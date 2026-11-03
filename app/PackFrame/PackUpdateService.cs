@@ -94,7 +94,6 @@ internal static class PackUpdateService
         var plan = Plan(instance, result);
         if (keepLocal.Any(key => !plan.Conflicts.Contains(key, StringComparer.OrdinalIgnoreCase)))
             throw new IOException("Update choices no longer match the plan.");
-        if (result.UnresolvedWorkshopCount > 0) throw new IOException("Workshop package IDs are unresolved. Finish downloading and retry.");
         var workspace = Path.Combine(instance.DirectoryPath, ".update-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workspace);
         try

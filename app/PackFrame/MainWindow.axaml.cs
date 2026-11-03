@@ -571,6 +571,7 @@ public partial class MainWindow : Window
             "檢查更新",
             "更新を確認"
         );
+        Find<Button>("LogButton").Content = Localization.LogButton(language);
         _qqGroupText.Text = OperationText.Choose(
             language,
             "QQ group: 960717872",
@@ -4936,6 +4937,11 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void OnLogClick(object? sender, RoutedEventArgs e)
+    {
+        await new LogWindow(_config.Language).ShowDialog(this);
+    }
+
     private static void OpenUrl(string? url)
     {
         if (string.IsNullOrWhiteSpace(url))
@@ -6009,18 +6015,34 @@ public partial class MainWindow : Window
             _lastEnableColumn = column + 1;
             UpdateEnableTargetBorders();
             ClearUndoHistory();
-            ShowToast(result.UnresolvedWorkshopCount > 0
-                ? Localization.ModpackCreatedPending(
-                    _config.Language,
-                    result.Name,
-                    result.PackageIds.Count,
-                    result.UnresolvedWorkshopCount
-                )
-                : Localization.ModpackCreated(
-                    _config.Language,
-                    result.Name,
-                    result.PackageIds.Count
-                ));
+            var pending = result.UnresolvedWorkshopCount;
+            var completion = new CompletionWindow(
+                Localization.CompletionTitle(_config.Language),
+                pending > 0
+                    ? Localization.ModpackCreatedPending(
+                        _config.Language,
+                        result.Name,
+                        result.PackageIds.Count,
+                        pending
+                    )
+                    : Localization.ModpackCreated(
+                        _config.Language,
+                        result.Name,
+                        result.PackageIds.Count
+                    ),
+                pending > 0 ? Localization.ViewMissingMods(_config.Language) : null,
+                Localization.OpenInstanceFolder(_config.Language),
+                Localization.CloseButton(_config.Language)
+            );
+            var choice = await completion.ShowDialog<CompletionChoice>(this);
+            if (choice == CompletionChoice.MissingMods)
+            {
+                await ShowMissingModsAsync(column);
+            }
+            else if (choice == CompletionChoice.OpenFolder)
+            {
+                InstanceStore.OpenFolder(created.DirectoryPath);
+            }
         }
         catch (Exception exception)
         {

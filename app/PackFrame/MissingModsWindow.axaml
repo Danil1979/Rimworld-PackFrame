@@ -31,6 +31,9 @@
             <TextBlock x:Name="SourceText"
                        Foreground="{DynamicResource SecondaryTextBrush}"
                        TextWrapping="Wrap" />
+            <TextBlock x:Name="RefreshNoteText"
+                       Foreground="{DynamicResource SecondaryTextBrush}"
+                       TextWrapping="Wrap" />
             <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
                 <TextBlock x:Name="MappingLabel"
                            Foreground="{DynamicResource SecondaryTextBrush}"

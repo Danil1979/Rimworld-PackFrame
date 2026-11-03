@@ -1147,6 +1147,17 @@ public static class Localization
         };
     }
 
+    public static string MissingModsRefreshNote(string? language)
+    {
+        return language switch
+        {
+            SimplifiedChinese => "如果你是新下载的合集，请检查 Steam 下载页面中 Rimworld 是否下载完成，完成后点右上角刷新。",
+            TraditionalChinese => "如果你是新下載的合集，請檢查 Steam 下載頁面中 Rimworld 是否下載完成，完成後點右上角重新整理。",
+            Japanese => "新しくダウンロードしたパックの場合、Steam のダウンロード画面で Rimworld のダウンロードが完了したか確認し、完了後に右上の更新を押してください。",
+            _ => "If you just downloaded this pack, confirm in the Steam downloads page that Rimworld finished downloading, then click Refresh at the top right."
+        };
+    }
+
     public static string MissingHistory(string? language)
     {
         return language switch
@@ -1276,6 +1287,39 @@ public static class Localization
             TraditionalChinese => "關閉",
             Japanese => "閉じる",
             _ => "Close"
+        };
+    }
+
+    public static string LogButton(string? language)
+    {
+        return language switch
+        {
+            SimplifiedChinese => "日志",
+            TraditionalChinese => "日誌",
+            Japanese => "ログ",
+            _ => "Log"
+        };
+    }
+
+    public static string OpenLogFile(string? language)
+    {
+        return language switch
+        {
+            SimplifiedChinese => "打开日志文件",
+            TraditionalChinese => "開啟日誌檔案",
+            Japanese => "ログファイルを開く",
+            _ => "Open log file"
+        };
+    }
+
+    public static string LogEmpty(string? language)
+    {
+        return language switch
+        {
+            SimplifiedChinese => "暂无日志。",
+            TraditionalChinese => "暫無日誌。",
+            Japanese => "ログはまだありません。",
+            _ => "No log entries yet."
         };
     }
 
@@ -1634,6 +1678,39 @@ public static class Localization
             TraditionalChinese => $"已建立實例「{name}」，啟用 {count} 個模組；{unresolved} 個工坊模組待下載後重新整理啟用。",
             Japanese => $"インスタンス「{name}」を作成し、{count} 個のMODを有効にしました。{unresolved} 個のワークショップMODはダウンロード後に更新して有効にしてください。",
             _ => $"Created instance \"{name}\" with {count} active mods; {unresolved} Workshop mods need to finish downloading before they can be activated."
+        };
+    }
+
+    public static string CompletionTitle(string? language)
+    {
+        return language switch
+        {
+            SimplifiedChinese => "安装完成",
+            TraditionalChinese => "安裝完成",
+            Japanese => "インストール完了",
+            _ => "Installation complete"
+        };
+    }
+
+    public static string ViewMissingMods(string? language)
+    {
+        return language switch
+        {
+            SimplifiedChinese => "查看缺失模组",
+            TraditionalChinese => "檢視缺失模組",
+            Japanese => "欠落MODを表示",
+            _ => "View missing mods"
+        };
+    }
+
+    public static string OpenInstanceFolder(string? language)
+    {
+        return language switch
+        {
+            SimplifiedChinese => "打开实例文件夹",
+            TraditionalChinese => "開啟實例資料夾",
+            Japanese => "インスタンスフォルダーを開く",
+            _ => "Open instance folder"
         };
     }
 

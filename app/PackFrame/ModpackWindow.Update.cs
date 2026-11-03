@@ -93,10 +93,6 @@ public partial class ModpackWindow
                 cancellationToken: cancellation.Token, language: _language,
                 archiveDownloadControl: _archiveDownloadControl);
             cancellation.Token.ThrowIfCancellationRequested();
-            if (!_currentInstance.IsSteamCmd && (result.UnresolvedWorkshopCount > 0 || pack.Mods.Any(mod => ModpackService.ParseWorkshopId(mod.WorkshopId ?? mod.WorkshopUrl) is { } id &&
-                !File.Exists(Path.Combine(_game.WorkshopPath ?? "", id.ToString(), "About", "About.xml"))))
-                )
-                throw new IOException(T("Waiting for Steam downloads. Retry after Steam finishes.", "等待 Steam 下载完成后重试。", "等待 Steam 下載完成後重試。", "Steam のダウンロード完了後に再試行してください。"));
             var plan = await Task.Run(() => PackUpdateService.Plan(_currentInstance, result));
             var choices = await new UpdateChoicesWindow(plan, _language).ShowDialog<UpdateChoices?>(this);
             if (choices is null) return;

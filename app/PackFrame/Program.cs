@@ -14,6 +14,7 @@ internal static class Program
         }
 
         SteamWorkshopClient.RemoveLegacyAppIdFile();
+        AppLog.Cleanup();
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 

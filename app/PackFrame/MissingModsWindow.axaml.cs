@@ -32,6 +32,8 @@ public partial class MissingModsWindow : Window
             Localization.MissingModsSummary(language, instance.DisplayName, rows.Count);
         this.FindControl<TextBlock>("SourceText")!.Text =
             Localization.MissingModsSourceNote(language);
+        this.FindControl<TextBlock>("RefreshNoteText")!.Text =
+            Localization.MissingModsRefreshNote(language);
         this.FindControl<TextBlock>("MappingLabel")!.Text =
             Localization.MissingModsMappingPath(language) + ":";
         this.FindControl<SelectableTextBlock>("MappingPathText")!.Text = mappingPath;
