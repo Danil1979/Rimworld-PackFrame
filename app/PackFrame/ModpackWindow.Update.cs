@@ -23,7 +23,7 @@ public partial class ModpackWindow
         var bind = Find<Button>("BindPackButton");
         bind.Content = T("Link this pack", "关联此合集", "關聯此合集", "このパックに関連付け");
         bind.IsVisible = valid && !match && _selectedPack?.Id is not null;
-        bind.IsEnabled = !_busy && string.IsNullOrWhiteSpace(_currentInstance?.Metadata?.PackSource);
+        bind.IsEnabled = !_busy;
         var restore = Find<Button>("RestoreUpdateButton");
         restore.Content = T("Restore previous update", "恢复上次更新", "還原上次更新", "前回の更新を復元");
         restore.IsVisible = valid && PackUpdateService.CanRestore(_currentInstance!); restore.IsEnabled = !_busy;
@@ -48,9 +48,15 @@ public partial class ModpackWindow
     private async void OnBindPackClick(object? sender, RoutedEventArgs e)
     {
         if (!CanChangeInstance() || _selectedPack is null) return;
-        var confirm = new ConfirmWindow(T("Link this instance? Existing files remain unowned; conflicts will require a choice.",
-            "关联当前实例？现有文件不会自动归属合集，更新时有冲突会询问。", "關聯目前實例？現有檔案不會自動歸屬合集，衝突時會詢問。",
-            "このインスタンスを関連付けますか？既存ファイルの競合は確認されます。"),
+        var alreadyBound = !string.IsNullOrWhiteSpace(_currentInstance?.Metadata?.PackSource);
+        var confirm = new ConfirmWindow(alreadyBound
+            ? T("This instance is already linked to another pack. Replace the binding? Existing files remain unowned; update conflicts will be asked.",
+                "当前实例已关联其他合集。要改为关联此合集吗？现有文件不会自动归属，更新时会询问冲突。",
+                "目前實例已關聯其他合集。要改為關聯此合集嗎？現有檔案不會自動歸屬，更新時會詢問衝突。",
+                "このインスタンスは別のパックに関連付けられています。このパックに関連付け直しますか？既存ファイルは未所有のままで、更新時に競合を確認します。")
+            : T("Link this instance? Existing files remain unowned; conflicts will require a choice.",
+                "关联当前实例？现有文件不会自动归属合集，更新时有冲突会询问。", "關聯目前實例？現有檔案不會自動歸屬合集，衝突時會詢問。",
+                "このインスタンスを関連付けますか？既存ファイルの競合は確認されます。"),
             T("Link", "关联", "關聯", "関連付け"), Localization.CancelButton(_language));
         if (!await confirm.ShowDialog<bool>(this)) return;
         try { PackUpdateService.BindLegacy(_currentInstance!, _selectedPack); ConfigApplied = true; RefreshUpdateControls(); }

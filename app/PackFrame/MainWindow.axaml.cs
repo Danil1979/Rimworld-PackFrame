@@ -5660,6 +5660,23 @@ public partial class MainWindow : Window
             return;
         }
 
+        var sourceInstance = GetInstanceForColumn(payload.SourceColumn);
+        if (sourceInstance is not null && !sourceInstance.IsDamaged)
+        {
+            foreach (var mod in payload.Mods)
+            {
+                try
+                {
+                    CopyLocalModToTarget(mod, sourceInstance, targetInstance);
+                }
+                catch (Exception exception)
+                {
+                    AppLog.Error("Copy local mod for cross-instance activation: " + mod.Path, exception);
+                    ShowToast(exception.Message);
+                }
+            }
+        }
+
         var targetOriginal = targetInstance.ActivePackageIds.ToList();
         var targetUpdated = ModListOperations.InsertSelection(targetOriginal, selectedIds, targetIndex);
         if (ActiveIdsEqual(targetOriginal, targetUpdated))
@@ -5688,6 +5705,104 @@ public partial class MainWindow : Window
         {
         }
     }
+    private void CopyLocalModToTarget(
+        ModInfo mod,
+        ManagedInstance source,
+        ManagedInstance target
+    )
+    {
+        if (mod.Source != ModSource.Local ||
+            string.IsNullOrWhiteSpace(mod.Path) ||
+            !Directory.Exists(mod.Path))
+        {
+            return;
+        }
+
+        var sourcePath = Path.GetFullPath(mod.Path);
+        var sourceMods = Path.GetFullPath(Path.Combine(source.DirectoryPath, "Mods"));
+        var targetMods = Path.GetFullPath(Path.Combine(target.DirectoryPath, "Mods"));
+        var gameMods = string.IsNullOrWhiteSpace(_gameInstallation?.GamePath)
+            ? null
+            : Path.GetFullPath(Path.Combine(_gameInstallation.GamePath, "Mods"));
+        var destinationRoot = IsPathUnder(sourcePath, sourceMods)
+            ? targetMods
+            : gameMods;
+        if (destinationRoot is null || IsPathUnder(sourcePath, destinationRoot))
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(destinationRoot);
+        var packageId = ModCatalog.ReadPackageId(sourcePath);
+        if (!string.IsNullOrWhiteSpace(packageId) &&
+            (HasPackageInDirectory(destinationRoot, packageId) ||
+             (destinationRoot.Equals(targetMods, StringComparison.OrdinalIgnoreCase) &&
+              gameMods is not null &&
+              HasPackageInDirectory(gameMods, packageId))))
+        {
+            return;
+        }
+
+        var folderName = Path.GetFileName(
+            sourcePath.TrimEnd(
+                Path.DirectorySeparatorChar,
+                Path.AltDirectorySeparatorChar
+            )
+        );
+        if (string.IsNullOrWhiteSpace(folderName))
+        {
+            folderName = string.IsNullOrWhiteSpace(packageId) ? "mod" : packageId;
+        }
+
+        var destination = Path.Combine(destinationRoot, folderName);
+        var suffix = 1;
+        while (Directory.Exists(destination) || File.Exists(destination))
+        {
+            destination = Path.Combine(destinationRoot, folderName + "-" + suffix);
+            suffix++;
+        }
+
+        ModpackInstanceInstaller.CopyTree(sourcePath, destination);
+    }
+
+    private static bool HasPackageInDirectory(string root, string packageId)
+    {
+        foreach (var directory in Directory.EnumerateDirectories(root))
+        {
+            if (string.Equals(
+                    ModCatalog.ReadPackageId(directory),
+                    packageId,
+                    StringComparison.OrdinalIgnoreCase
+                ))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsPathUnder(string path, string root)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var fullRoot = Path.GetFullPath(root).TrimEnd(
+            Path.DirectorySeparatorChar,
+            Path.AltDirectorySeparatorChar
+        );
+        return fullPath.Equals(
+                   fullRoot,
+                   OperatingSystem.IsWindows()
+                       ? StringComparison.OrdinalIgnoreCase
+                       : StringComparison.Ordinal
+               ) ||
+               fullPath.StartsWith(
+                   fullRoot + Path.DirectorySeparatorChar,
+                   OperatingSystem.IsWindows()
+                       ? StringComparison.OrdinalIgnoreCase
+                       : StringComparison.Ordinal
+               );
+    }
+
     private void MoveMods(DragPayload payload, int targetColumn, int targetIndex)
     {
         var selectedIds = payload.Mods

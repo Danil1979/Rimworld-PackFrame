@@ -102,7 +102,8 @@ public sealed record ModpackInstallResult(
     bool SteamCmd,
     string? PackSource = null,
     long? Revision = null,
-    string? Version = null
+    string? Version = null,
+    IReadOnlyList<string>? ReplacedModFolders = null
 );
 
 public static class ModpackService
@@ -373,6 +374,8 @@ public static class ModpackService
         Directory.CreateDirectory(modsRoot);
         var modsArchiveExtracted = false;
         string? downloadedArchivePath = null;
+        var downloadedOverlayPaths = new List<string>();
+        var replacedModFolders = new List<string>();
         var downloadCacheDirectory = Path.Combine(Path.GetDirectoryName(modsRoot)!, "downloads");
         var ossArchiveUri = ResolveModsArchiveUri(pack);
         var r2ArchiveUri = ResolveR2ArchiveUri(pack);
@@ -451,6 +454,21 @@ public static class ModpackService
                 status?.Invoke(OperationText.Install(language));
                 downloadedArchivePath = archivePath;
                 modsArchiveExtracted = true;
+        }
+
+        if (modsArchiveExtracted && !skipModsDownload)
+        {
+            await ApplyLocalModOverlaysAsync(
+                pack,
+                modsRoot,
+                new[] { ossArchiveUri, r2ArchiveUri },
+                downloadCacheDirectory,
+                downloadedOverlayPaths,
+                replacedModFolders,
+                status,
+                language,
+                cancellationToken
+            );
         }
 
         var stagingRoot = Path.GetDirectoryName(modsRoot);
@@ -671,6 +689,11 @@ public static class ModpackService
             TryDeleteFile(downloadedArchivePath);
         }
 
+        foreach (var overlayPath in downloadedOverlayPaths)
+        {
+            TryDeleteFile(overlayPath);
+        }
+
         var name = string.IsNullOrWhiteSpace(pack.Name)
             ? "Modpack"
             : pack.Name.Trim();
@@ -686,7 +709,8 @@ public static class ModpackService
             pack.Id,
             pack.ConfigBaseUrl,
             pack.ConfigFiles,
-            useSteamCmd, pack.PackSource, pack.Revision, pack.Version
+            useSteamCmd, pack.PackSource, pack.Revision, pack.Version,
+            replacedModFolders
         );
     }
 
@@ -1130,6 +1154,240 @@ public static class ModpackService
         return string.IsNullOrWhiteSpace(installedId)
             ? Array.Empty<string>()
             : new[] { installedId };
+    }
+
+    private static async Task ApplyLocalModOverlaysAsync(
+        ModpackDefinition pack,
+        string modsRoot,
+        IEnumerable<Uri?> archiveUris,
+        string downloadCacheDirectory,
+        List<string> downloadedOverlayPaths,
+        List<string> replacedModFolders,
+        Action<string>? status,
+        string? language,
+        CancellationToken cancellationToken
+    )
+    {
+        var overlayBases = archiveUris
+            .Where(uri => uri is not null && IsObjectStoreUri(uri))
+            .Select(uri => uri!)
+            .DistinctBy(uri => uri.AbsoluteUri, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (overlayBases.Count == 0)
+        {
+            return;
+        }
+
+        var packageIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var mod in (pack.Mods ?? new List<ModpackMod>())
+                     .Where(mod => mod is not null && NormalizeSource(mod) == "local"))
+        {
+            var packageId = NormalizePackageId(mod.PackageId);
+            if (!string.IsNullOrWhiteSpace(packageId))
+            {
+                packageIds.Add(packageId);
+            }
+        }
+        foreach (var directory in Directory.EnumerateDirectories(modsRoot))
+        {
+            var packageId = ModCatalog.ReadPackageId(directory);
+            if (!string.IsNullOrWhiteSpace(packageId))
+            {
+                packageIds.Add(packageId);
+            }
+        }
+
+        status?.Invoke(OperationText.CheckOverlays(language));
+        foreach (var packageId in packageIds)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Uri? overlayUri = null;
+            foreach (var baseUri in overlayBases)
+            {
+                foreach (var extension in new[] { ".zip", ".7z" })
+                {
+                    var candidate = BuildOverlayUri(baseUri, packageId, extension);
+                    if (await ObjectExistsAsync(candidate, cancellationToken))
+                    {
+                        overlayUri = candidate;
+                        break;
+                    }
+                }
+                if (overlayUri is not null)
+                {
+                    break;
+                }
+            }
+            if (overlayUri is null)
+            {
+                continue;
+            }
+
+            status?.Invoke(OperationText.DownloadOverlay(language, packageId));
+            var overlayPath = GetDownloadCachePath(
+                overlayUri,
+                pack.Revision,
+                downloadCacheDirectory
+            );
+            await DownloadAsync(
+                overlayUri,
+                overlayPath,
+                status,
+                cancellationToken,
+                language
+            );
+            downloadedOverlayPaths.Add(overlayPath);
+
+            var extractRoot = Path.Combine(
+                Path.GetTempPath(),
+                "PackFrame",
+                "overlay-" + Guid.NewGuid().ToString("N")
+            );
+            try
+            {
+                Directory.CreateDirectory(extractRoot);
+                await Task.Run(
+                    () => ExtractModsArchive(
+                        overlayPath,
+                        extractRoot,
+                        status,
+                        language,
+                        cancellationToken
+                    ),
+                    cancellationToken
+                );
+                var overlayModRoot = FindOverlayModRoot(extractRoot)
+                    ?? throw new InvalidDataException(
+                        $"Overlay archive for {packageId} contains no RimWorld mod."
+                    );
+                var overlayPackageId = ModCatalog.ReadPackageId(overlayModRoot);
+                if (!string.IsNullOrWhiteSpace(overlayPackageId) &&
+                    !string.Equals(
+                        overlayPackageId,
+                        packageId,
+                        StringComparison.OrdinalIgnoreCase
+                    ))
+                {
+                    throw new InvalidDataException(
+                        $"Overlay packageId {overlayPackageId} does not match {packageId}."
+                    );
+                }
+
+                var existing = Directory
+                    .EnumerateDirectories(modsRoot)
+                    .Where(directory => string.Equals(
+                        ModCatalog.ReadPackageId(directory),
+                        packageId,
+                        StringComparison.OrdinalIgnoreCase
+                    ))
+                    .ToList();
+                var folderName = existing.Count > 0
+                    ? Path.GetFileName(existing[0])
+                    : Path.GetFileName(overlayModRoot);
+                if (string.IsNullOrWhiteSpace(folderName))
+                {
+                    folderName = packageId;
+                }
+
+                var target = Path.Combine(modsRoot, folderName);
+                var unique = 1;
+                while ((Directory.Exists(target) || File.Exists(target)) &&
+                       !existing.Any(path => string.Equals(
+                           Path.GetFullPath(path),
+                           Path.GetFullPath(target),
+                           StringComparison.OrdinalIgnoreCase
+                       )))
+                {
+                    target = Path.Combine(modsRoot, folderName + "-" + unique);
+                    unique++;
+                }
+
+                foreach (var directory in existing)
+                {
+                    if (Directory.Exists(directory))
+                    {
+                        Directory.Delete(directory, true);
+                    }
+                }
+                if (Directory.Exists(target))
+                {
+                    Directory.Delete(target, true);
+                }
+                CopyDirectory(overlayModRoot, target);
+                var relative = "Mods/" + Path.GetFileName(target);
+                if (!replacedModFolders.Contains(relative, StringComparer.OrdinalIgnoreCase))
+                {
+                    replacedModFolders.Add(relative);
+                }
+            }
+            finally
+            {
+                TryDeleteDirectory(extractRoot);
+            }
+        }
+    }
+
+    private static string? FindOverlayModRoot(string extractRoot)
+    {
+        var candidates = Directory
+            .EnumerateFiles(extractRoot, "About.xml", SearchOption.AllDirectories)
+            .Where(path => string.Equals(
+                Path.GetFileName(Path.GetDirectoryName(path)),
+                "About",
+                StringComparison.OrdinalIgnoreCase
+            ))
+            .Select(path => Path.GetDirectoryName(Path.GetDirectoryName(path)))
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(path => path!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (candidates.Count > 0)
+        {
+            return candidates[0];
+        }
+
+        return Directory.EnumerateDirectories(extractRoot).FirstOrDefault();
+    }
+
+    private static Uri BuildOverlayUri(Uri archiveUri, string packageId, string extension)
+    {
+        var builder = new UriBuilder(archiveUri);
+        var path = builder.Path;
+        var slash = path.LastIndexOf('/');
+        builder.Path = (slash >= 0 ? path[..(slash + 1)] : "/") +
+            Uri.EscapeDataString(packageId) + extension;
+        builder.Query = string.Empty;
+        return builder.Uri;
+    }
+
+    private static bool IsObjectStoreUri(Uri uri) =>
+        uri.Host.EndsWith(".aliyuncs.com", StringComparison.OrdinalIgnoreCase) ||
+        uri.Host.EndsWith(".r2.dev", StringComparison.OrdinalIgnoreCase) ||
+        uri.Host.EndsWith(".cloudflarestorage.com", StringComparison.OrdinalIgnoreCase);
+
+    private static async Task<bool> ObjectExistsAsync(
+        Uri uri,
+        CancellationToken cancellationToken
+    )
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Head, uri);
+            using var response = await Http.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken
+            );
+            return response.IsSuccessStatusCode;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static Uri? ResolveModsArchiveUri(ModpackDefinition pack) =>

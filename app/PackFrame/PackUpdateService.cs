@@ -71,6 +71,13 @@ internal static class PackUpdateService
                 !metadata.ManagedModFolders.Contains(folder, StringComparer.OrdinalIgnoreCase))
                 conflicts.Add(folder);
         }
+        foreach (var folder in result.ReplacedModFolders ?? Array.Empty<string>())
+        {
+            ValidateManagedKey(folder);
+            if (Directory.Exists(SafePath(instance.DirectoryPath, folder)) &&
+                !conflicts.Contains(folder, StringComparer.OrdinalIgnoreCase))
+                conflicts.Add(folder);
+        }
         var nextOrder = NextOrder(instance, result);
         return new(conflicts,
             !instance.ActivePackageIds.SequenceEqual(metadata.InstalledOrder, StringComparer.OrdinalIgnoreCase),
