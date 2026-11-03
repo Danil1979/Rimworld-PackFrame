@@ -179,16 +179,6 @@ internal static class SteamCmdClient
         }
 
         Directory.CreateDirectory(modsRoot);
-        var args = new List<string> { "+login", "anonymous" };
-        foreach (var id in workshopIds)
-        {
-            args.Add("+workshop_download_item");
-            args.Add(RimWorldAppId.ToString());
-            args.Add(id.ToString());
-            args.Add("validate");
-        }
-        args.Add("+quit");
-
         var steamCmdRoot = Path.GetDirectoryName(steamCmdPath)
             ?? throw new InvalidOperationException("SteamCMD root was not found.");
         var cacheRoot = Path.Combine(
@@ -211,12 +201,28 @@ internal static class SteamCmdClient
         );
         try
         {
-            await RunAsync(
-                steamCmdPath,
-                args,
-                cancellationToken,
-                timeout: TimeSpan.FromMinutes(60)
-            );
+            // SteamCMD has a small internal parameter limit; keep each invocation
+            // well below it or it can assert/crash (0xC0000374).
+            const int batchSize = 20;
+            for (var offset = 0; offset < workshopIds.Count; offset += batchSize)
+            {
+                var args = new List<string> { "+login", "anonymous" };
+                foreach (var id in workshopIds.Skip(offset).Take(batchSize))
+                {
+                    args.Add("+workshop_download_item");
+                    args.Add(RimWorldAppId.ToString());
+                    args.Add(id.ToString());
+                    args.Add("validate");
+                }
+                args.Add("+quit");
+
+                await RunAsync(
+                    steamCmdPath,
+                    args,
+                    cancellationToken,
+                    timeout: TimeSpan.FromMinutes(30)
+                );
+            }
         }
         finally
         {
