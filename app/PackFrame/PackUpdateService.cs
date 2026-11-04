@@ -46,6 +46,14 @@ internal static class PackUpdateService
         metadata.InstalledOrder = InstanceStore.LoadInstance(instance.DirectoryPath).ActivePackageIds;
         metadata.ManagedFiles = ConfigHashes(result.ConfigSourcePath);
         metadata.ManagedModFolders = ModFolders(result.ModsSourcePath);
+        metadata.ModsArchiveName = result.ModsArchiveName;
+        metadata.AppliedOverlays = result.AppliedOverlays is null
+            ? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            : result.AppliedOverlays.ToDictionary(
+                pair => pair.Key,
+                pair => pair.Value,
+                StringComparer.OrdinalIgnoreCase
+            );
         InstanceStore.SaveMetadata(instance, metadata);
     }
 
@@ -105,6 +113,10 @@ internal static class PackUpdateService
             foreach (var folder in metadata.ManagedModFolders.Union(nextMods, StringComparer.OrdinalIgnoreCase))
             {
                 if (keepLocal.Contains(folder)) continue;
+                if (result.SparseMods && !nextMods.Contains(folder, StringComparer.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
                 replacements[folder] = nextMods.Contains(folder, StringComparer.OrdinalIgnoreCase)
                     ? SafePath(result.ModsSourcePath!, folder[5..]) : null;
             }
@@ -131,8 +143,25 @@ internal static class PackUpdateService
             metadata.ConfigBaseUrl = result.ConfigBaseUrl;
             metadata.ConfigFiles = result.ConfigFiles.ToList();
             metadata.ManagedFiles = nextFiles;
-            metadata.ManagedModFolders = nextMods.Where(folder => !keepLocal.Contains(folder)).ToList();
+            metadata.ManagedModFolders = result.SparseMods
+                ? metadata.ManagedModFolders
+                    .Union(nextMods, StringComparer.OrdinalIgnoreCase)
+                    .Where(folder => !keepLocal.Contains(folder))
+                    .ToList()
+                : nextMods.Where(folder => !keepLocal.Contains(folder)).ToList();
             metadata.InstalledOrder = order;
+            if (!string.IsNullOrWhiteSpace(result.ModsArchiveName))
+            {
+                metadata.ModsArchiveName = result.ModsArchiveName;
+            }
+            if (result.AppliedOverlays is not null)
+            {
+                metadata.AppliedOverlays = result.AppliedOverlays.ToDictionary(
+                    pair => pair.Key,
+                    pair => pair.Value,
+                    StringComparer.OrdinalIgnoreCase
+                );
+            }
             var metadataPath = Path.Combine(workspace, InstanceStore.MetadataFileName);
             File.WriteAllText(metadataPath, JsonSerializer.Serialize(metadata, PackFrameJsonContext.Default.InstanceMetadata));
             replacements[InstanceStore.MetadataFileName] = metadataPath; // Version is committed last.

@@ -75,6 +75,8 @@ public sealed class InstanceMetadata
     public string? ConfigBaseUrl { get; set; }
     public List<string> ConfigFiles { get; set; } = new();
     public bool SteamCmd { get; set; }
+    public string? ModsArchiveName { get; set; }
+    public Dictionary<string, string> AppliedOverlays { get; set; } = new();
 }
 
 public static class InstanceStore

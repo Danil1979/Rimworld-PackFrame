@@ -14,6 +14,7 @@ internal static class OperationText
     public static string Extract(string? language) => Choose(language, "Extracting local mods...", "正在解压本地模组...", "正在解壓本機模組...", "ローカル MOD を展開中...");
     public static string Install(string? language) => Choose(language, "Installing mods...", "正在安装模组...", "正在安裝模組...", "MOD をインストール中...");
     public static string CheckOverlays(string? language) => Choose(language, "Checking local mod overlays...", "正在检查本地模组覆盖包...", "正在檢查本機模組覆蓋包...", "ローカル MOD の上書きパッケージを確認中...");
+    public static string ReuseBaseArchive(string? language) => Choose(language, "Base archive unchanged; updating overlays...", "大包未变化，正在更新覆盖包...", "大包未變更，正在更新覆蓋包...", "ベースアーカイブは変更なし。上書きパッケージを更新中...");
     public static string DownloadOverlay(string? language, string packageId) => Choose(language, "Downloading overlay: ", "正在下载覆盖包：", "正在下載覆蓋包：", "上書きパッケージをダウンロード中: ") + packageId;
     public static string ResolveCollection(string? language) => Choose(language, "Resolving Steam collection...", "正在解析 Steam 合集...", "正在解析 Steam 合集...", "Steam コレクションを解析中...");
     public static string ExtractProgress(

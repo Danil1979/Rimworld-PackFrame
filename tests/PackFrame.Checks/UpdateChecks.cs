@@ -82,6 +82,38 @@ internal static class UpdateChecks
                 InstanceStore.LoadInstance(instance.DirectoryPath).Metadata!.InstalledRevision == 1,
                 "commit failure restores already replaced mod files and leaves revision unchanged");
         }
+        Require(ModpackService.ArchiveVersion("多种族RJW [1.7]_3.zip") == 3 &&
+            ModpackService.ArchiveVersion("zx.multiracerjwtweak_12.7z") == 12 &&
+            ModpackService.ArchiveVersion("多种族RJW [1.7].zip") == 0,
+            "archive file name version suffix is parsed");
+        Require(ModpackService.OverlayVersion("zx.multiracerjwtweak_3.zip", "zx.multiracerjwtweak") == 3 &&
+            ModpackService.OverlayVersion("zx.multiracerjwtweak.zip", "zx.multiracerjwtweak") == 0 &&
+            ModpackService.OverlayVersion("foo_1_2.zip", "foo_1") == 2,
+            "overlay file name version is parsed against its package id");
+        Require(ModpackService.ShouldReuseBaseArchive("多种族RJW [1.7].zip", null) &&
+            !ModpackService.ShouldReuseBaseArchive("多种族RJW [1.7]_1.zip", null) &&
+            ModpackService.ShouldReuseBaseArchive("多种族RJW [1.7]_1.zip", "多种族RJW [1.7]_1.zip") &&
+            !ModpackService.ShouldReuseBaseArchive("多种族RJW [1.7]_2.zip", "多种族RJW [1.7]_1.zip"),
+            "legacy suffixless archive counts as installed; suffix changes trigger download");
+        var sparseStaging = Path.Combine(packRoot, "runtime", "install-" + Guid.NewGuid().ToString("N"));
+        var sparseMods = Path.Combine(sparseStaging, "Mods");
+        var sparseConfig = Path.Combine(sparseStaging, "Config");
+        Directory.CreateDirectory(Path.Combine(sparseMods, "Overlay"));
+        Directory.CreateDirectory(sparseConfig);
+        File.WriteAllText(Path.Combine(sparseMods, "Overlay", "version.txt"), "overlay");
+        File.WriteAllText(Path.Combine(sparseConfig, "Mod_Test.xml"), "<value>one</value>");
+        var sparse = new ModpackInstallResult("Pack", new[] { "mod.1" }, 0, 0, 1, 0, sparseMods, sparseConfig,
+            "stable-id", "https://example.com/config", new[] { "Mod_Test.xml" }, false,
+            "https://example.com/index.json", 2, "2",
+            new[] { "Mods/Overlay" }, "pack_1.zip",
+            new Dictionary<string, string> { ["overlay.mod"] = "overlay_1.zip" }, true);
+        PackUpdateService.Apply(packRoot, instance, sparse, new HashSet<string>(), false);
+        Require(File.ReadAllText(Path.Combine(instance.DirectoryPath, "Mods", "Managed", "version.txt")) == "one" &&
+            File.ReadAllText(Path.Combine(instance.DirectoryPath, "Mods", "Overlay", "version.txt")) == "overlay" &&
+            instance.Metadata!.ModsArchiveName == "pack_1.zip" &&
+            instance.Metadata.AppliedOverlays["overlay.mod"] == "overlay_1.zip" &&
+            instance.Metadata.InstalledRevision == 2,
+            "sparse update replaces overlays, keeps base mods, and records names");
         var unowned = InstanceStore.CreateNew(packRoot, null, "1.6", new[] { "user.mod" });
         PackUpdateService.BindLegacy(unowned, new ModpackDefinition { Id = "stable-id", PackSource = "https://example.com/index.json" });
         Require(unowned.Metadata!.InstalledRevision is null && unowned.Metadata.ManagedFiles.Count == 0,

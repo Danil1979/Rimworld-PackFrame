@@ -91,7 +91,10 @@ public partial class ModpackWindow
                 useSteamCmd: _currentInstance.IsSteamCmd,
                 status: text => Dispatcher.UIThread.Post(() => { if (!_closed) Find<TextBlock>("StatusText").Text = text; }),
                 cancellationToken: cancellation.Token, language: _language,
-                archiveDownloadControl: _archiveDownloadControl);
+                archiveDownloadControl: _archiveDownloadControl,
+                existingModsRoot: Path.Combine(_currentInstance.DirectoryPath, "Mods"),
+                installedArchiveName: _currentInstance.Metadata?.ModsArchiveName,
+                recordedOverlays: _currentInstance.Metadata?.AppliedOverlays);
             cancellation.Token.ThrowIfCancellationRequested();
             var plan = await Task.Run(() => PackUpdateService.Plan(_currentInstance, result));
             var choices = await new UpdateChoicesWindow(plan, _language).ShowDialog<UpdateChoices?>(this);
