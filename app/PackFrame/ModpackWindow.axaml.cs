@@ -87,7 +87,14 @@ public partial class ModpackWindow : Window
         _language = config.Language ?? Localization.English;
 
         ApplyLocalization();
-        var indexUrl = ModpackService.StartupIndexUrl(config.ModpackIndexUrl);
+        var indexUrl = string.IsNullOrWhiteSpace(config.ModpackIndexUrl) ||
+            string.Equals(
+                config.ModpackIndexUrl,
+                ModpackService.GitHubIndexUrl,
+                StringComparison.OrdinalIgnoreCase
+            )
+            ? ModpackService.GiteeIndexUrl
+            : config.ModpackIndexUrl;
         RepoBox.Text = indexUrl;
         config.ModpackIndexUrl = indexUrl;
         config.Save();
@@ -217,7 +224,7 @@ public partial class ModpackWindow : Window
             ?? throw new InvalidOperationException($"{name} was not found.");
     }
 
-    private async Task LoadIndexAsync(bool refresh = false)
+    private async Task LoadIndexAsync()
     {
         if (_busy)
         {
@@ -238,21 +245,18 @@ public partial class ModpackWindow : Window
         }
 
         _busy = true;
+        _selectedItem = null;
+        _selectedPack = null;
+        _detailVersion++;
         SetControls(false);
+        ClearDetail(Localization.ModpackStatusReading(_language));
         Find<TextBlock>("StatusText").Text =
             Localization.ModpackStatusReading(_language);
 
-        string? indexUrl = null;
         try
         {
-            indexUrl = ModpackService.NormalizeIndexUrl(rawUrl);
-            var index = await ModpackIndexCache.Shared.LoadAsync(indexUrl, refresh);
-            if (_closed) return;
-            _selectedItem = null;
-            _selectedPack = null;
-            _detailVersion++;
-            ClearDetail(Localization.ModpackStatusReading(_language));
-            _indexUri = new Uri(indexUrl);
+            var index = await ModpackService.LoadIndexAsync(rawUrl);
+            _indexUri = new Uri(ModpackService.NormalizeIndexUrl(rawUrl));
             _items = index.Packs
                 .Where(entry => !string.IsNullOrWhiteSpace(entry.Id) ||
                                 !string.IsNullOrWhiteSpace(entry.File))
@@ -280,21 +284,6 @@ public partial class ModpackWindow : Window
         }
         catch (Exception exception)
         {
-            AppLog.Error("Load modpack index: " + rawUrl, exception);
-            if (_closed) return;
-            if (_items.Count > 0 && indexUrl is not null &&
-                _indexUri?.AbsoluteUri == indexUrl)
-            {
-                Find<TextBlock>("StatusText").Text = OperationText.Choose(_language,
-                    "Refresh failed; keeping the previous list.",
-                    "刷新失败，继续显示上次的合集列表。",
-                    "重新整理失敗，繼續顯示上次的合集清單。",
-                    "更新に失敗しました。前回の一覧を表示しています。");
-                return;
-            }
-            _selectedItem = null;
-            _selectedPack = null;
-            _detailVersion++;
             _items = new List<ModpackListItem>();
             Find<ListBox>("PackList").ItemsSource = _items;
             Find<TextBlock>("ListCount").Text = "0";
@@ -637,7 +626,7 @@ public partial class ModpackWindow : Window
         githubItem.Click += async (_, _) =>
         {
             RepoBox.Text = ModpackService.GitHubIndexUrl;
-            await LoadIndexAsync(refresh: true);
+            await LoadIndexAsync();
         };
         flyout.Items.Add(githubItem);
 
@@ -648,7 +637,7 @@ public partial class ModpackWindow : Window
         giteeItem.Click += async (_, _) =>
         {
             RepoBox.Text = ModpackService.GiteeIndexUrl;
-            await LoadIndexAsync(refresh: true);
+            await LoadIndexAsync();
         };
         flyout.Items.Add(giteeItem);
         flyout.ShowAt((Control)sender!);
@@ -658,7 +647,7 @@ public partial class ModpackWindow : Window
     {
         _coverCache.Clear();
         _coverCacheBytes = 0;
-        await LoadIndexAsync(refresh: true);
+        await LoadIndexAsync();
     }
 
     private async void OnRepoKeyDown(object? sender, KeyEventArgs e)
@@ -666,7 +655,7 @@ public partial class ModpackWindow : Window
         if (e.Key == Key.Enter)
         {
             e.Handled = true;
-            await LoadIndexAsync(refresh: true);
+            await LoadIndexAsync();
         }
     }
 
@@ -1077,6 +1066,8 @@ public partial class ModpackWindow : Window
         return client;
     }
 }
+
+
 
 
 

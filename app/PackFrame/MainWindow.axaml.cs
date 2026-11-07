@@ -518,12 +518,6 @@ public partial class MainWindow : Window
 
         Opened += (_, _) =>
         {
-            var indexUrl = ModpackService.StartupIndexUrl(_config.ModpackIndexUrl);
-            _ = Task.Run(async () =>
-            {
-                try { await ModpackIndexCache.Shared.LoadAsync(indexUrl, refresh: true); }
-                catch (Exception exception) { AppLog.Error("Refresh modpack index on startup: " + indexUrl, exception); }
-            });
             Dispatcher.UIThread.Post(
                 () => _inactiveList.Focus(),
                 DispatcherPriority.Loaded
