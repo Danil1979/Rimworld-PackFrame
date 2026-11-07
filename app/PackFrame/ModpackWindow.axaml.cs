@@ -127,7 +127,7 @@ public partial class ModpackWindow : Window
             Find<Button>("SteamCmdButton"),
             Localization.ModpackSteamCmdInstall(_language)
         );
-        SetWorkshopOnlyButtonText(
+        SetButtonText(
             Find<Button>("WorkshopOnlyButton"),
             Localization.ModpackWorkshopOnlyInstall(_language)
         );
@@ -135,6 +135,8 @@ public partial class ModpackWindow : Window
             Find<Button>("ApplyConfigButton"),
             Localization.ModpackApplyConfig(_language)
         );
+        Find<Button>("AdvancedOptionsButton").Content = T(
+            "Advanced options", "高级选项", "進階選項", "詳細オプション");
         Find<Button>("CloseButton").Content = Localization.CloseButton(_language);
         Find<Button>("CancelOperationButton").Content =
             Localization.CancelButton(_language);
@@ -182,7 +184,7 @@ public partial class ModpackWindow : Window
         SetControls(true);
     }
 
-    private static void SetWorkshopOnlyButtonText(Button button, string text)
+    private static void SetButtonText(Button button, string text)
     {
         var panel = new StackPanel
         {
@@ -195,23 +197,13 @@ public partial class ModpackWindow : Window
             {
                 Text = lines[i],
                 FontSize = i == 0 ? 14 : 10,
+                Foreground = i == 0 ? ThemeService.PrimaryTextBrush : ThemeService.SecondaryTextBrush,
                 TextAlignment = TextAlignment.Center,
                 TextWrapping = TextWrapping.Wrap
             });
         }
 
         button.Content = panel;
-    }
-
-    private static void SetButtonText(Button button, string text, double fontSize = 14)
-    {
-        button.Content = new TextBlock
-        {
-            Text = text,
-            FontSize = fontSize,
-            TextAlignment = TextAlignment.Center,
-            TextWrapping = TextWrapping.Wrap
-        };
     }
 
     private T Find<T>(string name) where T : Control
@@ -537,6 +529,7 @@ public partial class ModpackWindow : Window
         RefreshUpdateControls();
         var ready = enabled && !_busy;
         Find<Button>("RefreshButton").IsEnabled = ready;
+        Find<Button>("AdvancedOptionsButton").IsEnabled = ready && _selectedPack is not null;
         Find<Button>("WorkshopOnlyButton").IsEnabled = ready && _selectedPack is not null;
         Find<TextBox>("RepoBox").IsEnabled = ready;
         Find<Button>("RepoMenuButton").IsEnabled = ready;
@@ -609,6 +602,7 @@ public partial class ModpackWindow : Window
 
     private async void OnWorkshopOnlyInstallClick(object? sender, RoutedEventArgs e)
     {
+        Find<Button>("AdvancedOptionsButton").Flyout?.Hide();
         await InstallFromLinkAsync(false, skipModsDownload: true);
     }
 
@@ -674,6 +668,7 @@ public partial class ModpackWindow : Window
 
     private async void OnApplyConfigClick(object? sender, RoutedEventArgs e)
     {
+        Find<Button>("AdvancedOptionsButton").Flyout?.Hide();
         if (_currentInstance?.IsDamaged == true)
         {
             Find<TextBlock>("StatusText").Text = _currentInstance.LoadError;
