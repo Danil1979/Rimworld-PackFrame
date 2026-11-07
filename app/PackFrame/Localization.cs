@@ -120,6 +120,72 @@ public static class Localization
         };
     }
 
+    public static string SameList(string? language)
+    {
+        return language switch
+        {
+            SimplifiedChinese => "同一列表",
+            TraditionalChinese => "同一清單",
+            Japanese => "同じリスト",
+            _ => "Same list"
+        };
+    }
+
+    public static string SameListHint(string? language)
+    {
+        return language switch
+        {
+            SimplifiedChinese => "两栏显示的是同一模组列表。",
+            TraditionalChinese => "兩欄顯示的是同一模組清單。",
+            Japanese => "両方の欄で同じ MOD リストを表示しています。",
+            _ => "This list is open in both panes."
+        };
+    }
+
+    public static string DragAddTo(string? language, string name)
+    {
+        return language switch
+        {
+            SimplifiedChinese => $"添加到 {name}",
+            TraditionalChinese => $"新增至 {name}",
+            Japanese => $"{name} に追加",
+            _ => $"Add to {name}"
+        };
+    }
+
+    public static string DragMoveHere(string? language)
+    {
+        return language switch
+        {
+            SimplifiedChinese => "移到这里",
+            TraditionalChinese => "移到這裡",
+            Japanese => "ここに移動",
+            _ => "Move here"
+        };
+    }
+
+    public static string DragDisableFrom(string? language, string name)
+    {
+        return language switch
+        {
+            SimplifiedChinese => $"在 {name} 中禁用",
+            TraditionalChinese => $"在 {name} 中停用",
+            Japanese => $"{name} で無効化",
+            _ => $"Disable in {name}"
+        };
+    }
+
+    public static string DragAddHere(string? language)
+    {
+        return language switch
+        {
+            SimplifiedChinese => "添加到这里",
+            TraditionalChinese => "新增至這裡",
+            Japanese => "ここに追加",
+            _ => "Add here"
+        };
+    }
+
     public static string InstanceName(string? language, int index)
     {
         return language switch
@@ -1331,6 +1397,17 @@ public static class Localization
             TraditionalChinese => "啟動遊戲",
             Japanese => "ゲームを起動",
             _ => "Launch Game"
+        };
+    }
+
+    public static string LaunchInstance(string? language, string name)
+    {
+        return language switch
+        {
+            SimplifiedChinese => $"启动 {name}",
+            TraditionalChinese => $"啟動 {name}",
+            Japanese => $"{name} を起動",
+            _ => $"Launch {name}"
         };
     }
 

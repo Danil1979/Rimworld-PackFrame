@@ -236,6 +236,7 @@ public partial class MainWindow : Window
         _undoButton = Find<Button>("UndoButton");
         _redoButton = Find<Button>("RedoButton");
         _launchButton = Find<Button>("LaunchButton");
+        _launchTargetText = Find<TextBlock>("LaunchTargetText");
         _saveButton = Find<Button>("SaveButton");
         _refreshButton = Find<Button>("RefreshButton");
         _syncConfigButton = Find<Button>("SyncConfigButton");
@@ -272,6 +273,8 @@ public partial class MainWindow : Window
         _activeMissing2 = Find<Button>("ActiveMissing2");
         _instanceCombo1 = Find<ComboBox>("InstanceCombo1");
         _instanceCombo2 = Find<ComboBox>("InstanceCombo2");
+        _sameListBadge1 = Find<Border>("SameListBadge1");
+        _sameListBadge2 = Find<Border>("SameListBadge2");
         _instanceCombo1.ItemsSource = _instanceNames1;
         _instanceCombo2.ItemsSource = _instanceNames2;
         _instanceActionButton1 = Find<Button>("InstanceActionButton1");
@@ -313,6 +316,8 @@ public partial class MainWindow : Window
         _dragOverlay = Find<Canvas>("DragOverlay");
         _dragGhost = Find<Border>("DragGhost");
         _dragGhostText = Find<TextBlock>("DragGhostText");
+        _dragGhostAction = Find<TextBlock>("DragGhostAction");
+        _dropTargetOutline = Find<Border>("DropTargetOutline");
         _insertionLine = Find<Border>("InsertionLine");
         _undoToast = Find<Border>("UndoToast");
         _undoToastText = Find<TextBlock>("UndoToastText");
@@ -388,6 +393,10 @@ public partial class MainWindow : Window
                 if (_painting)
                 {
                     FinishPaint();
+                }
+                if (_customDragActive)
+                {
+                    EndModDrag();
                 }
             };
             list.AddHandler(
@@ -554,7 +563,6 @@ public partial class MainWindow : Window
         UpdatePaintButtonVisual();
         _undoButton.Content = Localization.Undo(language);
         _redoButton.Content = Localization.Redo(language);
-        _launchButton.Content = Localization.LaunchGame(language);
         _githubLinkButton.Content = "GitHub";
         _discordLinkButton.Content = "Discord";
         _backgroundButton.Content = OperationText.Choose(
@@ -1876,6 +1884,7 @@ public partial class MainWindow : Window
         _inactiveHeader.Text = $"{Localization.Inactive(language)} [{_inactiveCount}]";
         _activeHeader1.Text = $"{Localization.Active(language)} [{_active1Count}]";
         _activeHeader2.Text = $"{Localization.Active(language)} [{_active2Count}]";
+        UpdatePaneHeaders();
         UpdateProblemFilterVisuals();
     }
 
@@ -2461,8 +2470,6 @@ public partial class MainWindow : Window
 
     private void RefreshManager(bool selectFirst)
     {
-        ToolTip.SetTip(_instanceCombo1, GetSelectedInstance(0)?.LoadError);
-        ToolTip.SetTip(_instanceCombo2, GetSelectedInstance(1)?.LoadError);
         foreach (var timer in _searchTimers.Values) timer.Stop();
         _searchSources.Clear();
         if (_allMods.Count == 0)
@@ -4084,6 +4091,7 @@ public partial class MainWindow : Window
     private void UpdateLaunchButton()
     {
         var instance = GetSelectedInstance(_lastEnableColumn - 1);
+        UpdateLaunchTarget(instance);
         var executable = _gameInstallation?.ExecutablePath;
         var executableExists = !string.IsNullOrWhiteSpace(executable) &&
             (File.Exists(executable) || Directory.Exists(executable));
@@ -5280,13 +5288,7 @@ public partial class MainWindow : Window
             ? 0
             : MapDropIndexToActive(target, GetDropIndexAt(target, e.GetPosition(target)));
 
-        StopAutoScroll();
-        HideDragGhost();
-        _insertionLine.IsVisible = false;
-        _insertionLine.Opacity = 1;
-        _customDragActive = false;
-        _dragPayload = null;
-        _dragSourceList = null;
+        EndModDrag();
         e.Pointer.Capture(null);
 
         if (!wasDragging)
@@ -5458,12 +5460,13 @@ public partial class MainWindow : Window
     {
         if (!_customDragActive)
         {
+            ClearModDragFeedback();
             _insertionLine.IsVisible = false;
             return;
         }
 
         var target = GetTargetListAt(e);
-        if (target is null)
+        if (!UpdateModDragFeedback(target) || target is null)
         {
             _insertionLine.IsVisible = false;
             return;
@@ -5512,6 +5515,7 @@ public partial class MainWindow : Window
     private void HideDragGhost()
     {
         _dragGhost.IsVisible = false;
+        ClearModDragFeedback();
     }
 
     private ListBox? GetTargetListAt(PointerEventArgs e)

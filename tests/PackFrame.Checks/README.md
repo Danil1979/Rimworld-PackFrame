@@ -18,6 +18,11 @@ List tests cover contiguous/noncontiguous moves, insertion boundaries,
 case-insensitive deduplication, two-instance undo/redo, and missing undo targets.
 Launch tests inspect arguments without launching RimWorld; installer tests use
 temporary mod/config files without downloading anything.
+Catalog checks use an injected HTTP handler to cover offline bundled startup,
+ETag/304 and Last-Modified checks, changed hashes, persistent and corrupt caches,
+source isolation, mirror-relative URLs, cancellation, and unwritable cache paths.
+Pack-detail checks cover revisits without another fetch, restart persistence,
+mirror aliases, mutable-model isolation, changed hashes, and failed/corrupt reads.
 Failure checks cover damaged-profile isolation, stale pending edits, installation
 rollback and staging-path rejection, recovery across damaged manifests, mutable
 color snapshots and failed color writes. Linux/macOS CI additionally constructs
@@ -25,6 +30,35 @@ a tar.gz and checks executable permissions through the actual SteamCMD extractor
 
 Manual platform checks:
 
+- Open Modpacks with no saved catalog and a slow/offline connection: the three
+  bundled entries should appear immediately and remain selectable during the
+  background check. Verify the source choice persists after reopening.
+- Change packs or repository sources while details are loading: stale responses
+  must not overwrite the new selection. Close during a check, reopen, and test a
+  custom catalog without a cache; default bundled entries must never appear for it.
+- Let pack A finish loading, select B, and return to A: saved details should appear
+  immediately without another request or loading message. Reopen and check that
+  saved details remain visible during background validation; Refresh must force
+  a new read. A first visit still needs the pack's details from the server.
+- Start an install, config apply, or pack binding while a background catalog
+  update is pending: it must retain the selected pack until that operation ends.
+- With cached pack details, install/apply must read a fresh manifest. If its
+  Workshop collection changed, an auto-filled link must follow the fresh pack;
+  explicitly edited links remain overrides. Refresh-and-resume must retain the
+  original installation target while a newer catalog waits in the background.
+- Select the same instance in both enabled panes: both show "Same list", with
+  independent search and scroll positions. Select different instances (including
+  instances with identical display names): the badges disappear. Change language
+  and confirm the badges and launch target are translated.
+- Drag within a list or between views of the same instance: the destination is
+  outlined, the ghost says "Move here", and the insertion line follows the drop
+  position. Drag between different instances: it says "Add to <name>" and leaves
+  the source intact. Drag to the inactive pane: it says "Disable in <name>".
+  Leaving a valid list, releasing the pointer, or losing pointer capture must
+  clear the destination outline and action label.
+- Click either enabled pane and change its instance: the launch button names that
+  target. Check long names at the minimum window width; the complete launch name
+  remains available in its tooltip and accessible name.
 - Drag a contiguous selection within itself, move a noncontiguous selection to
   the beginning/end, drag between two profiles, and copy into a profile that
   already contains an item. Check the selection after each operation.

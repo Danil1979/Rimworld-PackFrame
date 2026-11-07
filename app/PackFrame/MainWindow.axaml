@@ -272,37 +272,51 @@
                         BorderBrush="{StaticResource SecondaryBrush}"
                         BorderThickness="1"
                         Padding="8">
-                    <Grid RowDefinitions="34,30,*,Auto">
-                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto" Margin="2,0,2,0">
-                            <ComboBox x:Name="InstanceCombo1"
-                                      MinWidth="100"
-                                      HorizontalAlignment="Left"
-                                      VerticalAlignment="Center"
-                                      Margin="0,0,6,0"
-                                      SelectionChanged="OnInstanceSelectionChanged" />
-                            <Button x:Name="InstanceActionButton1"
-                                    Grid.Column="1"
-                                    Theme="{StaticResource FlatButton}"
-                                    Content="…"
-                                    Padding="8,4"
-                                    MinWidth="30"
-                                    MinHeight="28"
-                                    Margin="0,0,6,0"
-                                    VerticalAlignment="Center"
-                                    Click="OnInstanceActionsClick" />
-                            <Button x:Name="ModpackButton1"
-                                    Grid.Column="2"
-                                    Theme="{StaticResource FlatButton}"
-                                    Padding="10,4"
-                                    MinHeight="28"
-                                    Margin="0,0,10,0"
-                                    VerticalAlignment="Center"
-                                    Click="OnModpack1Click" />
-                            <TextBlock x:Name="ActiveHeader1"
-                                       Grid.Column="3"
-                                       Foreground="{DynamicResource PrimaryTextBrush}"
-                                       HorizontalAlignment="Right"
-                                       VerticalAlignment="Center" />
+                    <Grid RowDefinitions="Auto,30,*,Auto">
+                        <Grid Grid.Row="0" RowDefinitions="34,30" Margin="2,0,2,4">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <ComboBox x:Name="InstanceCombo1"
+                                          MinWidth="0"
+                                          FontWeight="SemiBold"
+                                          HorizontalAlignment="Stretch"
+                                          VerticalAlignment="Center"
+                                          SelectionChanged="OnInstanceSelectionChanged" />
+                                <Border x:Name="SameListBadge1"
+                                        Grid.Column="1"
+                                        BorderBrush="{DynamicResource SecondaryTextBrush}"
+                                        BorderThickness="1"
+                                        Padding="6,2"
+                                        Margin="8,0,0,0"
+                                        VerticalAlignment="Center"
+                                        IsVisible="False">
+                                    <TextBlock Foreground="{DynamicResource SecondaryTextBrush}"
+                                               FontSize="12" />
+                                </Border>
+                            </Grid>
+                            <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*">
+                                <Button x:Name="InstanceActionButton1"
+                                        Theme="{StaticResource FlatButton}"
+                                        Content="…"
+                                        Padding="8,4"
+                                        MinWidth="30"
+                                        MinHeight="28"
+                                        Margin="0,0,6,0"
+                                        VerticalAlignment="Center"
+                                        Click="OnInstanceActionsClick" />
+                                <Button x:Name="ModpackButton1"
+                                        Grid.Column="1"
+                                        Theme="{StaticResource FlatButton}"
+                                        Padding="10,4"
+                                        MinHeight="28"
+                                        Margin="0,0,10,0"
+                                        VerticalAlignment="Center"
+                                        Click="OnModpack1Click" />
+                                <TextBlock x:Name="ActiveHeader1"
+                                           Grid.Column="2"
+                                           Foreground="{DynamicResource PrimaryTextBrush}"
+                                           HorizontalAlignment="Right"
+                                           VerticalAlignment="Center" />
+                            </Grid>
                         </Grid>
                         <Grid Grid.Row="1"
                               ColumnDefinitions="*,Auto,Auto,Auto"
@@ -382,37 +396,51 @@
                         BorderBrush="{StaticResource SecondaryBrush}"
                         BorderThickness="1"
                         Padding="8">
-                    <Grid RowDefinitions="34,30,*,Auto">
-                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto" Margin="2,0,2,0">
-                            <ComboBox x:Name="InstanceCombo2"
-                                      MinWidth="100"
-                                      HorizontalAlignment="Left"
-                                      VerticalAlignment="Center"
-                                      Margin="0,0,6,0"
-                                      SelectionChanged="OnInstanceSelectionChanged" />
-                            <Button x:Name="InstanceActionButton2"
-                                    Grid.Column="1"
-                                    Theme="{StaticResource FlatButton}"
-                                    Content="…"
-                                    Padding="8,4"
-                                    MinWidth="30"
-                                    MinHeight="28"
-                                    Margin="0,0,6,0"
-                                    VerticalAlignment="Center"
-                                    Click="OnInstanceActionsClick" />
-                            <Button x:Name="ModpackButton2"
-                                    Grid.Column="2"
-                                    Theme="{StaticResource FlatButton}"
-                                    Padding="10,4"
-                                    MinHeight="28"
-                                    Margin="0,0,10,0"
-                                    VerticalAlignment="Center"
-                                    Click="OnModpack2Click" />
-                            <TextBlock x:Name="ActiveHeader2"
-                                       Grid.Column="3"
-                                       Foreground="{DynamicResource PrimaryTextBrush}"
-                                       HorizontalAlignment="Right"
-                                       VerticalAlignment="Center" />
+                    <Grid RowDefinitions="Auto,30,*,Auto">
+                        <Grid Grid.Row="0" RowDefinitions="34,30" Margin="2,0,2,4">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <ComboBox x:Name="InstanceCombo2"
+                                          MinWidth="0"
+                                          FontWeight="SemiBold"
+                                          HorizontalAlignment="Stretch"
+                                          VerticalAlignment="Center"
+                                          SelectionChanged="OnInstanceSelectionChanged" />
+                                <Border x:Name="SameListBadge2"
+                                        Grid.Column="1"
+                                        BorderBrush="{DynamicResource SecondaryTextBrush}"
+                                        BorderThickness="1"
+                                        Padding="6,2"
+                                        Margin="8,0,0,0"
+                                        VerticalAlignment="Center"
+                                        IsVisible="False">
+                                    <TextBlock Foreground="{DynamicResource SecondaryTextBrush}"
+                                               FontSize="12" />
+                                </Border>
+                            </Grid>
+                            <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*">
+                                <Button x:Name="InstanceActionButton2"
+                                        Theme="{StaticResource FlatButton}"
+                                        Content="…"
+                                        Padding="8,4"
+                                        MinWidth="30"
+                                        MinHeight="28"
+                                        Margin="0,0,6,0"
+                                        VerticalAlignment="Center"
+                                        Click="OnInstanceActionsClick" />
+                                <Button x:Name="ModpackButton2"
+                                        Grid.Column="1"
+                                        Theme="{StaticResource FlatButton}"
+                                        Padding="10,4"
+                                        MinHeight="28"
+                                        Margin="0,0,10,0"
+                                        VerticalAlignment="Center"
+                                        Click="OnModpack2Click" />
+                                <TextBlock x:Name="ActiveHeader2"
+                                           Grid.Column="2"
+                                           Foreground="{DynamicResource PrimaryTextBrush}"
+                                           HorizontalAlignment="Right"
+                                           VerticalAlignment="Center" />
+                            </Grid>
                         </Grid>
                         <Grid Grid.Row="1"
                               ColumnDefinitions="*,Auto,Auto,Auto"
@@ -526,9 +554,13 @@
                 <Button x:Name="LaunchButton"
                         Theme="{StaticResource FlatButton}"
                         MinHeight="36"
+                        MaxWidth="300"
                         Padding="24,8"
                         IsEnabled="False"
-                        Click="OnLaunchClick" />
+                        Click="OnLaunchClick">
+                    <TextBlock x:Name="LaunchTargetText"
+                               TextTrimming="CharacterEllipsis" />
+                </Button>
             </StackPanel>
         </Grid>
 
@@ -536,18 +568,32 @@
                 Grid.RowSpan="3"
                 IsHitTestVisible="False"
                 Background="Transparent">
+            <Border x:Name="DropTargetOutline"
+                    BorderBrush="{DynamicResource PrimaryTextBrush}"
+                    BorderThickness="2"
+                    IsVisible="False" />
             <Border x:Name="InsertionLine"
                     Height="2"
                     Background="{DynamicResource PrimaryTextBrush}"
                     IsVisible="False" />
             <Border x:Name="DragGhost"
-                    Background="#B3455364"
+                    Background="{DynamicResource AppBackgroundBrush}"
+                    BorderBrush="{DynamicResource SecondaryTextBrush}"
+                    BorderThickness="1"
                     Padding="10,6"
                     Width="240"
                     IsVisible="False">
-                <TextBlock x:Name="DragGhostText"
+                <StackPanel Spacing="4">
+                    <TextBlock x:Name="DragGhostAction"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource PrimaryTextBrush}"
+                               TextTrimming="CharacterEllipsis"
+                               IsVisible="False" />
+                    <TextBlock x:Name="DragGhostText"
                            Foreground="{DynamicResource PrimaryTextBrush}"
+                           MaxHeight="100"
                            TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
             </Border>
         </Canvas>
 

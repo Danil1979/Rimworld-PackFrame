@@ -26,7 +26,8 @@ public partial class ModpackWindow
         bind.IsEnabled = !_busy;
         var restore = Find<Button>("RestoreUpdateButton");
         restore.Content = T("Restore previous update", "恢复上次更新", "還原上次更新", "前回の更新を復元");
-        restore.IsVisible = valid && PackUpdateService.CanRestore(_currentInstance!); restore.IsEnabled = !_busy;
+        restore.IsVisible = valid && PackUpdateService.CanRestore(_currentInstance!);
+        restore.IsEnabled = !_busy && _detailCancellation is null;
         Find<TextBlock>("UpdateVersionText").Text = match
             ? T("Installed: ", "已安装：", "已安裝：", "インストール済み: ") +
                 (_currentInstance!.Metadata?.InstalledVersion ?? _currentInstance.Metadata?.InstalledRevision?.ToString() ?? "?")
@@ -48,6 +49,7 @@ public partial class ModpackWindow
     private async void OnBindPackClick(object? sender, RoutedEventArgs e)
     {
         if (!CanChangeInstance() || _selectedPack is null) return;
+        var selectedPack = _selectedPack;
         var alreadyBound = !string.IsNullOrWhiteSpace(_currentInstance?.Metadata?.PackSource);
         var confirm = new ConfirmWindow(alreadyBound
             ? T("This instance is already linked to another pack. Replace the binding? Existing files remain unowned; update conflicts will be asked.",
@@ -58,9 +60,16 @@ public partial class ModpackWindow
                 "关联当前实例？现有文件不会自动归属合集，更新时有冲突会询问。", "關聯目前實例？現有檔案不會自動歸屬合集，衝突時會詢問。",
                 "このインスタンスを関連付けますか？既存ファイルの競合は確認されます。"),
             T("Link", "关联", "關聯", "関連付け"), Localization.CancelButton(_language));
-        if (!await confirm.ShowDialog<bool>(this)) return;
-        try { PackUpdateService.BindLegacy(_currentInstance!, _selectedPack); ConfigApplied = true; RefreshUpdateControls(); }
+        _busy = true;
+        SetControls(false);
+        try
+        {
+            if (!await confirm.ShowDialog<bool>(this) || _closed) return;
+            PackUpdateService.BindLegacy(_currentInstance!, selectedPack);
+            ConfigApplied = true;
+        }
         catch (Exception exception) { Find<TextBlock>("StatusText").Text = exception.Message; }
+        finally { _busy = false; if (!_closed) SetControls(true); }
     }
 
     private async void OnCheckUpdateClick(object? sender, RoutedEventArgs e)
