@@ -1636,10 +1636,10 @@ public static class Localization
     {
         return language switch
         {
-            SimplifiedChinese => "安装并创建实例\n正版",
-            TraditionalChinese => "安裝並建立實例\n正版",
-            Japanese => "インスタンスを作成\n正規版",
-            _ => "Install and create instance\nLicensed"
+            SimplifiedChinese => "正版\n（下载为新的排序）",
+            TraditionalChinese => "正版\n（下載為新的排序）",
+            Japanese => "正規版\n（新しい並び順としてダウンロード）",
+            _ => "Licensed\n(Download as a new load order)"
         };
     }
 
@@ -1713,10 +1713,10 @@ public static class Localization
     {
         return language switch
         {
-            SimplifiedChinese => "下载配置和排序到当前实例\n重置配置和排序",
-            TraditionalChinese => "下載設定與排序到目前實例\n重置設定和排序",
-            Japanese => "設定と並び順を現在のインスタンスへ\nリセット",
-            _ => "Download config and load order to instance\nReset config and load order"
+            SimplifiedChinese => "重新读取排序\n（复原当前的排序和设置）",
+            TraditionalChinese => "重新讀取排序\n（復原目前的排序和設定）",
+            Japanese => "並び順を再読み込み\n（現在の並び順と設定をリセット）",
+            _ => "Reload load order\n(Reset the current load order and settings)"
         };
     }
 
@@ -1724,10 +1724,10 @@ public static class Localization
     {
         return language switch
         {
-            SimplifiedChinese => "SteamCMD 下载并创建实例\n无正版",
-            TraditionalChinese => "SteamCMD 下載並建立實例\n無正版",
-            Japanese => "SteamCMD でダウンロードして作成\n非正規版",
-            _ => "SteamCMD download and create\nNo license"
+            SimplifiedChinese => "盗版\n（下载为新的排序）",
+            TraditionalChinese => "盜版\n（下載為新的排序）",
+            Japanese => "非正規版\n（新しい並び順としてダウンロード）",
+            _ => "Unlicensed\n(Download as a new load order)"
         };
     }
 
@@ -1735,10 +1735,10 @@ public static class Localization
     {
         return language switch
         {
-            SimplifiedChinese => "只下载合集、配置和排序\n手动把本地模组放到\n该实例下的Mods目录",
-            TraditionalChinese => "只下載合集、設定和排序\n手動把本地模組放到\n該實例下的Mods目錄",
-            Japanese => "コレクション・設定・並び順のみ\nローカルMODは\n該当インスタンスのModsへ手動配置",
-            _ => "Collection, config and order only\nPlace local mods in\nthis instance's Mods folder manually"
+            SimplifiedChinese => "正版\n（下载为新的排序，但是不下载本地模组）",
+            TraditionalChinese => "正版\n（下載為新的排序，但不下載本地模組）",
+            Japanese => "正規版\n（新しい並び順としてダウンロード、ローカルMODを除く）",
+            _ => "Licensed\n(Download as a new load order without local mods)"
         };
     }
 
