@@ -137,6 +137,7 @@ public partial class MainWindow : Window
     private readonly Popup _modBadgePopup;
     private Control? _problemTooltipTarget;
     private bool _problemTooltipContentHovered;
+    private IPointer? _problemTooltipPointer;
 
     private const string ScratchFolderName = "__scratch__";
     private List<ModInfo> _allMods = new();
@@ -355,9 +356,10 @@ public partial class MainWindow : Window
         LogicalChildren.Add(_modBadgePopup);
         _problemTooltipTimer.Tick += (_, _) =>
         {
-            _problemTooltipTimer.Stop();
+            // Retry while dragging or a nested copy menu temporarily prevents closing.
             if (!_problemTooltipContentHovered &&
-                _modBadgePopup.Child?.IsKeyboardFocusWithin != true &&
+                (_problemTooltipPointer?.Captured is not Visual captured ||
+                 !captured.GetSelfAndVisualAncestors().Contains(_modBadgePopup.Child)) &&
                 _modBadgePopup.OpenedPopups.Count == 0)
             {
                 CloseProblemTooltip();
@@ -1451,11 +1453,12 @@ public partial class MainWindow : Window
             _problemTooltipContentHovered = true;
             _problemTooltipTimer.Stop();
         };
-        content.PointerExited += (_, _) =>
+        content.PointerExited += (_, e) =>
         {
             if (ReferenceEquals(_problemTooltipTarget, target))
             {
                 _problemTooltipContentHovered = false;
+                _problemTooltipPointer = e.Pointer;
                 StartProblemTooltipCloseTimer();
             }
         };
@@ -1611,12 +1614,6 @@ public partial class MainWindow : Window
         };
         copyItem.Click += (_, _) => body.Copy();
         copyMenu.Items.Add(copyItem);
-        copyMenu.Opened += (_, _) =>
-        {
-            _problemTooltipContentHovered = true;
-            _problemTooltipTimer.Stop();
-        };
-        copyMenu.Closed += (_, _) => _problemTooltipContentHovered = false;
         body.ContextMenu = copyMenu;
         content.Children.Add(body);
 
@@ -1769,6 +1766,7 @@ public partial class MainWindow : Window
 
         _problemTooltipTarget = null;
         _problemTooltipContentHovered = false;
+        _problemTooltipPointer = null;
     }
 
     private List<MissingModRow> BuildMissingMods(int instanceIndex)
