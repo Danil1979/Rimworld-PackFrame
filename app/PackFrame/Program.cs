@@ -8,6 +8,11 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        if (AppUpdateService.TryRunHelper(args))
+        {
+            return;
+        }
+
         if (SteamWorkshopClient.TryRunHelper(args))
         {
             return;

@@ -12,6 +12,7 @@ public sealed class AppConfig
     public string? OfficialConfigPath { get; set; }
     public string? ProfileFolder1 { get; set; }
     public string? ProfileFolder2 { get; set; }
+    public bool ShowSecondaryPane { get; set; }
     public List<string> ProfileOrder { get; set; } = new();
     public string? ModpackIndexUrl { get; set; }
     public string? BackgroundColor { get; set; }

@@ -14,8 +14,10 @@ cross-instance recovery, broken-link cleanup, ownership checks, preparation
 rollback, color-cache invalidation, and corrupt-configuration diagnostics.
 The tests call the application's internal implementations through
 `InternalsVisibleTo`, rather than compiling separate copies of production files.
-List tests cover contiguous/noncontiguous moves, insertion boundaries,
-case-insensitive deduplication, two-instance undo/redo, and missing undo targets.
+List tests cover contiguous/noncontiguous moves, insertion boundaries and previews,
+case-insensitive deduplication, true load-order positions through filtering and
+missing entries, pane selection restoration, two-instance undo/redo, and missing
+undo targets.
 Launch tests inspect arguments without launching RimWorld; installer tests use
 temporary mod/config files without downloading anything.
 Catalog checks use an injected HTTP handler to cover offline bundled startup,
@@ -31,6 +33,18 @@ color snapshots and failed color writes. Linux/macOS CI additionally constructs
 a tar.gz and checks executable permissions through the actual SteamCMD extractor.
 
 Manual platform checks:
+
+- App update checks must only offer published release information. Opening the
+  offer must not download, close or restart PackFrame. Download, Later and Install
+  and restart are separate choices; closing/cancelling during download keeps the
+  running installation intact. A deferred verified download should be reused.
+- Cancelling unsaved changes before update installation keeps PackFrame open.
+  Only an explicit install followed by the main window's actual close may commit
+  the helper. Verify update success/failure receipts using an isolated installation,
+  and preserve its settings, instances, saves and mods. Never test replacement
+  against a player's running installation.
+- The unsaved-changes prompt should fit its wrapped message and buttons without
+  the fixed blank area below. Escape cancels; Tab reaches each action.
 
 - Open Modpacks with no saved catalog and a slow/offline connection: the three
   bundled entries should appear immediately and remain selectable during the
@@ -48,18 +62,23 @@ Manual platform checks:
   Workshop collection changed, an auto-filled link must follow the fresh pack;
   explicitly edited links remain overrides. Refresh-and-resume must retain the
   original installation target while a newer catalog waits in the background.
+- Start with settings that have no saved layout: only one enabled pane appears.
+  Select several mods, click its header's "Open on right" action, and confirm the
+  same instance opens on the right with search focused and the left selection intact.
 - Select the same instance in both enabled panes: both show "Same list", with
   independent search and scroll positions. Select different instances (including
   instances with identical display names): the badges disappear. Change language
   and confirm the badges and launch target are translated.
 - Drag within a list or between views of the same instance: the destination is
-  outlined, the ghost says "Move here", and the insertion line follows the drop
-  position. Drag between different instances: it says "Add to <name>" and leaves
-  the source intact. Drag to the inactive pane: it says "Disable in <name>".
+  outlined, the ghost names the mod before/after the insertion point, and the
+  insertion line follows the drop position. A drop that changes nothing says
+  "Already here". Drag between different instances: it says "Add to <name>",
+  "Reorder in <name>", or "Add and reorder in <name>" depending on existing mods,
+  and leaves the source intact. Drag to the inactive pane: it says "Disable in <name>".
   Leaving a valid list, releasing the pointer, or losing pointer capture must
   clear the destination outline and action label.
-- Click either enabled pane and change its instance: the launch button names that
-  target. Check long names at the minimum window width; the complete launch name
+- Click either enabled pane and change its instance: its header is highlighted
+  and the launch button names that target. Check long names at the minimum window width; the complete launch name
   remains available in its tooltip and accessible name.
 - Drag a contiguous selection within itself, move a noncontiguous selection to
   the beginning/end, drag between two profiles, and copy into a profile that
@@ -70,11 +89,30 @@ Manual platform checks:
   insertion with a search filter. These event/coordinate paths remain in the UI.
 
 - Search quickly in each column: only that column should rebuild after 180ms;
-  other columns clear selection without rebuilding. Details and keyboard actions
+  other columns retain selection and scroll position without rebuilding. Visible
+  selected rows in the searched column remain selected; hidden selections are
+  cleared safely. Details and keyboard actions
   must target the searched column; zero results must clear details. Switch the target instance and search
   again to check the inactive list uses the new target.
 - Select mods rapidly: the preview must match the latest selection, including
   switching to a mod without an image. Close while an image is loading.
+
+- Select several mods in the left enabled pane, search in the right pane, then
+  drag the original selection to a distant destination. Repeat with different
+  instances. Extend and shrink a range with repeated Shift+Down/Up, then visit the
+  other pane and return. Check Shift/Ctrl anchors survive and Delete,
+  double-click, color actions and context menus affect only their current pane.
+- Filter an enabled list and verify each number stays its full load-order position,
+  including gaps for missing entries. Reorder and undo: both views must renumber
+  consistently without resetting their independent positions. Gutter width must
+  remain stable during filtering, including three/four-digit orders. Status badges
+  stay at the right edge; hover them to check the same details and actions.
+- Close the second enabled pane using its header control while it is the
+  enable/launch target: the target and header highlight must return to the visible
+  pane. Open the same instance on the right again: its search and scroll position
+  remain intact. Open a different left instance on the right: the previous right
+  search is cleared. Reopen the app and check the saved layout preference.
+  Hidden panes must not receive keyboard actions or drag targets.
 - Errors are recorded in `app/PackFrame/bin/Release/net10.0/packframe.log` in the
   local launcher layout, with one rotated `.1` file after 2 MB.
 

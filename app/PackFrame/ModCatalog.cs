@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -70,6 +71,12 @@ public sealed record ModInfo(
     }
 
     public bool IsLocal => Source == ModSource.Local;
+    public int? LoadOrder { get; init; }
+    public double LoadOrderGutterWidth { get; init; }
+    public bool HasLoadOrder => LoadOrder is > 0;
+    public string LoadOrderText => LoadOrder is > 0
+        ? LoadOrder.Value.ToString(CultureInfo.InvariantCulture)
+        : string.Empty;
     public bool IsProfileMods { get; init; }
     public string? ProfileFolder { get; init; }
     public bool SearchMatched { get; set; } = true;

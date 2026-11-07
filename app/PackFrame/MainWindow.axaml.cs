@@ -112,6 +112,8 @@ public partial class MainWindow : Window
     private readonly ListBox _activeList2;
     private readonly Border _activeColumn1;
     private readonly Border _activeColumn2;
+    private readonly Border _activePaneHeader1;
+    private readonly Border _activePaneHeader2;
     private readonly SelectableTextBlock _nameLabel;
     private readonly SelectableTextBlock _authorLabel;
     private readonly SelectableTextBlock _pathLabel;
@@ -302,6 +304,8 @@ public partial class MainWindow : Window
         _activeList2 = Find<ListBox>("ActiveList2");
         _activeColumn1 = Find<Border>("ActiveColumn1");
         _activeColumn2 = Find<Border>("ActiveColumn2");
+        _activePaneHeader1 = Find<Border>("ActivePaneHeader1");
+        _activePaneHeader2 = Find<Border>("ActivePaneHeader2");
         _nameLabel = Find<SelectableTextBlock>("NameLabel");
         _authorLabel = Find<SelectableTextBlock>("AuthorLabel");
         _pathLabel = Find<SelectableTextBlock>("PathLabel");
@@ -421,6 +425,8 @@ public partial class MainWindow : Window
         );
 
         _packRoot = AppPaths.FindPackRoot();
+        InitializePaneSelection();
+        InitializePaneNavigation();
         ApplyLocalization();
         UpdateEnableTargetBorders();
         UpdateUndoButton();
@@ -527,6 +533,7 @@ public partial class MainWindow : Window
 
         Opened += (_, _) =>
         {
+            ShowAppUpdateResult();
             var indexUrl = ModpackService.StartupIndexUrl(_config.ModpackIndexUrl);
             _ = Task.Run(async () =>
             {
@@ -797,9 +804,7 @@ public partial class MainWindow : Window
                 return;
             }
 
-            var list = _lastPressList ??
-                       GetModLists().FirstOrDefault(item => item.IsKeyboardFocusWithin) ??
-                       _selectionAnchorList;
+            var list = GetCommandList();
             if (list is not null)
             {
                 MoveModSelection(
@@ -821,9 +826,7 @@ public partial class MainWindow : Window
                 return;
             }
 
-            var list = _lastPressList ??
-                       GetModLists().FirstOrDefault(item => item.IsKeyboardFocusWithin) ??
-                       _selectionAnchorList;
+            var list = GetCommandList();
             if (list is not null)
             {
                 MoveModsOnDoubleClick(list);
@@ -2435,6 +2438,13 @@ public partial class MainWindow : Window
 
     private void ResetCatalog()
     {
+        _paneScopes.Clear();
+        _paneAnchors.Clear();
+        _paneRangeEnds.Clear();
+        _paneRestoreVersions.Clear();
+        _selectionAnchorList = null;
+        _selectionAnchorIndex = -1;
+        _activeSelectionList = null;
         foreach (var timer in _searchTimers.Values) timer.Stop();
         _searchSources.Clear();
         _allMods = new List<ModInfo>();
@@ -2550,13 +2560,9 @@ public partial class MainWindow : Window
         active2 = ApplyModColors(active2, colorData);
 
         _refreshing = true;
-        foreach (var list in GetModLists())
-        {
-            list.SelectedItems!.Clear();
-        }
-        _inactiveList.ItemsSource = inactive;
-        _activeList1.ItemsSource = active1;
-        _activeList2.ItemsSource = active2;
+        ReplacePaneItems(_inactiveList, inactive, PaneInstanceScope(targetInstance));
+        ReplacePaneItems(_activeList1, active1, PaneInstanceScope(instance1));
+        ReplacePaneItems(_activeList2, active2, PaneInstanceScope(instance2));
         _refreshing = false;
 
         _inactiveCount = inactive.Count;
@@ -2599,6 +2605,12 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (GetCommandList()?.SelectedItem is ModInfo retained)
+        {
+            ShowDetails(retained);
+            return;
+        }
+
         var first = inactive.FirstOrDefault()
             ?? active1.FirstOrDefault()
             ?? active2.FirstOrDefault();
@@ -2622,11 +2634,15 @@ public partial class MainWindow : Window
             _activeList2.SelectedItem = first;
         }
         _refreshing = false;
+        var selectedList = inactive.Contains(first) ? _inactiveList : active1.Contains(first) ? _activeList1 : _activeList2;
+        SetPaneInteractionContext(selectedList);
+        SetPaneAnchor(selectedList, selectedList.SelectedIndex);
         ShowDetails(first);
     }
 
     private void OnSearchTextChanged(ModSearchState state, string? text, ListBox list)
     {
+        SetPaneInteractionContext(list);
         state.Query = text ?? string.Empty;
         if (_allMods.Count == 0)
         {
@@ -2663,6 +2679,9 @@ public partial class MainWindow : Window
 
     private void RefreshSearch(ListBox list)
     {
+        if (!list.IsEffectivelyVisible) return;
+        var ownsContext = ReferenceEquals(_activeSelectionList, list) || list.IsKeyboardFocusWithin;
+        if (ownsContext) SetPaneInteractionContext(list);
         if (_searchTimers.TryGetValue(list, out var timer)) timer.Stop();
         if (!_searchSources.TryGetValue(list, out var source))
         {
@@ -2676,17 +2695,9 @@ public partial class MainWindow : Window
         var matches = PrepareSearchList(source, state);
         if (inactive) matches = SortInactive(matches);
         var visible = ApplyModColors(ApplyProblemFilters(matches, filter), ModColorStore.Load(_packRoot));
-        var selectedId = (list.SelectedItem as ModInfo)?.PackageId;
         _refreshing = true;
-        // Search becomes the active selection context, as with clicking a different column.
-        foreach (var other in GetModLists())
-            if (!ReferenceEquals(other, list)) other.SelectedItems!.Clear();
-        list.ItemsSource = visible;
-        var first = visible.FirstOrDefault(mod => mod.PackageId == selectedId) ?? visible.FirstOrDefault();
-        list.SelectedItem = first;
-        _selectionAnchorList = list;
-        _selectionAnchorIndex = first is null ? -1 : visible.IndexOf(first);
-        _lastPressList = list;
+        ReplacePaneItems(list, visible, _paneScopes.GetValueOrDefault(list), selectFirst: true);
+        var first = list.SelectedItem as ModInfo;
         _refreshing = false;
         if (inactive) _inactiveCount = visible.Count;
         else if (firstColumn) _active1Count = visible.Count;
@@ -2696,7 +2707,7 @@ public partial class MainWindow : Window
             inactive ? null : firstColumn ? _activeProblemS1 : _activeProblemS2,
             inactive ? _inactiveProblemV : firstColumn ? _activeProblemV1 : _activeProblemV2,
             inactive ? _inactiveProblemR : firstColumn ? _activeProblemR1 : _activeProblemR2, matches);
-        ShowDetails(first);
+        if (ownsContext) ShowDetails(first);
     }
 
     private void OnInactiveSourceClick(object? sender, RoutedEventArgs e)
@@ -2762,11 +2773,6 @@ public partial class MainWindow : Window
         ListBox list
     )
     {
-        var selectedIds = GetSelectedMods(list)
-            .Select(mod => mod.PackageId)
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
         state.HideUnmatched = !state.HideUnmatched;
         UpdateViewModeButton(button, state, _config.Language);
         if (_allMods.Count == 0)
@@ -2774,53 +2780,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        RefreshManager(false);
-        RestoreSearchSelection(list, selectedIds);
-    }
-
-    private void RestoreSearchSelection(
-        ListBox list,
-        IReadOnlyList<string> selectedIds
-    )
-    {
-        var items = list.Items.Cast<ModInfo>().ToList();
-        var selected = selectedIds
-            .Select(id => items.FirstOrDefault(mod => string.Equals(
-                mod.PackageId,
-                id,
-                StringComparison.OrdinalIgnoreCase
-            )))
-            .Where(mod => mod is not null)
-            .Select(mod => mod!)
-            .ToList();
-        if (selected.Count == 0)
-        {
-            ShowDetails(null);
-            return;
-        }
-
-        _refreshing = true;
-        foreach (var other in GetModLists())
-        {
-            other.SelectedItems!.Clear();
-        }
-
-        var autoScroll = list.AutoScrollToSelectedItem;
-        list.AutoScrollToSelectedItem = false;
-        foreach (var mod in selected)
-        {
-            list.SelectedItems!.Add(mod);
-        }
-        list.AutoScrollToSelectedItem = autoScroll;
-        _selectionAnchorList = list;
-        _selectionAnchorIndex = items.IndexOf(selected[0]);
-        _refreshing = false;
-
-        Dispatcher.UIThread.Post(
-            () => list.ScrollIntoView(selected[0]),
-            DispatcherPriority.Loaded
-        );
-        ShowDetails(selected[0]);
+        RefreshSearch(list);
     }
 
     private void UpdateViewModeButton(
@@ -3423,15 +3383,9 @@ public partial class MainWindow : Window
         Vector activeOffset2
     )
     {
-        void RestoreOffsets()
-        {
-            SetListScrollOffset(_inactiveList, inactiveOffset);
-            SetListScrollOffset(_activeList1, activeOffset1);
-            SetListScrollOffset(_activeList2, activeOffset2);
-        }
-
-        Dispatcher.UIThread.Post(RestoreOffsets, DispatcherPriority.Loaded);
-        Dispatcher.UIThread.Post(RestoreOffsets, DispatcherPriority.Background);
+        QueuePaneScrollRestore(_inactiveList, inactiveOffset);
+        QueuePaneScrollRestore(_activeList1, activeOffset1);
+        QueuePaneScrollRestore(_activeList2, activeOffset2);
     }
 
     private static Vector GetListScrollOffset(ListBox list)
@@ -3535,8 +3489,7 @@ public partial class MainWindow : Window
         inactive = ApplyModColors(inactive, ModColorStore.Load(_packRoot));
 
         _refreshing = true;
-        _inactiveList.ItemsSource = inactive;
-        _inactiveList.SelectedItem = null;
+        ReplacePaneItems(_inactiveList, inactive, PaneInstanceScope(targetInstance));
         _refreshing = false;
         _inactiveCount = inactive.Count;
         UpdateHeaders();
@@ -3619,7 +3572,7 @@ public partial class MainWindow : Window
             }
         }
 
-        return active;
+        return ModListOperations.WithLoadOrder(active, instance.ActivePackageIds);
     }
 
     private ModInfo? SelectModForInstance(string packageId, ManagedInstance? instance)
@@ -3871,6 +3824,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        SetPaneInteractionContext(list);
         var mod = list.SelectedItems!.Cast<ModInfo>().LastOrDefault();
         if (mod is not null)
         {
@@ -3913,10 +3867,12 @@ public partial class MainWindow : Window
     private void SelectMovedMods(int targetColumn, IReadOnlyCollection<string> selectedIds)
     {
         var list = GetModListForColumn(targetColumn);
-        if (list is null)
+        if (list is null || !list.IsEffectivelyVisible)
         {
             return;
         }
+
+        InvalidatePaneScrollRestore(list);
 
         var selectedSet = new HashSet<string>(selectedIds, StringComparer.OrdinalIgnoreCase);
         var items = list.Items.Cast<ModInfo>().ToList();
@@ -3926,11 +3882,10 @@ public partial class MainWindow : Window
             return;
         }
 
+        SetPaneInteractionContext(list);
+
         _refreshing = true;
-        foreach (var other in GetModLists())
-        {
-            other.SelectedItems!.Clear();
-        }
+        list.SelectedItems!.Clear();
 
         var selection = list.Selection;
         selection.BeginBatchUpdate();
@@ -3950,8 +3905,7 @@ public partial class MainWindow : Window
             selection.EndBatchUpdate();
         }
 
-        _selectionAnchorList = list;
-        _selectionAnchorIndex = items.IndexOf(moved[0]);
+        SetPaneAnchor(list, items.IndexOf(moved[0]));
         _lastPressList = list;
         _refreshing = false;
         list.Focus();
@@ -4031,6 +3985,7 @@ public partial class MainWindow : Window
         }
 
         var column = ReferenceEquals(border, _activeColumn1) ? 1 : 2;
+        SetPaneInteractionContext(column == 1 ? _activeList1 : _activeList2);
         if (column == 1 && GetSelectedInstance(0)?.IsScratch == true)
         {
             var officialIndex = _instances.FindIndex(instance =>
@@ -4085,12 +4040,19 @@ public partial class MainWindow : Window
 
     private void UpdateEnableTargetBorders()
     {
+        if (!_config.ShowSecondaryPane && _lastEnableColumn == 2) _lastEnableColumn = 1;
         _activeColumn1.BorderBrush = _lastEnableColumn == 1
             ? TextBrush
             : SecondaryBorderBrush;
         _activeColumn2.BorderBrush = _lastEnableColumn == 2
             ? TextBrush
             : SecondaryBorderBrush;
+        foreach (var (header, active) in new[]
+                 { (_activePaneHeader1, _lastEnableColumn == 1), (_activePaneHeader2, _lastEnableColumn == 2) })
+        {
+            if (active) header.Classes.Add("enable-target");
+            else header.Classes.Remove("enable-target");
+        }
         UpdateLaunchButton();
     }
 
@@ -4409,58 +4371,25 @@ public partial class MainWindow : Window
 
     private void MoveModSelection(ListBox list, int direction, bool shift)
     {
+        InvalidatePaneScrollRestore(list);
+        SetPaneInteractionContext(list);
         if (list.ItemCount == 0)
         {
             return;
         }
 
-        var current = list.SelectedIndex;
+        var current = GetPaneRangeEnd(list);
         if (current < 0 && ReferenceEquals(_selectionAnchorList, list))
         {
             current = _selectionAnchorIndex;
         }
 
-        var next = current < 0
-            ? direction > 0 ? 0 : list.ItemCount - 1
-            : Math.Clamp(current + direction, 0, list.ItemCount - 1);
-        var nextItem = list.Items[next];
-        if (nextItem is null)
-        {
-            return;
-        }
-
         _refreshing = true;
-        foreach (var other in GetModLists())
-        {
-            if (other != list)
-            {
-                other.SelectedItems!.Clear();
-            }
-        }
-
-        if (shift && ReferenceEquals(_selectionAnchorList, list) && _selectionAnchorIndex >= 0)
-        {
-            var start = Math.Min(_selectionAnchorIndex, next);
-            var end = Math.Max(_selectionAnchorIndex, next);
-            var selection = list.Selection;
-            selection.BeginBatchUpdate();
-            try
-            {
-                list.SelectedItems!.Clear();
-                selection.SelectRange(start, end);
-            }
-            finally
-            {
-                selection.EndBatchUpdate();
-            }
-        }
-        else
-        {
-            list.SelectedItems!.Clear();
-            list.SelectedItems!.Add(nextItem);
-            _selectionAnchorList = list;
-            _selectionAnchorIndex = next;
-        }
+        var extend = shift && ReferenceEquals(_selectionAnchorList, list) && _selectionAnchorIndex >= 0;
+        var next = PaneSelectionRange.Move(list, direction, extend, _selectionAnchorIndex, current);
+        var nextItem = list.Items[next]!;
+        if (extend) SetPaneRangeEnd(list, next);
+        else SetPaneAnchor(list, next);
 
         _lastPressList = list;
         _refreshing = false;
@@ -4479,6 +4408,9 @@ public partial class MainWindow : Window
         {
             return;
         }
+
+        InvalidatePaneScrollRestore(list);
+        SetPaneInteractionContext(list);
 
         _modBadgePopup.IsOpen = false;
         var point = e.GetCurrentPoint(list);
@@ -4577,44 +4509,10 @@ public partial class MainWindow : Window
         _pendingCollapseIndex = -1;
 
         _refreshing = true;
-        foreach (var other in GetModLists())
-        {
-            if (other != list)
-            {
-                other.SelectedItems!.Clear();
-            }
-        }
-
         if (shift && ReferenceEquals(_selectionAnchorList, list) && _selectionAnchorIndex >= 0)
         {
-            var start = Math.Min(_selectionAnchorIndex, index);
-            var end = Math.Max(_selectionAnchorIndex, index);
-            var selection = list.Selection;
-            var autoScroll = list.AutoScrollToSelectedItem;
-            list.AutoScrollToSelectedItem = false;
-            selection.BeginBatchUpdate();
-            try
-            {
-                if (!ctrl)
-                {
-                    list.SelectedItems!.Clear();
-                }
-
-                for (var rangeIndex = start; rangeIndex <= end; rangeIndex++)
-                {
-                    if (list.Items[rangeIndex] is ModInfo rangeMod &&
-                        !list.SelectedItems!.Contains(rangeMod))
-                    {
-                        list.SelectedItems!.Add(rangeMod);
-                    }
-                }
-            }
-            finally
-            {
-                selection.EndBatchUpdate();
-                list.AutoScrollToSelectedItem = autoScroll;
-            }
-
+            PaneSelectionRange.Select(list, _selectionAnchorIndex, index, additive: ctrl);
+            SetPaneRangeEnd(list, index);
             _rangeSelectionList = list;
             _rangeSelectionMods = GetSelectedMods(list);
         }
@@ -4629,8 +4527,7 @@ public partial class MainWindow : Window
                 list.SelectedItems!.Add(mod);
             }
 
-            _selectionAnchorList = list;
-            _selectionAnchorIndex = index;
+            SetPaneAnchor(list, index);
         }
         else
         {
@@ -4647,8 +4544,7 @@ public partial class MainWindow : Window
                 list.SelectedItems!.Add(mod);
             }
 
-            _selectionAnchorList = list;
-            _selectionAnchorIndex = index;
+            SetPaneAnchor(list, index);
         }
 
         if (pressedWasMulti && !shift && !ctrl)
@@ -4669,23 +4565,19 @@ public partial class MainWindow : Window
 
     private void SelectForContextMenu(ListBox list, ModInfo mod, int index)
     {
+        SetPaneInteractionContext(list);
         if (list.SelectedItems!.Contains(mod))
         {
-            _selectionAnchorList = list;
-            _selectionAnchorIndex = index;
+            SetPaneAnchor(list, index);
             ShowDetails(mod);
             return;
         }
 
         _refreshing = true;
-        foreach (var other in GetModLists())
-        {
-            other.SelectedItems!.Clear();
-        }
+        list.SelectedItems!.Clear();
         list.SelectedItems!.Add(mod);
         _refreshing = false;
-        _selectionAnchorList = list;
-        _selectionAnchorIndex = index;
+        SetPaneAnchor(list, index);
         ShowDetails(mod);
     }
 
@@ -4883,72 +4775,6 @@ public partial class MainWindow : Window
             "brown" => OperationText.Choose(_config.Language, "Brown", "暗棕", "暗棕", "ブラウン"),
             _ => OperationText.Choose(_config.Language, "Default", "默认", "默認", "デフォルト")
         };
-    }
-
-    private async void OnCheckUpdateClick(object? sender, RoutedEventArgs e)
-    {
-        if (_checkingUpdate)
-        {
-            return;
-        }
-
-        _checkingUpdate = true;
-        _checkUpdateButton.IsEnabled = false;
-        ShowToast(OperationText.Choose(
-            _config.Language,
-            "Checking for updates...",
-            "正在检查更新...",
-            "正在檢查更新...",
-            "更新を確認中..."
-        ));
-        try
-        {
-            var update = await UpdateService.CheckAsync();
-            if (update is null || !UpdateService.IsNewer(update.Tag))
-            {
-                ShowToast(OperationText.Choose(
-                    _config.Language,
-                    "You are using the latest version.",
-                    "当前已是最新版本。",
-                    "目前已是最新版本。",
-                    "最新バージョンです。"
-                ));
-                return;
-            }
-
-            var message = OperationText.Choose(
-                _config.Language,
-                "A new version is available: " + update.Tag + "\nOpen the download page?",
-                "发现新版本：" + update.Tag + "\n是否打开下载页面？",
-                "發現新版本：" + update.Tag + "\n是否開啟下載頁面？",
-                "新しいバージョンがあります：" + update.Tag + "\nダウンロードページを開きますか？"
-            );
-            var confirm = new ConfirmWindow(
-                message,
-                OperationText.Choose(_config.Language, "Download", "打开下载", "開啟下載", "ダウンロードを開く"),
-                Localization.CancelButton(_config.Language)
-            );
-            if (await confirm.ShowDialog<bool>(this))
-            {
-                OpenUrl(update.Url);
-            }
-        }
-        catch (Exception exception)
-        {
-            AppLog.Error("Check for updates", exception);
-            ShowToast(OperationText.Choose(
-                _config.Language,
-                "Update check failed: " + exception.Message,
-                "检查更新失败：" + exception.Message,
-                "檢查更新失敗：" + exception.Message,
-                "更新確認に失敗しました：" + exception.Message
-            ));
-        }
-        finally
-        {
-            _checkingUpdate = false;
-            _checkUpdateButton.IsEnabled = true;
-        }
     }
 
     private async void OnLogClick(object? sender, RoutedEventArgs e)
@@ -5209,14 +5035,8 @@ public partial class MainWindow : Window
 
     private void SelectForDoubleClick(ListBox list, int index, ModInfo mod)
     {
+        SetPaneInteractionContext(list);
         _refreshing = true;
-        foreach (var other in GetModLists())
-        {
-            if (other != list)
-            {
-                other.SelectedItems!.Clear();
-            }
-        }
 
         if (!list.SelectedItems!.Contains(mod))
         {
@@ -5224,8 +5044,7 @@ public partial class MainWindow : Window
             list.SelectedItems!.Add(mod);
         }
 
-        _selectionAnchorList = list;
-        _selectionAnchorIndex = index;
+        SetPaneAnchor(list, index);
         _pendingCollapseList = null;
         _pendingCollapseMod = null;
         _pendingCollapseIndex = -1;
@@ -5304,8 +5123,7 @@ public partial class MainWindow : Window
                 _refreshing = true;
                 _pendingCollapseList.SelectedItems!.Clear();
                 _pendingCollapseList.SelectedItems!.Add(_pendingCollapseMod);
-                _selectionAnchorList = _pendingCollapseList;
-                _selectionAnchorIndex = _pendingCollapseIndex;
+                SetPaneAnchor(_pendingCollapseList, _pendingCollapseIndex);
                 _refreshing = false;
                 ShowDetails(_pendingCollapseMod);
                 e.Handled = true;
@@ -5349,16 +5167,14 @@ public partial class MainWindow : Window
 
     private void OnModListPointerWheelChanged(object? sender, PointerWheelEventArgs e)
     {
-        if (!_customDragActive)
+        var target = GetTargetListAt(e) ?? sender as ListBox;
+        if (target is null || !target.IsEffectivelyVisible)
         {
             return;
         }
 
-        var target = GetTargetListAt(e) ?? sender as ListBox;
-        if (target is null)
-        {
-            return;
-        }
+        InvalidatePaneScrollRestore(target);
+        if (!_customDragActive) return;
 
         var viewer = target
             .GetVisualDescendants()
@@ -5472,14 +5288,21 @@ public partial class MainWindow : Window
         }
 
         var target = GetTargetListAt(e);
-        if (!UpdateModDragFeedback(target) || target is null)
+        if (target is null)
         {
+            ClearModDragFeedback();
             _insertionLine.IsVisible = false;
             return;
         }
 
         var position = e.GetPosition(target);
         var index = GetDropIndexAt(target, position);
+        var mappedIndex = MapDropIndexToActive(target, index);
+        if (!UpdateModDragFeedback(target, mappedIndex))
+        {
+            _insertionLine.IsVisible = false;
+            return;
+        }
         var targetTop = target.TranslatePoint(new Point(0, 0), _dragOverlay);
         if (targetTop is null)
         {
@@ -5528,6 +5351,7 @@ public partial class MainWindow : Window
     {
         foreach (var list in GetModLists())
         {
+            if (!list.IsEffectivelyVisible) continue;
             var position = e.GetPosition(list);
             if (position.X >= 0 &&
                 position.Y >= 0 &&

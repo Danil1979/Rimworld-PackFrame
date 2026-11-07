@@ -53,6 +53,7 @@ public partial class MainWindow
         var maximum = Math.Max(0, viewer.Extent.Height - viewer.Viewport.Height);
         var offset = Math.Clamp(viewer.Offset.Y + _autoScrollDirection * 24, 0, maximum);
         if (Math.Abs(offset - viewer.Offset.Y) < 0.5) return;
+        InvalidatePaneScrollRestore(_autoScrollList);
         viewer.Offset = new Vector(viewer.Offset.X, offset);
     }
 

@@ -16,6 +16,9 @@ namespace PackFrame;
 [JsonSerializable(typeof(ModpackDetailsDocument))]
 [JsonSerializable(typeof(ModpackDefinition))]
 [JsonSerializable(typeof(ModpackRepoManifest))]
+[JsonSerializable(typeof(PreparedAppUpdate))]
+[JsonSerializable(typeof(AppUpdatePlan))]
+[JsonSerializable(typeof(AppUpdateResult))]
 internal partial class PackFrameJsonContext : JsonSerializerContext
 {
 }
