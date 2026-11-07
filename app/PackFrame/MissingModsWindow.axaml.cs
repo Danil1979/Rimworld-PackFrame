@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -24,16 +25,14 @@ public partial class MissingModsWindow : Window
     {
         _instance = instance;
         _language = language;
-        var title = Localization.MissingModsTitle(language);
+        var title = Localization.ModAvailabilityTitle(language);
         var mappingPath = ModFullNameList.GetPath(instance);
         Title = $"Rimworld PackFrame - {title}";
         this.FindControl<TextBlock>("TitleText")!.Text = title;
-        this.FindControl<TextBlock>("SummaryText")!.Text =
-            Localization.MissingModsSummary(language, instance.DisplayName, rows.Count);
         this.FindControl<TextBlock>("SourceText")!.Text =
-            Localization.MissingModsSourceNote(language);
+            Localization.ModAvailabilitySourceNote(language);
         this.FindControl<TextBlock>("RefreshNoteText")!.Text =
-            Localization.MissingModsRefreshNote(language);
+            Localization.WorkshopAutoRefreshNote(language);
         this.FindControl<TextBlock>("MappingLabel")!.Text =
             Localization.MissingModsMappingPath(language) + ":";
         this.FindControl<SelectableTextBlock>("MappingPathText")!.Text = mappingPath;
@@ -42,11 +41,12 @@ public partial class MissingModsWindow : Window
         this.FindControl<TextBlock>("PackageHeader")!.Text =
             Localization.FieldPackageId(language);
         this.FindControl<TextBlock>("LinkHeader")!.Text = Localization.Link(language);
+        this.FindControl<TextBlock>("StatusHeader")!.Text = Localization.StatusHeader(language);
         this.FindControl<Button>("HistoryButton")!.Content =
             Localization.MissingHistory(language);
         this.FindControl<Button>("FooterCloseButton")!.Content =
             Localization.CloseButton(language);
-        this.FindControl<ItemsControl>("Rows")!.ItemsSource = rows;
+        UpdateRows(rows);
 
         Opened += (_, _) =>
         {
@@ -54,6 +54,23 @@ public partial class MissingModsWindow : Window
             ToolTip.SetTip(pathText, mappingPath);
         };
         KeyDown += OnWindowKeyDown;
+    }
+
+    public void UpdateRows(IReadOnlyList<MissingModRow> rows)
+    {
+        var missing = rows.Count(row => row.Availability == WorkshopModAvailability.Missing);
+        var downloading = rows.Count(row => row.IsDownloading);
+        var unknown = rows.Count(row => row.Availability == WorkshopModAvailability.Unknown);
+        var checking = rows.Count(row => row.Availability == WorkshopModAvailability.CheckingSteam);
+        this.FindControl<TextBlock>("SummaryText")!.Text = Localization.ModAvailabilitySummary(
+            _language, _instance?.DisplayName ?? string.Empty, missing, downloading, unknown, checking);
+        this.FindControl<ItemsControl>("Rows")!.ItemsSource = rows.Select(row =>
+            string.IsNullOrWhiteSpace(row.Status) ? new MissingModRow
+            {
+                Label = row.Label, Author = row.Author, PackageId = row.PackageId, Link = row.Link,
+                WorkshopId = row.WorkshopId, Availability = row.Availability,
+                Status = Localization.WorkshopStatus(_language, row.Availability)
+            } : row).ToList();
     }
 
     private async void OnHistoryClick(object? sender, RoutedEventArgs e)

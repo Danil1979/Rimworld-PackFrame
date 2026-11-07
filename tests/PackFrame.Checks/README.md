@@ -31,8 +31,26 @@ Failure checks cover damaged-profile isolation, stale pending edits, installatio
 rollback and staging-path rejection, recovery across damaged manifests, mutable
 color snapshots and failed color writes. Linux/macOS CI additionally constructs
 a tar.gz and checks executable permissions through the actual SteamCMD extractor.
+Workshop checks cover read-only helper requests, Steam item-state flags and progress,
+unavailable queries, deferred/bounded completion rescans, saved item/package mappings,
+restart recovery, and preserving pending edits and unrelated instance metadata.
+These checks use synthetic state and temporary files; they do not contact Steam.
 
 Manual platform checks:
+
+- On Windows x64 with Steam running, install a pack whose local download finishes
+  before its Workshop items. Queued/downloading items must not count as Missing;
+  the status dialog updates while open. Check download progress when Steam supplies
+  it, and verify the lists refresh after each item finishes without pressing Refresh.
+  Keep unsaved order edits, selections, searches and scroll positions in both panes
+  during completion; they must remain intact. Reopen PackFrame during a download
+  and confirm its saved Workshop targets are still monitored.
+- Pause Steam downloads and resume them; queued items remain pending. Close Steam
+  or make its API unavailable: uncertain Workshop items show Status unavailable,
+  while known missing local/GitHub mods remain Missing. Restart Steam and verify
+  monitoring recovers. SteamCMD instances must keep their existing download flow.
+- A completed Workshop item with unreadable metadata gets a bounded rescan retry;
+  persistent invalid metadata becomes Missing rather than refreshing indefinitely.
 
 - App update checks must only offer published release information. Opening the
   offer must not download, close or restart PackFrame. Download, Later and Install

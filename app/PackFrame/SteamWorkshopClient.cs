@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace PackFrame;
 
-internal static class SteamWorkshopClient
+internal static partial class SteamWorkshopClient
 {
     private const string SubscribeHelperArg = "--packframe-steam-subscribe";
     private const string UnsubscribeHelperArg = "--packframe-steam-unsubscribe";
@@ -71,6 +71,7 @@ internal static class SteamWorkshopClient
 
     internal static bool TryRunHelper(string[] args)
     {
+        if (TryRunDownloadStateHelper(args)) return true;
         if (args.Length == 0 ||
             (args[0] != SubscribeHelperArg && args[0] != UnsubscribeHelperArg))
         {

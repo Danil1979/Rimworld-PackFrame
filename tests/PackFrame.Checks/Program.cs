@@ -388,6 +388,9 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
     PaneLayoutChecks.Run();
     await UpdateServiceChecks.Run();
     await AppUpdateChecks.Run(root);
+    await WorkshopDownloadStateChecks.Run();
+    WorkshopTrackingChecks.Run();
+    WorkshopBindingChecks.Run(root);
     await CatalogChecks.Run(root);
     await DetailsCacheChecks.Run(root);
     await PublishingChecks.Run(root);
