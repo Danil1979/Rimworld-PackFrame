@@ -25,6 +25,13 @@ public partial class MainWindow
         Closed += (_, _) => { _workshopMonitorTimer.Stop(); _workshopMonitorCancellation.Cancel(); };
     }
 
+    private void WakeWorkshopMonitoring()
+    {
+        if (_windowClosed || _workshopMonitorTimer is null) return;
+        _workshopMonitorTimer.Interval = TimeSpan.FromSeconds(4);
+        _ = PollWorkshopDownloadsAsync();
+    }
+
     private List<WorkshopModReference> WorkshopReferences(ManagedInstance instance)
     {
         var references = WorkshopModReferences.ForInstance(instance);

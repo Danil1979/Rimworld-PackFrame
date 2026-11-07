@@ -1,4 +1,3 @@
-using System.Text.Json;
 using PackFrame;
 
 internal static class WorkshopDownloadStateChecks
@@ -29,31 +28,6 @@ internal static class WorkshopDownloadStateChecks
         Require(!unknown.IsDownloading && !unknown.IsInstalled,
             "an untracked Workshop item is not mislabeled as downloading");
 
-        var snapshot = new WorkshopDownloadSnapshot(new() { [11] = downloading, [12] = completed with { WorkshopId = 12 } });
-        var json = JsonSerializer.Serialize(snapshot, WorkshopStateJsonContext.Default.WorkshopDownloadSnapshot);
-        var restored = JsonSerializer.Deserialize(json, WorkshopStateJsonContext.Default.WorkshopDownloadSnapshot);
-        Require(SteamWorkshopClient.IsCompleteDownloadSnapshot(restored, new ulong[] { 11, 12 }) &&
-                restored!.Items[11].BytesDownloaded == 25 && restored.Items[11].BytesTotal == 100 &&
-                restored.Items[12].IsInstalled && !json.Contains("isInstalled", StringComparison.OrdinalIgnoreCase),
-            "isolated helper snapshots preserve Steam IDs, flags and progress without trusting derived status fields");
-        Require(!SteamWorkshopClient.IsCompleteDownloadSnapshot(null, new ulong[] { 11 }) &&
-                !SteamWorkshopClient.IsCompleteDownloadSnapshot(snapshot, new ulong[] { 11 }) &&
-                !SteamWorkshopClient.IsCompleteDownloadSnapshot(new(new() { [11] = completed with { WorkshopId = 99 } }), new ulong[] { 11 }),
-            "partial or mismatched helper results remain unknown instead of authorizing a refresh");
-
-        var directory = Path.Combine(Path.GetTempPath(), "PackFrame query fixture");
-        var game = "C:/Games/游戏 & notes/RimWorld";
-        var apphost = SteamWorkshopClient.CreateDownloadQueryStartInfo("C:/PackFrame/packframe.exe", "",
-            directory, game);
-        Require(!apphost.UseShellExecute && apphost.CreateNoWindow && apphost.ArgumentList.SequenceEqual(new[]
-            { SteamWorkshopClient.DownloadStateHelperArg, game, Path.Combine(directory, "result.json"), Path.Combine(directory, "request.json") }),
-            "Workshop status queries pass paths as separate shell-free arguments and keep item IDs in a request file");
-        var hosted = SteamWorkshopClient.CreateDownloadQueryStartInfo("C:/dotnet/dotnet.exe", "C:/Pack Frame/packframe.dll",
-            directory, game);
-        Require(hosted.ArgumentList[0] == "C:/Pack Frame/packframe.dll" &&
-                hosted.ArgumentList[1] == SteamWorkshopClient.DownloadStateHelperArg,
-            "framework-dependent Workshop helpers launch the PackFrame assembly before their query arguments");
-
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
         try
@@ -63,10 +37,10 @@ internal static class WorkshopDownloadStateChecks
         }
         catch (OperationCanceledException)
         {
-            Require(true, "cancelled Workshop queries stop before any helper or Steam operation starts");
+            Require(true, "cancelled Workshop queries stop before reading Steam download records");
         }
         var empty = await SteamWorkshopClient.QueryDownloadStateAsync("unused", Array.Empty<ulong>());
-        Require(empty?.Items.Count == 0, "an empty Workshop query requires no native Steam session");
+        Require(empty?.Items.Count == 0, "an empty Workshop query requires no Steam files or client session");
     }
 
     private static void Require(bool condition, string message)

@@ -71,7 +71,6 @@ internal static partial class SteamWorkshopClient
 
     internal static bool TryRunHelper(string[] args)
     {
-        if (TryRunDownloadStateHelper(args)) return true;
         if (args.Length == 0 ||
             (args[0] != SubscribeHelperArg && args[0] != UnsubscribeHelperArg))
         {

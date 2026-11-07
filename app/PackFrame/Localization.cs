@@ -1858,7 +1858,7 @@ public static class Localization
             SimplifiedChinese => $"已创建实例“{name}”，启用 {count} 个模组；{unresolved} 个工坊模组尚未就绪，Steam 下载完成后会自动刷新。",
             TraditionalChinese => $"已建立實例「{name}」，啟用 {count} 個模組；{unresolved} 個工作坊模組尚未就緒，Steam 下載完成後會自動重新整理。",
             Japanese => $"インスタンス「{name}」を作成し、{count} 個のMODを有効にしました。未準備のワークショップMOD {unresolved} 個は、Steam のダウンロード完了後に自動更新されます。",
-            _ => $"Created instance \"{name}\" with {count} active mods; {unresolved} Workshop mods are not ready yet. The list refreshes automatically after Steam finishes downloading."
+            _ => $"Created instance \"{name}\" with {count} active mods; {unresolved} Workshop {(unresolved == 1 ? "mod is" : "mods are")} not ready yet. The list refreshes automatically after Steam finishes downloading."
         };
     }
 
@@ -1877,10 +1877,10 @@ public static class Localization
     {
         return language switch
         {
-            SimplifiedChinese => "查看缺失模组",
-            TraditionalChinese => "檢視缺失模組",
-            Japanese => "欠落MODを表示",
-            _ => "View missing mods"
+            SimplifiedChinese => "查看模组状态",
+            TraditionalChinese => "檢視模組狀態",
+            Japanese => "MODの状態を表示",
+            _ => "View mod status"
         };
     }
 

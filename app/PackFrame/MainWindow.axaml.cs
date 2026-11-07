@@ -2264,6 +2264,7 @@ public partial class MainWindow : Window
             if (version == _loadVersion)
             {
                 _loadingMods = false;
+                WakeWorkshopMonitoring();
                 _refreshButton.Content = Localization.Refresh(_config.Language);
                 _refreshButton.IsEnabled = true;
             }
