@@ -111,7 +111,9 @@ Manual platform checks:
   entry. Leaving before 300ms, switching badges, clicking, scrolling, or closing
   the pane/window must cancel the pending opening. Leaving an open popup closes
   it after 100ms; moving into its content keeps copy, text selection, and Apply
-  usable. Color-label, launch-target, and damaged-instance tooltips are unchanged.
+  usable. Move between text, column gaps, blank space, and the outer padding:
+  all of the visible popup must keep it open, including version/duplicate summaries.
+  Color-label, launch-target, and damaged-instance tooltips are unchanged.
 - Close the second enabled pane using its header control while it is the
   enable/launch target: the target and header highlight must return to the visible
   pane. Open the same instance on the right again: its search and scroll position

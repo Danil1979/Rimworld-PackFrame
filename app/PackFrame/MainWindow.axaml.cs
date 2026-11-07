@@ -1462,8 +1462,9 @@ public partial class MainWindow : Window
 
     private void SetProblemTooltipContent(Control target, StackPanel content)
     {
-        AttachProblemTooltipHover(target, content);
-        ToolTip.SetTip(target, content);
+        var tooltip = new ToolTip { Content = content };
+        AttachProblemTooltipHover(target, tooltip);
+        ToolTip.SetTip(target, tooltip);
     }
 
     private void SetSortProblemTooltipContent(TextBlock target, StackPanel content)
