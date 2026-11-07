@@ -129,8 +129,9 @@ public partial class MainWindow
             pair.Key.UpdateRows(BuildAvailabilityRows(pair.Value));
     }
 
+    // Keep the popup's row anchor and selectable content intact until it closes.
     private bool CanApplyWorkshopRefresh => !_windowClosed && !_loadingMods && !_customDragActive &&
-        !_painting && !_instanceDragActive && !_refreshing;
+        !_painting && !_instanceDragActive && !_refreshing && !_modBadgePopup.IsOpen;
 
     private async Task PollWorkshopDownloadsAsync()
     {
