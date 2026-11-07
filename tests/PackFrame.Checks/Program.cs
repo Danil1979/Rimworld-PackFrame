@@ -383,6 +383,7 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
     Check(ModpackService.ResolveImage(packManifest, "https://example.com/cover.png") ==
         "https://example.com/cover.png", "absolute cover image stays absolute");
     await PublishingChecks.Run(root);
+    await ModpackIndexChecks.Run(root);
     CoverChecks.Run(root);
     var ownedCollections = new[]
     {
