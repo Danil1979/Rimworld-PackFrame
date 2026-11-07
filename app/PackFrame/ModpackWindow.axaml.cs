@@ -87,7 +87,14 @@ public partial class ModpackWindow : Window
         _language = config.Language ?? Localization.English;
 
         ApplyLocalization();
-        var indexUrl = ModpackService.StartupIndexUrl(config.ModpackIndexUrl);
+        var indexUrl = string.IsNullOrWhiteSpace(config.ModpackIndexUrl) ||
+            string.Equals(
+                config.ModpackIndexUrl,
+                ModpackService.GitHubIndexUrl,
+                StringComparison.OrdinalIgnoreCase
+            )
+            ? ModpackService.GiteeIndexUrl
+            : config.ModpackIndexUrl;
         RepoBox.Text = indexUrl;
         config.ModpackIndexUrl = indexUrl;
         config.Save();
@@ -1012,6 +1019,8 @@ public partial class ModpackWindow : Window
         return client;
     }
 }
+
+
 
 
 
