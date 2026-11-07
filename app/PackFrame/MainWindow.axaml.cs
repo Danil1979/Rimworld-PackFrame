@@ -133,6 +133,7 @@ public partial class MainWindow : Window
     private readonly TextBlock _undoToastText;
     private readonly DispatcherTimer _undoToastTimer;
     private readonly DispatcherTimer _problemTooltipTimer;
+    private IDisposable? _problemTooltipShowTimer;
     private readonly Popup _modBadgePopup;
     private Control? _problemTooltipTarget;
     private bool _problemTooltipContentHovered;
@@ -343,7 +344,7 @@ public partial class MainWindow : Window
 
         _problemTooltipTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(500)
+            Interval = TimeSpan.FromMilliseconds(100)
         };
         _modBadgePopup = new Popup
         {
@@ -1462,8 +1463,9 @@ public partial class MainWindow : Window
 
     private void SetProblemTooltipContent(Control target, StackPanel content)
     {
-        AttachProblemTooltipHover(target, content);
-        ToolTip.SetTip(target, content);
+        var tooltip = new ToolTip { Content = content };
+        AttachProblemTooltipHover(target, tooltip);
+        ToolTip.SetTip(target, tooltip);
     }
 
     private void SetSortProblemTooltipContent(TextBlock target, StackPanel content)
@@ -1491,35 +1493,27 @@ public partial class MainWindow : Window
             return;
         }
 
-        var tip = ReferenceEquals(target, _activeProblemS1) || ReferenceEquals(target, _activeProblemS2)
-            ? target.Tag as Control
-            : ToolTip.GetTip(target) as Control;
-        if (tip is null)
+        ScheduleProblemTooltip(target, () =>
         {
-            return;
-        }
+            var isSortProblem = ReferenceEquals(target, _activeProblemS1) || ReferenceEquals(target, _activeProblemS2);
+            var tip = isSortProblem ? target.Tag as Control : ToolTip.GetTip(target) as Control;
+            if (tip is null)
+            {
+                CloseProblemTooltip();
+                return;
+            }
 
-        _problemTooltipTimer.Stop();
-        if (_problemTooltipTarget is not null &&
-            !ReferenceEquals(_problemTooltipTarget, target))
-        {
-            ToolTip.SetIsOpen(_problemTooltipTarget, false);
-        }
-        _modBadgePopup.IsOpen = false;
-
-        _problemTooltipTarget = target;
-        _problemTooltipContentHovered = false;
-        if (ReferenceEquals(target, _activeProblemS1) || ReferenceEquals(target, _activeProblemS2))
-        {
-            _modBadgePopup.Child = null;
-            _modBadgePopup.Child = tip;
-            _modBadgePopup.PlacementTarget = target;
-            _modBadgePopup.IsOpen = true;
-        }
-        else
-        {
-            ToolTip.SetIsOpen(target, true);
-        }
+            if (isSortProblem)
+            {
+                _modBadgePopup.Child = tip;
+                _modBadgePopup.PlacementTarget = target;
+                _modBadgePopup.IsOpen = true;
+            }
+            else
+            {
+                ToolTip.SetIsOpen(target, true);
+            }
+        });
     }
 
     private void OnModBadgePointerEntered(object? sender, PointerEventArgs e)
@@ -1531,21 +1525,47 @@ public partial class MainWindow : Window
             return;
         }
 
-        _problemTooltipTimer.Stop();
-        if (_problemTooltipTarget is not null &&
-            !ReferenceEquals(_problemTooltipTarget, target))
+        ScheduleProblemTooltip(target, () =>
         {
-            ToolTip.SetIsOpen(_problemTooltipTarget, false);
-        }
-        _modBadgePopup.IsOpen = false;
+            if (string.IsNullOrWhiteSpace(mod.BadgeTooltip))
+            {
+                CloseProblemTooltip();
+                return;
+            }
 
+            var content = CreateModBadgeTooltip(mod);
+            AttachProblemTooltipHover(target, content);
+            _modBadgePopup.Child = content;
+            _modBadgePopup.PlacementTarget = target;
+            _modBadgePopup.IsOpen = true;
+        });
+    }
+
+    private void ScheduleProblemTooltip(Control target, Action show)
+    {
+        _problemTooltipTimer.Stop();
+        if (ReferenceEquals(_problemTooltipTarget, target) &&
+            (_modBadgePopup.IsOpen || ToolTip.GetIsOpen(target)))
+        {
+            return;
+        }
+
+        CloseProblemTooltip();
         _problemTooltipTarget = target;
-        _problemTooltipContentHovered = false;
-        var content = CreateModBadgeTooltip(mod);
-        AttachProblemTooltipHover(target, content);
-        _modBadgePopup.Child = content;
-        _modBadgePopup.PlacementTarget = target;
-        _modBadgePopup.IsOpen = true;
+        var dataContext = target.DataContext;
+        _problemTooltipShowTimer = DispatcherTimer.RunOnce(() =>
+        {
+            _problemTooltipShowTimer = null;
+            if (_windowClosed || _customDragActive || _painting ||
+                !target.IsPointerOver || !target.IsEffectivelyVisible ||
+                !ReferenceEquals(target.DataContext, dataContext))
+            {
+                CloseProblemTooltip();
+                return;
+            }
+
+            show();
+        }, TimeSpan.FromMilliseconds(300));
     }
 
     private void OnModBadgePointerExited(object? sender, PointerEventArgs e)
@@ -1729,6 +1749,8 @@ public partial class MainWindow : Window
 
     private void StartProblemTooltipCloseTimer()
     {
+        _problemTooltipShowTimer?.Dispose();
+        _problemTooltipShowTimer = null;
         if (_problemTooltipContentHovered)
         {
             return;
@@ -1740,6 +1762,8 @@ public partial class MainWindow : Window
 
     private void CloseProblemTooltip()
     {
+        _problemTooltipShowTimer?.Dispose();
+        _problemTooltipShowTimer = null;
         _problemTooltipTimer.Stop();
         if (_problemTooltipTarget is not null)
         {
@@ -4363,7 +4387,7 @@ public partial class MainWindow : Window
         InvalidatePaneScrollRestore(list);
         SetPaneInteractionContext(list);
 
-        _modBadgePopup.IsOpen = false;
+        CloseProblemTooltip();
         var point = e.GetCurrentPoint(list);
         if (_paintMode && point.Properties.IsLeftButtonPressed)
         {
@@ -5125,6 +5149,7 @@ public partial class MainWindow : Window
         }
 
         InvalidatePaneScrollRestore(target);
+        if (_problemTooltipShowTimer is not null) CloseProblemTooltip();
         if (!_customDragActive) return;
 
         var viewer = target
