@@ -351,11 +351,14 @@ public partial class MainWindow : Window
             IsLightDismissEnabled = false,
             Placement = PlacementMode.Top
         };
+        // Inherit control themes, including visible text-selection highlights.
+        LogicalChildren.Add(_modBadgePopup);
         _problemTooltipTimer.Tick += (_, _) =>
         {
             _problemTooltipTimer.Stop();
             if (!_problemTooltipContentHovered &&
-                _modBadgePopup.Child?.IsKeyboardFocusWithin != true)
+                _modBadgePopup.Child?.IsKeyboardFocusWithin != true &&
+                _modBadgePopup.OpenedPopups.Count == 0)
             {
                 CloseProblemTooltip();
             }
