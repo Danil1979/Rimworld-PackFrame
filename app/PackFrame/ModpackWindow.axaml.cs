@@ -105,6 +105,9 @@ public partial class ModpackWindow : Window
             if (_committingUpdate) { e.Cancel = true; return; }
             _closed = true;
             _operationCancellation?.Cancel();
+            _catalogVersion++;
+            _catalogCancellation?.Cancel();
+            CancelDetailLoad();
             _coverCancellation?.Cancel();
             DisposeCover();
         };
@@ -224,90 +227,9 @@ public partial class ModpackWindow : Window
             ?? throw new InvalidOperationException($"{name} was not found.");
     }
 
-    private async Task LoadIndexAsync()
-    {
-        if (_busy)
-        {
-            return;
-        }
-
-        var rawUrl = RepoBox.Text?.Trim() ?? string.Empty;
-        if (rawUrl.Length == 0)
-        {
-            ClearDetail(Localization.ModpackNoUrl(_language));
-            return;
-        }
-
-        if (_config is not null)
-        {
-            _config.ModpackIndexUrl = rawUrl;
-            _config.Save();
-        }
-
-        _busy = true;
-        _selectedItem = null;
-        _selectedPack = null;
-        _detailVersion++;
-        SetControls(false);
-        ClearDetail(Localization.ModpackStatusReading(_language));
-        Find<TextBlock>("StatusText").Text =
-            Localization.ModpackStatusReading(_language);
-
-        try
-        {
-            var index = await ModpackService.LoadIndexAsync(rawUrl);
-            _indexUri = new Uri(ModpackService.NormalizeIndexUrl(rawUrl));
-            _items = index.Packs
-                .Where(entry => !string.IsNullOrWhiteSpace(entry.Id) ||
-                                !string.IsNullOrWhiteSpace(entry.File))
-                .Select(entry => new ModpackListItem
-                {
-                    Entry = entry,
-                    CountText = entry.ModCount > 0
-                        ? Localization.ModpackModsCount(_language, entry.ModCount)
-                        : string.Empty
-                })
-                .ToList();
-
-            var list = Find<ListBox>("PackList");
-            list.ItemsSource = _items;
-            Find<TextBlock>("ListCount").Text = _items.Count.ToString();
-            if (_items.Count == 0)
-            {
-                ClearDetail(Localization.ModpackEmpty(_language));
-            }
-            else
-            {
-                Find<TextBlock>("StatusText").Text =
-                    Localization.ModpackSelectHint(_language);
-            }
-        }
-        catch (Exception exception)
-        {
-            _items = new List<ModpackListItem>();
-            Find<ListBox>("PackList").ItemsSource = _items;
-            Find<TextBlock>("ListCount").Text = "0";
-            ClearDetail(Localization.ModpackLoadFailed(
-                _language,
-                exception.Message
-            ));
-        }
-        finally
-        {
-            _busy = false;
-            SetControls(true);
-        }
-
-        if (_items.Count > 0)
-        {
-            var matching = _items.FindIndex(item => item.Entry.Id == _currentInstance?.Metadata?.PackId);
-            Find<ListBox>("PackList").SelectedIndex = matching >= 0 ? matching : 0;
-        }
-    }
-
     private async void OnPackSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (sender is not ListBox list ||
+        if (_closed || _busy || _applyingCatalog || sender is not ListBox list ||
             list.SelectedItem is not ModpackListItem item ||
             _indexUri is null)
         {
@@ -317,52 +239,68 @@ public partial class ModpackWindow : Window
         await LoadPackAsync(item);
     }
 
-    private async Task LoadPackAsync(ModpackListItem item)
+    private async Task LoadPackAsync(ModpackListItem item, bool forceRefresh = false)
     {
-        if (_indexUri is null)
+        if (_closed || _busy || _indexUri is null)
         {
             return;
         }
 
-        var version = ++_detailVersion;
+        CancelDetailLoad();
+        var version = _detailVersion;
+        var indexUri = _indexUri;
+        var key = ModpackDetailsCache.GetKey(item.Entry, indexUri);
+        var saved = ModpackDetailsCache.Shared.LoadLocal(item.Entry, indexUri);
         _selectedItem = item;
         _selectedPack = null;
-        _busy = true;
-        SetControls(false);
-        ClearDetail(Localization.ModpackStatusReading(_language));
-        Find<TextBlock>("StatusText").Text =
-            Localization.ModpackStatusReading(_language);
+        if (saved is not null)
+        {
+            ShowSelectedPack(saved.Pack, item, version);
+            SetControls(true);
+            if (!forceRefresh && _checkedPackDetails.Contains(key)) return;
+        }
+        else
+        {
+            ClearDetail(T($"Loading {item.Name}...", $"正在读取 {item.Name}...",
+                $"正在讀取 {item.Name}...", $"{item.Name} を読み込み中..."));
+        }
+        using var cancellation = new CancellationTokenSource();
+        _detailCancellation = cancellation;
+        SetControls(true);
 
         try
         {
-            var pack = await ModpackService.LoadPackAsync(item.Entry, _indexUri);
-            if (version != _detailVersion)
+            var snapshot = await ModpackDetailsCache.Shared.RefreshAsync(item.Entry, indexUri, cancellation.Token);
+            if (_closed || _busy || version != _detailVersion ||
+                !ReferenceEquals(_detailCancellation, cancellation))
             {
                 return;
             }
 
-            _selectedPack = pack;
-            ShowPack(pack, item);
-            Find<TextBlock>("StatusText").Text =
-                Localization.ModpackSelectHint(_language);
-            _ = LoadCoverAsync(pack.Image ?? item.Entry.Image, version);
+            _checkedPackDetails.Add(key);
+            if (saved is null || saved.ContentHash != snapshot.ContentHash)
+                ShowSelectedPack(snapshot.Pack, item, version);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
         }
         catch (Exception exception)
         {
-            if (version == _detailVersion)
+            if (!_closed && version == _detailVersion)
             {
-                ClearDetail(Localization.ModpackLoadFailed(
-                    _language,
-                    exception.Message
-                ));
+                if (saved is null)
+                    ClearDetail(Localization.ModpackLoadFailed(_language, exception.Message));
+                else
+                    Find<TextBlock>("StatusText").Text = T("Using saved pack details.",
+                        "正在使用本地合集详情。", "正在使用本機合集詳情。", "保存済みの詳細を表示しています。");
             }
         }
         finally
         {
-            if (version == _detailVersion)
+            if (ReferenceEquals(_detailCancellation, cancellation))
             {
-                _busy = false;
-                SetControls(true);
+                _detailCancellation = null;
+                if (!_closed) SetControls(true);
             }
         }
     }
@@ -601,11 +539,14 @@ public partial class ModpackWindow : Window
 
     private void SetControls(bool enabled)
     {
+        if (_busy) CancelDetailLoad();
+        else if (enabled) ApplyPendingCatalog();
         RefreshUpdateControls();
         var ready = enabled && !_busy;
         Find<Button>("RefreshButton").IsEnabled = ready;
-        Find<Button>("WorkshopOnlyButton").IsEnabled = ready;
+        Find<Button>("WorkshopOnlyButton").IsEnabled = ready && _selectedPack is not null;
         Find<TextBox>("RepoBox").IsEnabled = ready;
+        Find<Button>("RepoMenuButton").IsEnabled = ready;
         Find<ListBox>("PackList").IsEnabled = ready;
         Find<Button>("CancelOperationButton").IsVisible =
             _operationCancellation is not null;
@@ -618,6 +559,7 @@ public partial class ModpackWindow : Window
 
     private void OnRepoMenuClick(object? sender, RoutedEventArgs e)
     {
+        if (_busy || _closed) return;
         var flyout = new MenuFlyout();
         var githubItem = new MenuItem
         {
@@ -625,8 +567,9 @@ public partial class ModpackWindow : Window
         };
         githubItem.Click += async (_, _) =>
         {
+            if (_busy || _closed) return;
             RepoBox.Text = ModpackService.GitHubIndexUrl;
-            await LoadIndexAsync();
+            await LoadIndexAsync(refreshDetails: true);
         };
         flyout.Items.Add(githubItem);
 
@@ -636,8 +579,9 @@ public partial class ModpackWindow : Window
         };
         giteeItem.Click += async (_, _) =>
         {
+            if (_busy || _closed) return;
             RepoBox.Text = ModpackService.GiteeIndexUrl;
-            await LoadIndexAsync();
+            await LoadIndexAsync(refreshDetails: true);
         };
         flyout.Items.Add(giteeItem);
         flyout.ShowAt((Control)sender!);
@@ -645,9 +589,10 @@ public partial class ModpackWindow : Window
 
     private async void OnRefreshClick(object? sender, RoutedEventArgs e)
     {
+        _checkedPackDetails.Clear();
         _coverCache.Clear();
         _coverCacheBytes = 0;
-        await LoadIndexAsync();
+        await LoadIndexAsync(refreshDetails: true);
     }
 
     private async void OnRepoKeyDown(object? sender, KeyEventArgs e)
@@ -655,7 +600,7 @@ public partial class ModpackWindow : Window
         if (e.Key == Key.Enter)
         {
             e.Handled = true;
-            await LoadIndexAsync();
+            await LoadIndexAsync(refreshDetails: true);
         }
     }
 
@@ -727,7 +672,11 @@ public partial class ModpackWindow : Window
             return;
         }
 
-        await InstallAsync(link, useSteamCmd, skipModsDownload);
+        // An auto-filled collection must follow the fresh manifest used for installation.
+        // Preserve a link the user explicitly changed as an additional source.
+        var overrideLink = string.Equals(link, _workshopUrl, StringComparison.OrdinalIgnoreCase)
+            ? null : link;
+        await InstallAsync(overrideLink, useSteamCmd, skipModsDownload);
     }
 
     private async void OnApplyConfigClick(object? sender, RoutedEventArgs e)
@@ -781,9 +730,12 @@ public partial class ModpackWindow : Window
             Localization.SyncConfig(_language) + "...";
         try
         {
+            var pack = await ReadPackForOperationAsync(cancellation.Token);
+            if (string.IsNullOrWhiteSpace(pack.ConfigBaseUrl) || pack.ConfigFiles.Count == 0)
+                throw new InvalidOperationException(Localization.SyncConfigNoSource(_language));
             await ModpackService.DownloadConfigToAsync(
-                _selectedPack.ConfigBaseUrl,
-                _selectedPack.ConfigFiles,
+                pack.ConfigBaseUrl,
+                pack.ConfigFiles,
                 _currentInstance.ConfigDirectoryPath,
                 text => Dispatcher.UIThread.Post(() =>
                 {
@@ -791,8 +743,8 @@ public partial class ModpackWindow : Window
                 }), cancellation.Token, _language
             );
             ConfigApplied = true;
-            InstanceStore.SetPackBinding(_currentInstance, _selectedPack.Id,
-                _selectedPack.ConfigBaseUrl, _selectedPack.ConfigFiles, _currentInstance.IsSteamCmd);
+            InstanceStore.SetPackBinding(_currentInstance, pack.Id,
+                pack.ConfigBaseUrl, pack.ConfigFiles, _currentInstance.IsSteamCmd);
             if (!_closed) Close();
         }
         catch (OperationCanceledException)
@@ -825,24 +777,25 @@ public partial class ModpackWindow : Window
 
         _busy = true;
         SetControls(false);
-        Find<TextBlock>("StatusText").Text =
-            Localization.ModpackStatusInstalling(_language);
-        _archiveDownloadControl = new ArchiveDownloadControl();
         _resumeDownloadRequested = false;
-        ShowResumeDownload();
-        ShowOssFallback(_selectedPack, skipModsDownload);
 
 
         var stagingRoot = Path.Combine(_packRoot, "runtime", StagingFolder(_selectedPack.Id));
-        var modsRoot = Path.Combine(stagingRoot, "Mods");
         using var cancellation = new CancellationTokenSource();
         _operationCancellation = cancellation;
         SetControls(false);
         var retry = false;
         try
         {
+            var pack = await ReadPackForOperationAsync(cancellation.Token);
+            stagingRoot = Path.Combine(_packRoot, "runtime", StagingFolder(pack.Id));
+            var modsRoot = Path.Combine(stagingRoot, "Mods");
+            _archiveDownloadControl = new ArchiveDownloadControl();
+            ShowResumeDownload();
+            ShowOssFallback(pack, skipModsDownload);
+            Find<TextBlock>("StatusText").Text = Localization.ModpackStatusInstalling(_language);
             var result = await ModpackService.InstallAsync(
-                _selectedPack,
+                pack,
                 _game,
                 _packRoot,
                 modsRoot,
@@ -909,7 +862,7 @@ public partial class ModpackWindow : Window
             HideOssFallback();
             HideResumeDownload();
             _busy = false;
-            if (!_closed)
+            if (!_closed && !retry)
             {
                 SetControls(true);
             }

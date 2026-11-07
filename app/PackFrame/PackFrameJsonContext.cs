@@ -12,6 +12,8 @@ namespace PackFrame;
 [JsonSerializable(typeof(ModColorData))]
 [JsonSerializable(typeof(ModFullNameDocument))]
 [JsonSerializable(typeof(ModpackIndex))]
+[JsonSerializable(typeof(ModpackCatalogDocument))]
+[JsonSerializable(typeof(ModpackDetailsDocument))]
 [JsonSerializable(typeof(ModpackDefinition))]
 [JsonSerializable(typeof(ModpackRepoManifest))]
 internal partial class PackFrameJsonContext : JsonSerializerContext

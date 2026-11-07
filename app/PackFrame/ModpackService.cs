@@ -177,6 +177,11 @@ public static class ModpackService
             url.Equals(GitHubIndexUrl, StringComparison.OrdinalIgnoreCase);
     }
 
+    internal static string StartupIndexUrl(string? url) =>
+        string.IsNullOrWhiteSpace(url)
+            ? GiteeIndexUrl
+            : url;
+
     public static async Task<ModpackIndex> LoadIndexAsync(
         string? url,
         CancellationToken cancellationToken = default

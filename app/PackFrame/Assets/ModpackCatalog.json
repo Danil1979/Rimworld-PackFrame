@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 2,
+  "packs": [
+    {
+      "id": "1-7",
+      "name": "多种族 [1.7]",
+      "summary": "多种族 [1.7]\r\n16个左右的HAR种族，一些零散美化\r\n100次随机人物生成加10次一万点袭击生成\r\n无一条红字\r\n\r\n合集为框架自动上传\r\n使用Rimworld PackFrame来一键安装排序和平衡补丁\r\n交流QQ群 960717872",
+      "repo": "ZXUW/1.7-Rimworld-PackFrame",
+      "ref": "main",
+      "manifest": "pack.json",
+      "modCount": 237,
+      "file": "https://raw.githubusercontent.com/ZXUW/1.7-Rimworld-PackFrame/main/pack.json",
+      "giteeFile": "https://gitee.com/zxuw/1.7-Rimworld-PackFrame/raw/main/pack.json"
+    },
+    {
+      "id": "rjw-1-7",
+      "name": "多种族RJW [1.7]",
+      "summary": "多种族三字母 [1.7]\r\n16个种族+三字母+SA0\r\n(三字母模组来自生物大师三字母)\r\n100小人随机生成+10次万点袭击无Error红字\r\n\r\n合集为框架自动上传\r\n使用Rimworld PackFrame来一键安装排序和平衡补丁",
+      "repo": "ZXUW/RJW-1.7-Rimworld-PackFrame",
+      "ref": "main",
+      "manifest": "pack.json",
+      "modCount": 304,
+      "file": "https://raw.githubusercontent.com/ZXUW/RJW-1.7-Rimworld-PackFrame/main/pack.json",
+      "giteeFile": "https://gitee.com/zxuw/RJW-1.7-Rimworld-PackFrame/raw/main/pack.json"
+    },
+    {
+      "id": "ui-1-7",
+      "name": "UI+美化 [1.7]",
+      "summary": "UI+美化 [1.7]",
+      "repo": "ZXUW/UI-1.7-Rimworld-PackFrame",
+      "ref": "main",
+      "manifest": "pack.json",
+      "file": "https://raw.githubusercontent.com/ZXUW/UI-1.7-Rimworld-PackFrame/main/pack.json",
+      "modCount": 83,
+      "giteeFile": "https://gitee.com/zxuw/UI-1.7-Rimworld-PackFrame/raw/main/pack.json"
+    }
+  ]
+}
