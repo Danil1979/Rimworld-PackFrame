@@ -1199,7 +1199,7 @@ public static class Localization
             WorkshopModAvailability.CheckingSteam => OperationText.Choose(language,
                 "Checking Steam", "正在检查 Steam", "正在檢查 Steam", "Steam を確認中"),
             WorkshopModAvailability.Unknown => OperationText.Choose(language,
-                "Status unavailable", "状态未知", "狀態未知", "状態を確認できません"),
+                "Unknown", "状态未知", "狀態未知", "状態不明"),
             WorkshopModAvailability.Queued => OperationText.Choose(language,
                 "Queued", "等待下载", "等待下載", "ダウンロード待ち"),
             WorkshopModAvailability.Downloading => OperationText.Choose(language,
@@ -1223,7 +1223,7 @@ public static class Localization
         if (downloading > 0) parts.Add(OperationText.Choose(language,
             $"Downloading {downloading}", $"下载中 {downloading}", $"下載中 {downloading}", $"ダウンロード中 {downloading}"));
         if (unknown > 0) parts.Add(OperationText.Choose(language,
-            $"Pending status {unknown}", $"待确认 {unknown}", $"待確認 {unknown}", $"状態未確認 {unknown}"));
+            $"Unknown {unknown}", $"未知 {unknown}", $"未知 {unknown}", $"状態不明 {unknown}"));
         return parts.Count > 0 ? string.Join(" · ", parts) : OperationText.Choose(language,
             "All available", "模组均可用", "模組皆可用", "すべて利用可能");
     }
@@ -1245,16 +1245,10 @@ public static class Localization
     }
 
     public static string WorkshopAutoRefreshNote(string? language) => OperationText.Choose(language,
-        "Workshop status is checked automatically. Completed downloads refresh this list.",
-        "自动检查工坊状态，下载完成后刷新列表。",
-        "自動檢查工作坊狀態，下載完成後重新整理清單。",
-        "ワークショップの状態を自動確認し、ダウンロード完了後に一覧を更新します。");
-
-    public static string ModAvailabilitySourceNote(string? language) => OperationText.Choose(language,
-        "Names and links come from saved instance records. Steam provides download status.",
-        "名称和链接来自实例记录，下载状态由 Steam 提供。",
-        "名稱和連結來自執行個體記錄，下載狀態由 Steam 提供。",
-        "名前とリンクは保存されたインスタンスの記録、ダウンロード状況は Steam から取得します。");
+        "Updates automatically when downloads finish.",
+        "下载完成后自动更新。",
+        "下載完成後自動更新。",
+        "ダウンロード完了後に自動更新します。");
 
     public static string ModAvailabilityTitle(string? language) => OperationText.Choose(language,
         "Mod status", "模组状态", "模組狀態", "MOD の状態");
@@ -1855,10 +1849,10 @@ public static class Localization
     {
         return language switch
         {
-            SimplifiedChinese => $"已创建实例“{name}”，启用 {count} 个模组；{unresolved} 个工坊模组尚未就绪，Steam 下载完成后会自动刷新。",
-            TraditionalChinese => $"已建立實例「{name}」，啟用 {count} 個模組；{unresolved} 個工作坊模組尚未就緒，Steam 下載完成後會自動重新整理。",
-            Japanese => $"インスタンス「{name}」を作成し、{count} 個のMODを有効にしました。未準備のワークショップMOD {unresolved} 個は、Steam のダウンロード完了後に自動更新されます。",
-            _ => $"Created instance \"{name}\" with {count} active mods; {unresolved} Workshop {(unresolved == 1 ? "mod is" : "mods are")} not ready yet. The list refreshes automatically after Steam finishes downloading."
+            SimplifiedChinese => $"已创建实例“{name}”（{count} 个模组）。\n{unresolved} 个工坊模组尚未就绪，下载完成后自动更新。",
+            TraditionalChinese => $"已建立實例「{name}」（{count} 個模組）。\n{unresolved} 個工作坊模組尚未就緒，下載完成後自動更新。",
+            Japanese => $"「{name}」を作成しました（MOD {count} 個）。\nワークショップMOD {unresolved} 個は未準備です。ダウンロード完了後に自動更新します。",
+            _ => $"Created \"{name}\" ({count} {(count == 1 ? "mod" : "mods")}).\n{unresolved} Workshop {(unresolved == 1 ? "mod is" : "mods are")} not ready yet. Updates automatically when downloads finish."
         };
     }
 

@@ -26,16 +26,10 @@ public partial class MissingModsWindow : Window
         _instance = instance;
         _language = language;
         var title = Localization.ModAvailabilityTitle(language);
-        var mappingPath = ModFullNameList.GetPath(instance);
         Title = $"Rimworld PackFrame - {title}";
         this.FindControl<TextBlock>("TitleText")!.Text = title;
-        this.FindControl<TextBlock>("SourceText")!.Text =
-            Localization.ModAvailabilitySourceNote(language);
         this.FindControl<TextBlock>("RefreshNoteText")!.Text =
             Localization.WorkshopAutoRefreshNote(language);
-        this.FindControl<TextBlock>("MappingLabel")!.Text =
-            Localization.MissingModsMappingPath(language) + ":";
-        this.FindControl<SelectableTextBlock>("MappingPathText")!.Text = mappingPath;
         this.FindControl<TextBlock>("LabelHeader")!.Text = Localization.FieldName(language);
         this.FindControl<TextBlock>("AuthorHeader")!.Text = Localization.FieldAuthor(language);
         this.FindControl<TextBlock>("PackageHeader")!.Text =
@@ -48,11 +42,6 @@ public partial class MissingModsWindow : Window
             Localization.CloseButton(language);
         UpdateRows(rows);
 
-        Opened += (_, _) =>
-        {
-            var pathText = this.FindControl<SelectableTextBlock>("MappingPathText")!;
-            ToolTip.SetTip(pathText, mappingPath);
-        };
         KeyDown += OnWindowKeyDown;
     }
 
@@ -64,6 +53,8 @@ public partial class MissingModsWindow : Window
         var checking = rows.Count(row => row.Availability == WorkshopModAvailability.CheckingSteam);
         this.FindControl<TextBlock>("SummaryText")!.Text = Localization.ModAvailabilitySummary(
             _language, _instance?.DisplayName ?? string.Empty, missing, downloading, unknown, checking);
+        this.FindControl<TextBlock>("RefreshNoteText")!.IsVisible = _instance?.IsSteamCmd == false &&
+            rows.Any(row => row.WorkshopId is not null && row.Availability != WorkshopModAvailability.Missing);
         this.FindControl<ItemsControl>("Rows")!.ItemsSource = rows.Select(row =>
             string.IsNullOrWhiteSpace(row.Status) ? new MissingModRow
             {

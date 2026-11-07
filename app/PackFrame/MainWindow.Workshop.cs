@@ -83,9 +83,8 @@ public partial class MainWindow
                 : WorkshopAvailability(reference.WorkshopId, found);
             if (found && availability is not (WorkshopModAvailability.Downloading or WorkshopModAvailability.Queued)) continue;
             var item = reference is null ? null : _workshopDownloads.Item(reference.WorkshopId);
-            var status = reference is null && availability == WorkshopModAvailability.Unknown
-                ? OperationText.Choose(_config.Language, "Waiting for Steam", "等待 Steam", "等待 Steam", "Steam を待機中")
-                : Localization.WorkshopStatus(_config.Language, availability, item?.BytesDownloaded ?? 0, item?.BytesTotal ?? 0);
+            var status = Localization.WorkshopStatus(_config.Language, availability,
+                item?.BytesDownloaded ?? 0, item?.BytesTotal ?? 0);
             result.Add(new MissingModRow
             {
                 PackageId = id, Label = FirstText(entry?.Label, old?.Label, reference?.Name, id),

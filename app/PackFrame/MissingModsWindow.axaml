@@ -28,21 +28,9 @@
             <TextBlock x:Name="SummaryText"
                        Foreground="{DynamicResource PrimaryTextBrush}"
                        TextWrapping="Wrap" />
-            <TextBlock x:Name="SourceText"
-                       Foreground="{DynamicResource SecondaryTextBrush}"
-                       TextWrapping="Wrap" />
             <TextBlock x:Name="RefreshNoteText"
                        Foreground="{DynamicResource SecondaryTextBrush}"
                        TextWrapping="Wrap" />
-            <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
-                <TextBlock x:Name="MappingLabel"
-                           Foreground="{DynamicResource SecondaryTextBrush}"
-                           Margin="0,0,8,0" />
-                <SelectableTextBlock x:Name="MappingPathText"
-                                     Grid.Column="1"
-                                     Foreground="{DynamicResource PrimaryTextBrush}"
-                                     TextTrimming="CharacterEllipsis" />
-            </Grid>
         </StackPanel>
 
         <Border Grid.Row="2"
