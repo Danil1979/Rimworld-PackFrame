@@ -373,8 +373,6 @@ public partial class MainWindow : Window
                  })
         {
             ToolTip.SetServiceEnabled(label, false);
-            ToolTip.SetPlacement(label, PlacementMode.Top);
-            ToolTip.SetVerticalOffset(label, 6);
             label.PointerEntered += OnProblemLabelPointerEntered;
             label.PointerExited += OnProblemLabelPointerExited;
         }
@@ -1462,9 +1460,18 @@ public partial class MainWindow : Window
 
     private void SetProblemTooltipContent(Control target, StackPanel content)
     {
-        var tooltip = new ToolTip { Content = content };
-        AttachProblemTooltipHover(target, tooltip);
-        ToolTip.SetTip(target, tooltip);
+        var popupContent = new Border
+        {
+            Background = ThemeService.BackgroundBrush,
+            BorderBrush = SecondaryBorderBrush,
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(10, 6),
+            MaxWidth = 1400,
+            Child = content
+        };
+        Avalonia.Controls.Documents.TextElement.SetForeground(popupContent, TextBrush);
+        AttachProblemTooltipHover(target, popupContent);
+        target.Tag = popupContent;
     }
 
     private void SetSortProblemTooltipContent(TextBlock target, StackPanel content)
@@ -1494,24 +1501,15 @@ public partial class MainWindow : Window
 
         ScheduleProblemTooltip(target, () =>
         {
-            var isSortProblem = ReferenceEquals(target, _activeProblemS1) || ReferenceEquals(target, _activeProblemS2);
-            var tip = isSortProblem ? target.Tag as Control : ToolTip.GetTip(target) as Control;
-            if (tip is null)
+            if (target.Tag is not Control tip)
             {
                 CloseProblemTooltip();
                 return;
             }
 
-            if (isSortProblem)
-            {
-                _modBadgePopup.Child = tip;
-                _modBadgePopup.PlacementTarget = target;
-                _modBadgePopup.IsOpen = true;
-            }
-            else
-            {
-                ToolTip.SetIsOpen(target, true);
-            }
+            _modBadgePopup.Child = tip;
+            _modBadgePopup.PlacementTarget = target;
+            _modBadgePopup.IsOpen = true;
         });
     }
 
@@ -1543,8 +1541,7 @@ public partial class MainWindow : Window
     private void ScheduleProblemTooltip(Control target, Action show)
     {
         _problemTooltipTimer.Stop();
-        if (ReferenceEquals(_problemTooltipTarget, target) &&
-            (_modBadgePopup.IsOpen || ToolTip.GetIsOpen(target)))
+        if (ReferenceEquals(_problemTooltipTarget, target) && _modBadgePopup.IsOpen)
         {
             return;
         }
@@ -1764,10 +1761,6 @@ public partial class MainWindow : Window
         _problemTooltipShowTimer?.Dispose();
         _problemTooltipShowTimer = null;
         _problemTooltipTimer.Stop();
-        if (_problemTooltipTarget is not null)
-        {
-            ToolTip.SetIsOpen(_problemTooltipTarget, false);
-        }
         _modBadgePopup.IsOpen = false;
         _modBadgePopup.Child = null;
 

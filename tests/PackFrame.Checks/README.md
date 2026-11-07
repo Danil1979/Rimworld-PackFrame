@@ -113,6 +113,9 @@ Manual platform checks:
   it after 100ms; moving into its content keeps copy, text selection, and Apply
   usable. Move between text, column gaps, blank space, and the outer padding:
   all of the visible popup must keep it open, including version/duplicate summaries.
+  Click its text or padding, then drag to select text: the popup must stay open
+  without changing the summary filter or list selection. Check Ctrl+C and the badge
+  copy menu; Apply must still work, and clicking the mod list must still close it.
   Color-label, launch-target, and damaged-instance tooltips are unchanged.
 - Close the second enabled pane using its header control while it is the
   enable/launch target: the target and header highlight must return to the visible
