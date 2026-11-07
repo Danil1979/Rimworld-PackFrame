@@ -139,8 +139,8 @@ public partial class MainWindow
             ((TextBlock)badge.Child!).Text = Localization.SameList(_config.Language);
             ToolTip.SetTip(badge, Localization.SameListHint(_config.Language));
         }
-        ToolTip.SetTip(_instanceCombo1, first?.LoadError ?? first?.DisplayName);
-        ToolTip.SetTip(_instanceCombo2, second?.LoadError ?? second?.DisplayName);
+        ToolTip.SetTip(_instanceCombo1, first?.LoadError);
+        ToolTip.SetTip(_instanceCombo2, second?.LoadError);
         UpdateSplitViewButton();
     }
 
