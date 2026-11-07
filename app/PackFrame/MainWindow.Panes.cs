@@ -19,7 +19,6 @@ public partial class MainWindow
     private Button _splitViewButton = null!;
     private TextBlock _splitViewLabel = null!;
     private Button _closeSecondaryPaneButton = null!;
-    private TextBlock _enableTargetText = null!;
 
     private void InitializePaneNavigation()
     {
@@ -27,7 +26,6 @@ public partial class MainWindow
         _splitViewButton = Find<Button>("SplitViewButton");
         _splitViewLabel = Find<TextBlock>("SplitViewLabel");
         _closeSecondaryPaneButton = Find<Button>("CloseSecondaryPaneButton");
-        _enableTargetText = Find<TextBlock>("EnableTargetText");
         ApplyPaneLayout();
     }
 
@@ -152,11 +150,6 @@ public partial class MainWindow
         _launchTargetText.Text = text;
         ToolTip.SetTip(_launchButton, text);
         AutomationProperties.SetName(_launchButton, text);
-        var enableText = string.IsNullOrWhiteSpace(instance?.DisplayName)
-            ? Localization.EnableDestination(_config.Language)
-            : Localization.EnableIn(_config.Language, instance.DisplayName);
-        _enableTargetText.Text = enableText;
-        ToolTip.SetTip(_enableTargetText, enableText);
     }
 
     private bool UpdateModDragFeedback(ListBox? target, int targetIndex)
