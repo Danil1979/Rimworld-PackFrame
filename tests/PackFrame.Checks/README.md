@@ -107,6 +107,11 @@ Manual platform checks:
   consistently without resetting their independent positions. Gutter width must
   remain stable during filtering, including three/four-digit orders. Status badges
   stay at the right edge; hover them to check the same details and actions.
+- Hover an error badge or bottom problem summary: it opens after 300ms, not on
+  entry. Leaving before 300ms, switching badges, clicking, scrolling, or closing
+  the pane/window must cancel the pending opening. Leaving an open popup closes
+  it after 100ms; moving into its content keeps copy, text selection, and Apply
+  usable. Color-label, launch-target, and damaged-instance tooltips are unchanged.
 - Close the second enabled pane using its header control while it is the
   enable/launch target: the target and header highlight must return to the visible
   pane. Open the same instance on the right again: its search and scroll position
