@@ -11,6 +11,11 @@ internal static class CatalogChecks
 
     public static async Task Run(string root)
     {
+        const string customSource = "https://example.com/custom/index.json";
+        Require(ModpackService.StartupIndexUrl(null) == ModpackService.GiteeIndexUrl &&
+                ModpackService.StartupIndexUrl(ModpackService.GitHubIndexUrl) == ModpackService.GitHubIndexUrl &&
+                ModpackService.StartupIndexUrl(customSource) == customSource,
+            "startup preload preserves the selected GitHub or custom catalog source");
         var folder = Path.Combine(root, "catalog");
         using var handler = new CatalogHttp();
         using var client = new HttpClient(handler);
@@ -74,6 +79,8 @@ internal static class CatalogChecks
         await CheckLastModified(root);
         await CheckCorruptCache(root);
         await CheckCancellation(root);
+        await CheckConcurrentRefresh(root);
+        await CheckAllWaitersCancelled(root);
         await CheckReadOnlyCache(root);
     }
 
@@ -195,6 +202,86 @@ internal static class CatalogChecks
         Require(failed is OperationCanceledException && handler.Requests == 1 &&
                 cache.LoadLocal(ModpackService.GitHubIndexUrl)?.Index.Packs.Single().Id == "bundled",
             "cancelled catalog checks stop without fallback or corrupting local content");
+    }
+
+    private static async Task CheckConcurrentRefresh(string root)
+    {
+        using var handler = new CatalogHttp { Respond = (_, _) => Task.FromResult(Json(First, "\"existing\"")) };
+        using var client = new HttpClient(handler);
+        var cache = new ModpackCatalogCache(client, Path.Combine(root, "catalog-shared"), Bundled);
+        var saved = await cache.RefreshAsync(ModpackService.GitHubIndexUrl);
+        var requestCount = handler.Requests;
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var sharedCancelled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        handler.Respond = async (_, token) =>
+        {
+            started.TrySetResult();
+            try { await release.Task.WaitAsync(token); }
+            catch (OperationCanceledException)
+            {
+                sharedCancelled.TrySetResult();
+                throw;
+            }
+            return Json(Updated, "\"shared-update\"");
+        };
+        using var preloadCancellation = new CancellationTokenSource();
+        var preload = cache.RefreshAsync(ModpackService.GitHubIndexUrl, preloadCancellation.Token);
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        var window = cache.RefreshAsync(ModpackService.GitHubIndexUrl);
+        Require(cache.LoadLocal(ModpackService.GitHubIndexUrl)?.ContentHash == saved.ContentHash,
+            "saved catalog remains immediately available during a shared startup refresh");
+        preloadCancellation.Cancel();
+        var cancelled = await ExpectFailure(() => preload.WaitAsync(TimeSpan.FromSeconds(3)));
+        Require(cancelled is OperationCanceledException && !sharedCancelled.Task.IsCompleted && !window.IsCompleted,
+            "cancelling startup preload leaves the collection window's shared request running");
+        release.TrySetResult();
+        var refreshed = await window.WaitAsync(TimeSpan.FromSeconds(3));
+        Require(handler.Requests == requestCount + 1 && refreshed.Index.Packs.Single().Id == "live-two" &&
+                refreshed.ContentHash != saved.ContentHash,
+            "simultaneous startup and window checks use one HTTP operation and publish its result");
+    }
+
+    private static async Task CheckAllWaitersCancelled(string root)
+    {
+        using var handler = new CatalogHttp { Respond = (_, _) => Task.FromResult(Json(First, "\"existing\"")) };
+        using var client = new HttpClient(handler);
+        var folder = Path.Combine(root, "catalog-shared-cancel");
+        var cache = new ModpackCatalogCache(client, folder, Bundled);
+        var saved = await cache.RefreshAsync(ModpackService.GitHubIndexUrl);
+        var requestCount = handler.Requests;
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var sharedCancelled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        handler.Respond = async (_, token) =>
+        {
+            started.TrySetResult();
+            try { await Task.Delay(Timeout.InfiniteTimeSpan, token); }
+            catch (OperationCanceledException)
+            {
+                sharedCancelled.TrySetResult();
+                throw;
+            }
+            throw new InvalidOperationException("Unexpected uncancelled shared catalog request");
+        };
+        using var firstCancellation = new CancellationTokenSource();
+        using var secondCancellation = new CancellationTokenSource();
+        var first = cache.RefreshAsync(ModpackService.GitHubIndexUrl, firstCancellation.Token);
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        var second = cache.RefreshAsync(ModpackService.GitHubIndexUrl, secondCancellation.Token);
+        firstCancellation.Cancel();
+        secondCancellation.Cancel();
+        var firstFailure = await ExpectFailure(() => first.WaitAsync(TimeSpan.FromSeconds(3)));
+        var secondFailure = await ExpectFailure(() => second.WaitAsync(TimeSpan.FromSeconds(3)));
+        await sharedCancelled.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        Require(firstFailure is OperationCanceledException && secondFailure is OperationCanceledException &&
+                handler.Requests == requestCount + 1 &&
+                new ModpackCatalogCache(client, folder, Bundled)
+                    .LoadLocal(ModpackService.GitHubIndexUrl)?.ContentHash == saved.ContentHash,
+            "cancelling all shared callers stops HTTP without fallback or damaging the saved catalog");
+        handler.Respond = (_, _) => Task.FromResult(Json(Updated, "\"next-update\""));
+        var next = await cache.RefreshAsync(ModpackService.GitHubIndexUrl).WaitAsync(TimeSpan.FromSeconds(3));
+        Require(handler.Requests == requestCount + 2 && next.Index.Packs.Single().Id == "live-two",
+            "a new catalog check starts a fresh request after all earlier callers cancel");
     }
 
     private static async Task CheckReadOnlyCache(string root)

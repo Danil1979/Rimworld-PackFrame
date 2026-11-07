@@ -87,9 +87,7 @@ public partial class ModpackWindow : Window
         _language = config.Language ?? Localization.English;
 
         ApplyLocalization();
-        var indexUrl = string.IsNullOrWhiteSpace(config.ModpackIndexUrl)
-            ? ModpackService.GiteeIndexUrl
-            : config.ModpackIndexUrl;
+        var indexUrl = ModpackService.StartupIndexUrl(config.ModpackIndexUrl);
         RepoBox.Text = indexUrl;
         config.ModpackIndexUrl = indexUrl;
         config.Save();
@@ -564,7 +562,7 @@ public partial class ModpackWindow : Window
         {
             if (_busy || _closed) return;
             RepoBox.Text = ModpackService.GitHubIndexUrl;
-            await LoadIndexAsync();
+            await LoadIndexAsync(refreshDetails: true);
         };
         flyout.Items.Add(githubItem);
 
@@ -576,7 +574,7 @@ public partial class ModpackWindow : Window
         {
             if (_busy || _closed) return;
             RepoBox.Text = ModpackService.GiteeIndexUrl;
-            await LoadIndexAsync();
+            await LoadIndexAsync(refreshDetails: true);
         };
         flyout.Items.Add(giteeItem);
         flyout.ShowAt((Control)sender!);
@@ -595,7 +593,7 @@ public partial class ModpackWindow : Window
         if (e.Key == Key.Enter)
         {
             e.Handled = true;
-            await LoadIndexAsync();
+            await LoadIndexAsync(refreshDetails: true);
         }
     }
 
@@ -1014,8 +1012,6 @@ public partial class ModpackWindow : Window
         return client;
     }
 }
-
-
 
 
 

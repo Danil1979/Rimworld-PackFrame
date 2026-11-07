@@ -21,6 +21,8 @@ temporary mod/config files without downloading anything.
 Catalog checks use an injected HTTP handler to cover offline bundled startup,
 ETag/304 and Last-Modified checks, changed hashes, persistent and corrupt caches,
 source isolation, mirror-relative URLs, cancellation, and unwritable cache paths.
+They also verify startup and window refreshes share one request while each caller
+can cancel independently, and that saved source choices are preserved.
 Pack-detail checks cover revisits without another fetch, restart persistence,
 mirror aliases, mutable-model isolation, changed hashes, and failed/corrupt reads.
 Failure checks cover damaged-profile isolation, stale pending edits, installation

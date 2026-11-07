@@ -39,6 +39,15 @@ internal sealed class ModpackCatalogCache
     private readonly string _cacheDirectory;
     private readonly string _bundledJson;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
+    private readonly object _inflightGate = new();
+    private readonly Dictionary<string, InflightRefresh> _inflight = new(StringComparer.Ordinal);
+
+    private sealed class InflightRefresh
+    {
+        public CancellationTokenSource Cancellation { get; } = new();
+        public Task<ModpackCatalogSnapshot> Task { get; set; } = null!;
+        public int Waiters { get; set; }
+    }
 
     public static ModpackCatalogCache Shared { get; } = new(
         new HttpClient(),
@@ -72,7 +81,61 @@ internal sealed class ModpackCatalogCache
         CancellationToken cancellationToken = default
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var normalized = ModpackService.NormalizeIndexUrl(url);
+        InflightRefresh operation;
+        lock (_inflightGate)
+        {
+            if (!_inflight.TryGetValue(normalized, out operation!) || operation.Task.IsCompleted)
+            {
+                operation = new InflightRefresh();
+                operation.Task = RefreshCoreAsync(normalized, operation.Cancellation.Token);
+                _inflight[normalized] = operation;
+            }
+            operation.Waiters++;
+        }
+
+        try
+        {
+            // Startup preloading and an open window can share HTTP work without
+            // sharing caller cancellation or exposing the same mutable index.
+            var snapshot = await operation.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            return snapshot with
+            {
+                Index = ParseIndex(JsonSerializer.Serialize(snapshot.Index, PackFrameJsonContext.Default.ModpackIndex))
+            };
+        }
+        finally
+        {
+            ReleaseRefresh(normalized, operation);
+        }
+    }
+
+    private void ReleaseRefresh(string normalized, InflightRefresh operation)
+    {
+        lock (_inflightGate)
+        {
+            operation.Waiters--;
+            if (operation.Waiters != 0) return;
+            if (_inflight.TryGetValue(normalized, out var current) && ReferenceEquals(current, operation))
+                _inflight.Remove(normalized);
+        }
+
+        // With no callers left, stop queued work and prevent mirror fallback.
+        // Disposal waits for the shared task to finish using its token.
+        if (!operation.Task.IsCompleted) operation.Cancellation.Cancel();
+        _ = operation.Task.ContinueWith(completed =>
+        {
+            _ = completed.Exception;
+            operation.Cancellation.Dispose();
+        }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+    }
+
+    private async Task<ModpackCatalogSnapshot> RefreshCoreAsync(
+        string normalized,
+        CancellationToken cancellationToken
+    )
+    {
         var candidates = GetCandidates(normalized);
         await _refreshGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
