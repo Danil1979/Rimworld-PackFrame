@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Media;
@@ -36,6 +39,91 @@ public partial class MainWindow
     private Task CopyModsToProfileAsync(DragPayload payload, int column, int index) => RunInstanceOperationAsync(
         CopyModsOperation, () => CopyModsToProfileCoreAsync(payload, column, index));
 
+    private Task DeleteLocalModsAsync(IReadOnlyList<ModInfo> mods) => RunInstanceOperationAsync(
+        Localization.DeleteModFiles(_config.Language), () => DeleteLocalModsCoreAsync(mods));
+
+    internal sealed record LocalModDeletionResult(
+        IReadOnlyList<ModInfo> Deleted, IReadOnlyList<(ModInfo Mod, Exception Error)> Failed);
+
+    private sealed class LocalModDeletionException(LocalModDeletionResult result)
+        : Exception("Failed to delete " + result.Failed.Count + " local mod folders.",
+            new AggregateException(result.Failed.Select(item => item.Error)))
+    {
+        internal LocalModDeletionResult Result { get; } = result;
+    }
+
+    internal static async Task<LocalModDeletionResult?> ConfirmAndDeleteLocalModsAsync(
+        IReadOnlyList<ModInfo> mods, Func<IReadOnlyList<ModInfo>, Task<bool>> confirm,
+        Func<IReadOnlyList<ModInfo>, Task<LocalModDeletionResult>> work)
+    {
+        // The displayed count, confirmed paths and eventual work must share one snapshot.
+        var targets = Array.AsReadOnly(mods.ToArray());
+        if (targets.Count == 0 || !await confirm(targets)) return null;
+        return await work(targets);
+    }
+
+    internal static LocalModDeletionResult DeleteLocalModFolders(IReadOnlyList<ModInfo> targets,
+        Action<string>? deleteDirectory = null)
+    {
+        deleteDirectory ??= path => Directory.Delete(path, recursive: true);
+        var deleted = new List<ModInfo>();
+        var failed = new List<(ModInfo Mod, Exception Error)>();
+        foreach (var mod in targets)
+        {
+            try
+            {
+                if (mod.Source != ModSource.Local || string.IsNullOrWhiteSpace(mod.Path))
+                    throw new IOException("The selected item is not a local mod folder: " + mod.Path);
+                deleteDirectory(mod.Path);
+                deleted.Add(mod);
+            }
+            catch (Exception exception)
+            {
+                AppLog.Error("Delete local mod folder: " + mod.Path, exception);
+                failed.Add((mod, exception));
+            }
+        }
+        return new LocalModDeletionResult(deleted, failed);
+    }
+
+    internal static List<ModInfo> WithoutDeletedModPaths(IReadOnlyList<ModInfo> catalog,
+        IReadOnlyList<ModInfo> deleted)
+    {
+        var comparison = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        var paths = deleted.Select(mod => NormalizeModDeletionPath(mod.Path))
+            .Where(path => path is not null).ToHashSet(comparison);
+        // A malformed surviving row must not interrupt reconciliation of successful deletions.
+        return catalog.Where(mod => NormalizeModDeletionPath(mod.Path) is not { } path ||
+            !paths.Contains(path)).ToList();
+    }
+
+    private static string? NormalizeModDeletionPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return null;
+        try { return Path.TrimEndingDirectorySeparator(Path.GetFullPath(path)); }
+        catch (ArgumentException) { return null; }
+        catch (NotSupportedException) { return null; }
+        catch (PathTooLongException) { return null; }
+    }
+
+    private static string LocalModDeletionOrderNotice(string? language) => OperationText.Choose(language,
+        "Mod-list orders are kept. Deleted files may leave missing mod entries in affected load orders.",
+        "模组列表顺序会保留。删除文件后，受影响的加载顺序中可能会出现缺失模组。",
+        "模組清單順序會保留。刪除檔案後，受影響的載入順序中可能會出現缺失模組。",
+        "MOD の読み込み順は保持されます。ファイルを削除すると、読み込み順に不足 MOD が残る場合があります。");
+
+    private string LocalModDeletionFailureMessage(LocalModDeletionResult result)
+    {
+        var count = result.Deleted.Count;
+        var total = count + result.Failed.Count;
+        return OperationText.Choose(_config.Language,
+            $"Deleted {count} of {total} mod folders. The remaining folders could not be fully deleted and may contain partially removed files. Check folder permissions and open the log for details.",
+            $"已删除 {total} 个模组文件夹中的 {count} 个。其余文件夹未能完全删除，其中的部分文件可能已被移除。请检查文件夹权限并打开日志查看详情。",
+            $"已刪除 {total} 個模組資料夾中的 {count} 個。其餘資料夾未能完全刪除，其中的部分檔案可能已被移除。請檢查資料夾權限並開啟記錄查看詳情。",
+            $"{total} 個中 {count} 個の MOD フォルダーを削除しました。残りのフォルダーは完全に削除できず、一部のファイルが削除されている可能性があります。アクセス権を確認し、詳細はログをご覧ください。")
+            + "\n\n" + LocalModDeletionOrderNotice(_config.Language);
+    }
+
     private async Task RunInstanceOperationAsync(string operation, Func<Task> action)
     {
         if (_windowClosed || _instanceOperationBusy) return;
@@ -60,6 +148,8 @@ public partial class MainWindow
                 "操作を完了できませんでした。元ファイル、ディスクの空き容量、フォルダーの権限を確認して再試行してください。詳細と復元先はログで確認できます。");
             if (exception is UnsupportedInstanceImportException)
                 message = operation + "\n\n" + InvalidImportMessage();
+            if (exception is LocalModDeletionException deletion)
+                message = operation + "\n\n" + LocalModDeletionFailureMessage(deletion.Result);
             var dialog = new ConfirmWindow(message, Localization.LogButton(_config.Language),
                 Localization.CloseButton(_config.Language));
             if (await dialog.ShowDialog<bool>(this) && !_windowClosed)

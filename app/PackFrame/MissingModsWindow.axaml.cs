@@ -56,12 +56,7 @@ public partial class MissingModsWindow : Window
         this.FindControl<TextBlock>("RefreshNoteText")!.IsVisible = _instance?.IsSteamCmd == false &&
             rows.Any(row => row.WorkshopId is not null && row.Availability != WorkshopModAvailability.Missing);
         this.FindControl<ItemsControl>("Rows")!.ItemsSource = rows.Select(row =>
-            string.IsNullOrWhiteSpace(row.Status) ? new MissingModRow
-            {
-                Label = row.Label, Author = row.Author, PackageId = row.PackageId, Link = row.Link,
-                WorkshopId = row.WorkshopId, Availability = row.Availability,
-                Status = Localization.WorkshopStatus(_language, row.Availability)
-            } : row).ToList();
+            ModStatusDisplayRow.From(row, _language)).ToList();
     }
 
     private async void OnHistoryClick(object? sender, RoutedEventArgs e)
@@ -73,6 +68,20 @@ public partial class MissingModsWindow : Window
 
         var window = new MissingHistoryWindow(_instance, _language);
         await window.ShowDialog(this);
+    }
+
+    private void OnOpenLinkClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: ModStatusDisplayRow row }) return;
+        var status = this.FindControl<TextBlock>("LinkStatusText")!;
+        if (ModStatusLink.TryOpen(row.Link, out var error))
+        {
+            status.IsVisible = false;
+            return;
+        }
+        status.Text = ModStatusLink.FailureText(_language);
+        status.IsVisible = true;
+        if (error is not null) AppLog.Error("Open mod web link", error);
     }
 
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)

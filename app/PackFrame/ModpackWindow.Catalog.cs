@@ -124,6 +124,8 @@ public partial class ModpackWindow
         }
 
         var previous = _selectedItem?.Entry;
+        var previousStatus = Find<TextBlock>("StatusText").Text;
+        var hadSelectedDetails = _selectedPack is not null;
         CancelDetailLoad();
         _indexUri = snapshot.IndexUri;
         _catalogHash = snapshot.ContentHash;
@@ -148,6 +150,11 @@ public partial class ModpackWindow
             !string.IsNullOrWhiteSpace(previous.Id)
                 ? item.Entry.Id == previous.Id
                 : item.Entry.File == previous.File && item.Entry.GiteeFile == previous.GiteeFile);
+        // Background/deferred catalog updates retain a result for the same selected pack.
+        // An explicit Refresh or a genuinely new selection starts fresh browsing guidance.
+        var preserveStatus = hadSelectedDetails && previous is not null && matching >= 0 && !refreshDetails &&
+            !ModpackFooterStatus.IsSelectionHint(previousStatus, _language);
+        if (preserveStatus) Find<TextBlock>("StatusText").Text = previousStatus;
         if (matching < 0 && _currentInstance?.Metadata?.PackId is { } bound)
             matching = _items.FindIndex(item => item.Entry.Id == bound);
         var list = Find<ListBox>("PackList");
@@ -159,7 +166,7 @@ public partial class ModpackWindow
         }
         finally { _applyingCatalog = false; }
         Find<TextBlock>("ListCount").Text = _items.Count.ToString();
-        if (list.SelectedItem is ModpackListItem selected) _ = LoadPackAsync(selected, refreshDetails);
+        if (list.SelectedItem is ModpackListItem selected) _ = LoadPackAsync(selected, refreshDetails, preserveStatus);
         else SetControls(true);
     }
 
@@ -209,13 +216,14 @@ public partial class ModpackWindow
         Find<TextBlock>("PackNoticeText").Text = text;
     }
 
-    private void ShowSelectedPack(ModpackDefinition pack, ModpackListItem item, int version)
+    private void ShowSelectedPack(ModpackDefinition pack, ModpackListItem item, int version, bool updateFooter = true)
     {
         _selectedPack = pack;
         SetPackNotice(null);
         ShowPack(pack, item);
         SetCover(null);
-        Find<TextBlock>("StatusText").Text = Localization.ModpackSelectHint(_language);
+        if (updateFooter && !_busy)
+            Find<TextBlock>("StatusText").Text = ModpackFooterStatus.SelectedHint(_language, _canInstall);
         _ = LoadCoverAsync(pack.Image ?? item.Entry.Image, version);
     }
 

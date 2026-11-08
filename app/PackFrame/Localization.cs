@@ -2502,14 +2502,48 @@ public static class Localization
 
     public static string ExportCollectionTokenHint(string? language)
     {
-        return language switch
+        var instructions = language switch
         {
-            SimplifiedChinese => "1. 点“获取 Token”。\n2. 在弹出的网页页面里点\"Generate new token\"，点下拉菜单里的\"Generate new token (classic)\"。\n3. 新页面最上方“Note”输入框里填 PackFrame。\n4. 往下找到第一大项\"repo\"，勾上。\n5. 拉到页面最底部，点绿色按钮\"Generate token\"。\n6. 新页面顶部会出现 ghp_ 开头的 Token。点右边的复制按钮，回到这里，粘贴到 GitHub Token 输入框。",
-            TraditionalChinese => "1. 開啟 classic token 頁面。\n2. Note 填 PackFrame，Expiration 依需求選擇。\n3. Select scopes 只勾 repo（Full control of private repositories）。\n4. 確保 admin:org 及其子項 write:org、read:org、manage_runners:org 全部取消。\n5. workflow、packages、user、delete:repo 等其他權限全部不勾。\n6. 點 Generate token，複製 ghp_... 貼到上方。",
-            Japanese => "1. classic token ページを開きます。\n2. Note に PackFrame を入力し、Expiration を選択します。\n3. Select scopes では repo（Full control of private repositories）だけを選択します。\n4. admin:org とその子項目 write:org、read:org、manage_runners:org をすべて外します。\n5. workflow、packages、user、delete:repo などは選択しません。\n6. Generate token を押し、ghp_... をコピーして上に貼り付けます。",
-            _ => "1. Open the classic token page.\n2. Enter PackFrame as Note and choose an Expiration.\n3. Under Select scopes, check only repo (Full control of private repositories).\n4. Uncheck admin:org and its children write:org, read:org, and manage_runners:org.\n5. Leave workflow, packages, user, delete:repo, and all other scopes unchecked.\n6. Click Generate token, copy ghp_..., and paste it above."
+            SimplifiedChinese => "1. 点“获取 Token”，然后选择 Generate new token (classic)。\n2. 设置较短的有效期。发布公开仓库只需勾选 public_repo，不要勾选完整的 repo 或其他无关权限。\n3. 生成令牌后粘贴到上方。public_repo 可修改你有写入权限的公开仓库，请妥善保管。",
+            TraditionalChinese => "1. 點選「取得 Token」，再選擇 Generate new token (classic)。\n2. 設定較短的有效期限。發布公開儲存庫只需勾選 public_repo，請勿勾選完整的 repo 或其他無關權限。\n3. 產生權杖後貼到上方。public_repo 可修改你有寫入權限的公開儲存庫，請妥善保管。",
+            Japanese => "1.「トークンを取得」から Generate new token (classic) を選択します。\n2. 有効期限を短く設定してください。公開リポジトリへの公開には public_repo のみを選択し、repo 全体や無関係な権限は選択しないでください。\n3. 生成したトークンを上に貼り付けます。public_repo は自分が書き込める公開リポジトリを変更できるため、厳重に管理してください。",
+            _ => "1. Open Get token, then Generate new token (classic).\n2. Choose a short expiration. For public repositories, select only public_repo, not the full repo scope or unrelated permissions.\n3. Generate the token and paste it above. public_repo can modify public repositories you can write to; treat it like a password."
         };
+        return instructions + "\n" + ExportCollectionTokenStorageHint(language);
     }
+
+    public static string ExportCollectionGiteeTokenHint(string? language)
+    {
+        var instructions = language switch
+        {
+            SimplifiedChinese => "使用 Gitee 私人令牌，并为仓库操作选择 projects 权限。仅授予 Gitee 对所选操作要求的权限；令牌权限不会赋予你原本没有的仓库访问权。",
+            TraditionalChinese => "使用 Gitee 私人權杖，並為儲存庫操作選擇 projects 權限。僅授予 Gitee 對所選操作要求的權限；權杖權限不會賦予你原本沒有的儲存庫存取權。",
+            Japanese => "Gitee の個人アクセストークンを使用し、リポジトリ操作には projects 権限を選択してください。選んだ操作に Gitee が要求する権限だけを付与してください。トークンは、アカウントにないリポジトリへのアクセス権を追加しません。",
+            _ => "Use a Gitee personal access token with projects for repository operations. Grant only the permissions Gitee requires for the selected operation. Token scopes do not grant repository access your account does not already have."
+        };
+        return instructions + "\n" + ExportCollectionTokenStorageHint(language);
+    }
+
+    public static string ExportCollectionIndexTokenHint(string? language)
+    {
+        var instructions = language switch
+        {
+            SimplifiedChinese => "GitHub：公开仓库使用 public_repo。Gitee：提交会在所选索引仓库中创建分支，因此你的账户须拥有该仓库的写入权限以及创建 PR 的权限。只有令牌并不能获得这些访问权。",
+            TraditionalChinese => "GitHub：公開儲存庫使用 public_repo。Gitee：提交會在所選索引儲存庫中建立分支，因此你的帳戶須擁有該儲存庫的寫入權限以及建立 PR 的權限。只有權杖並不能取得這些存取權。",
+            Japanese => "GitHub: 公開リポジトリには public_repo を使用します。Gitee: 送信時に選択したインデックスリポジトリ内にブランチを作成するため、そのリポジトリへの書き込み権限と PR の作成権限が必要です。トークンだけではアクセス権は付与されません。",
+            _ => "GitHub: use public_repo for public repositories. Gitee: submission creates a branch in the selected index repository, so your account needs write access there and permission to create pull requests. A token alone does not grant this access."
+        };
+        return instructions + "\n" + ExportCollectionTokenStorageHint(language);
+    }
+
+    private static string ExportCollectionTokenStorageHint(string? language) => language switch
+    {
+        SimplifiedChinese => "令牌保留在当前打开的导出窗口中，不会保存到 packframe.json。关闭窗口不会吊销令牌。",
+        TraditionalChinese => "權杖保留在目前開啟的匯出視窗中，不會儲存到 packframe.json。關閉視窗不會撤銷權杖。",
+        Japanese => "トークンは開いているエクスポート画面に保持され、packframe.json には保存されません。画面を閉じてもトークンは失効しません。",
+        _ => "Tokens stay in this open export window and are not saved to packframe.json. Closing the window does not revoke them."
+    };
+
     public static string ExportCollectionRepoName(string? language)
     {
         return language switch

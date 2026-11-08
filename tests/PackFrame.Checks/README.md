@@ -214,3 +214,22 @@ on failure. Confirm existing unsaved orders survive catalog refreshes.
 - Select several inactive mods, then click Enable over the other active pane without focusing its list first. Confirm the named target receives that exact selection; Disable removes only its own pane's selection. Repeat with both views on the same instance. Double-click and drag keep their existing target behavior.
 - In each search, test text-only, source-only, status-only and combined filters. The trailing × and Escape in the search/list clear the same query/source/status state, including a no-results list. Search field/view preferences remain intact. Ctrl+F (⌘F on Mac) focuses the current pane's search; Ctrl+Z while typing remains text undo. Escape in dialogs or combo menus must not reset a pane.
 - Edit two different instances: each affected header says Unsaved, the bottom status names both, and Save changes shows its shortcut and emphasis. Save or discard removes badges/emphasis. Returning to an already-edited instance restores its badge.
+
+Local-mod deletion checks use generated temporary folders only. They cover cancelled
+and delayed confirmation, captured targets after selection changes, mixed and total
+failures, duplicate package IDs in separate locations, non-local target rejection,
+and preservation of pending orders, saved configuration and surviving catalog rows.
+Manually verify repeated delete commands open only one confirmation; Cancel leaves
+files, selections and lists unchanged; disk work blocks window close and shortcuts;
+partial failures show persistent counts and a working log action. Successful deletions
+must preserve load orders (affected entries can become Missing), and must not remove
+another copy of the same package from the catalog.
+
+When the last catalog mod is deleted, instance selectors and pending orders must stay
+visible; affected load orders should show their missing entries instead of resetting.
+
+Missing-mod recovery links use display-only rows with localized, row-specific
+accessible actions. Tests capture the intended URI without opening a browser,
+reject unsafe schemes, credentials and control characters, and exercise opener
+failures. Empty-pane checks distinguish missing-only load orders, absent game
+folders, empty catalogs and filtered installed rows.

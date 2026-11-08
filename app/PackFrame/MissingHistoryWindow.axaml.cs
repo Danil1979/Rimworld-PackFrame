@@ -76,7 +76,8 @@ public partial class MissingHistoryWindow : Window
     {
         if (_instance is null) return;
         this.FindControl<TextBlock>("StatusText")!.IsVisible = false;
-        this.FindControl<ItemsControl>("Rows")!.ItemsSource = rows;
+        this.FindControl<ItemsControl>("Rows")!.ItemsSource = rows.Select(row =>
+            ModStatusDisplayRow.From(row, _language)).ToList();
         this.FindControl<TextBlock>("SummaryText")!.Text =
             Localization.MissingHistorySummary(
                 _language,
@@ -141,6 +142,20 @@ public partial class MissingHistoryWindow : Window
         status.IsVisible = true;
         ToolTip.SetTip(status, exception.Message);
         AppLog.Error(clearing ? "Clear missing history" : "Read missing history", exception);
+    }
+
+    private void OnOpenLinkClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: ModStatusDisplayRow row }) return;
+        var status = this.FindControl<TextBlock>("LinkStatusText")!;
+        if (ModStatusLink.TryOpen(row.Link, out var error))
+        {
+            status.IsVisible = false;
+            return;
+        }
+        status.Text = ModStatusLink.FailureText(_language);
+        status.IsVisible = true;
+        if (error is not null) AppLog.Error("Open mod web link", error);
     }
 
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)

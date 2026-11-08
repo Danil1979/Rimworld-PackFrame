@@ -232,13 +232,14 @@ public partial class ModpackWindow : Window
         await LoadPackAsync(item);
     }
 
-    private async Task LoadPackAsync(ModpackListItem item, bool forceRefresh = false)
+    private async Task LoadPackAsync(ModpackListItem item, bool forceRefresh = false, bool preserveStatus = false)
     {
         if (_closed || _busy || _indexUri is null)
         {
             return;
         }
 
+        var previousStatus = Find<TextBlock>("StatusText").Text;
         CancelDetailLoad();
         Find<ScrollViewer>("DetailScroll").Offset = default;
         var version = _detailVersion;
@@ -249,7 +250,7 @@ public partial class ModpackWindow : Window
         _selectedPack = null;
         if (saved is not null)
         {
-            ShowSelectedPack(saved.Pack, item, version);
+            ShowSelectedPack(saved.Pack, item, version, updateFooter: !preserveStatus);
             SetControls(true);
             if (!forceRefresh && _checkedPackDetails.Contains(key)) return;
             SetPackNotice(T("Showing saved details while checking for updates...",
@@ -260,6 +261,8 @@ public partial class ModpackWindow : Window
             ClearDetail(T($"Loading {item.Name}...", $"正在读取 {item.Name}...",
                 $"正在讀取 {item.Name}...", $"{item.Name} を読み込み中..."));
         }
+        if (preserveStatus) Find<TextBlock>("StatusText").Text = previousStatus;
+        var expectedStatus = Find<TextBlock>("StatusText").Text;
         using var cancellation = new CancellationTokenSource();
         _detailCancellation = cancellation;
         SetControls(true);
@@ -276,7 +279,8 @@ public partial class ModpackWindow : Window
             _checkedPackDetails.Add(key);
             SetPackNotice(null);
             if (saved is null || saved.ContentHash != snapshot.ContentHash)
-                ShowSelectedPack(snapshot.Pack, item, version);
+                ShowSelectedPack(snapshot.Pack, item, version, updateFooter:
+                    ModpackFooterStatus.CanReplace(Find<TextBlock>("StatusText").Text, expectedStatus, preserveStatus, _busy));
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
@@ -288,10 +292,13 @@ public partial class ModpackWindow : Window
                 AppLog.Error("Load pack details: " + item.Name, exception);
                 if (saved is null)
                 {
+                    var currentStatus = Find<TextBlock>("StatusText").Text;
                     ClearDetail(T("Pack details unavailable. Check your connection and select Refresh to retry.",
                         "无法读取合集详情。请检查网络连接并点击“刷新”重试。",
                         "無法讀取合集詳情。請檢查網路連線並點擊「重新整理」重試。",
                         "パックの詳細を読み込めません。接続を確認して「更新」で再試行してください。"));
+                    if (!ModpackFooterStatus.CanReplace(currentStatus, expectedStatus, preserveStatus, _busy))
+                        Find<TextBlock>("StatusText").Text = currentStatus;
                     Find<SelectableTextBlock>("PackTitle").Text = item.Name;
                     Find<SelectableTextBlock>("PackDescription").Text = item.Entry.Summary;
                 }

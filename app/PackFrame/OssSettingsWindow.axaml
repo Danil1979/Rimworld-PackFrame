@@ -24,28 +24,35 @@
                           Margin="0,8,0,0" />
 
                 <TextBlock x:Name="EndpointLabel"
+                           TextWrapping="Wrap"
                            Foreground="{DynamicResource SecondaryTextBrush}"
                            FontWeight="SemiBold"
                            Margin="0,8,0,0" />
-                <Border Classes="field" MinHeight="36">
+                <Border x:Name="EndpointField" Classes="field" MinHeight="36">
                     <TextBox x:Name="EndpointBox"
                              Background="Transparent"
                              BorderThickness="0"
                              CornerRadius="0"
                              VerticalContentAlignment="Center" />
                 </Border>
+                <TextBlock x:Name="EndpointError" IsVisible="False" TextWrapping="Wrap"
+                           Foreground="{DynamicResource PrimaryTextBrush}" />
 
                 <TextBlock x:Name="BucketLabel"
                            Foreground="{DynamicResource SecondaryTextBrush}"
                            FontWeight="SemiBold"
                            Margin="0,6,0,0" />
-                <Border Classes="field" MinHeight="36">
+                <Border x:Name="BucketField" Classes="field" MinHeight="36">
                     <TextBox x:Name="BucketBox"
                              Background="Transparent"
                              BorderThickness="0"
                              CornerRadius="0"
                              VerticalContentAlignment="Center" />
                 </Border>
+                <TextBlock x:Name="BucketError" IsVisible="False" TextWrapping="Wrap"
+                           Foreground="{DynamicResource PrimaryTextBrush}" />
+                <TextBlock x:Name="DestinationText" TextWrapping="Wrap"
+                           Foreground="{DynamicResource SecondaryTextBrush}" />
 
                 <TextBlock x:Name="PrefixLabel"
                            Foreground="{DynamicResource SecondaryTextBrush}"
@@ -63,19 +70,21 @@
                            Foreground="{DynamicResource SecondaryTextBrush}"
                            FontWeight="SemiBold"
                            Margin="0,6,0,0" />
-                <Border Classes="field" MinHeight="36">
+                <Border x:Name="AccessKeyIdField" Classes="field" MinHeight="36">
                     <TextBox x:Name="AccessKeyIdBox"
                              Background="Transparent"
                              BorderThickness="0"
                              CornerRadius="0"
                              VerticalContentAlignment="Center" />
                 </Border>
+                <TextBlock x:Name="AccessKeyIdError" IsVisible="False" TextWrapping="Wrap"
+                           Foreground="{DynamicResource PrimaryTextBrush}" />
 
                 <TextBlock x:Name="AccessKeySecretLabel"
                            Foreground="{DynamicResource SecondaryTextBrush}"
                            FontWeight="SemiBold"
                            Margin="0,6,0,0" />
-                <Border Classes="field" MinHeight="36">
+                <Border x:Name="AccessKeySecretField" Classes="field" MinHeight="36">
                     <TextBox x:Name="AccessKeySecretBox"
                              Background="Transparent"
                              BorderThickness="0"
@@ -83,6 +92,8 @@
                              PasswordChar="*"
                              VerticalContentAlignment="Center" />
                 </Border>
+                <TextBlock x:Name="AccessKeySecretError" IsVisible="False" TextWrapping="Wrap"
+                           Foreground="{DynamicResource PrimaryTextBrush}" />
 
                 <TextBlock x:Name="NoteText"
                            Foreground="{DynamicResource MutedTextBrush}"

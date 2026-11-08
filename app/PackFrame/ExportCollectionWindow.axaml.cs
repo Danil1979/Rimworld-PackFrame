@@ -321,7 +321,7 @@ public partial class ExportCollectionWindow : Window
             "開啟 Gitee PR",
             "Gitee PR を開く"
         );
-        IndexHint.Text = string.Empty;
+        IndexHint.Text = Localization.ExportCollectionIndexTokenHint(_language);
         SubmitIndexButton.Content =
             Localization.ExportCollectionSubmitIndex(_language);
         OpenIndexPrButton.Content =
@@ -376,13 +376,7 @@ public partial class ExportCollectionWindow : Window
         GetGiteeTokenButton.Content = OperationText.Choose(
             _language, "Get token", "获取 Token", "取得 Token", "トークンを取得"
         );
-        GiteeTokenHint.Text = OperationText.Choose(
-            _language,
-            "Create a Gitee personal access token with projects permission.",
-            "在 Gitee 创建私人令牌，勾选 projects 权限。",
-            "在 Gitee 建立私人令牌，勾選 projects 權限。",
-            "Gitee の個人アクセストークンを作成し、projects 権限を付与してください。"
-        );
+        GiteeTokenHint.Text = Localization.ExportCollectionGiteeTokenHint(_language);
         GiteeRepoNameLabel.Text = Localization.ExportCollectionRepoName(_language);
         UploadGiteeButton.Content = OperationText.Choose(
             _language, "Upload to Gitee", "上传到 Gitee", "上傳到 Gitee", "Gitee へアップロード"

@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The November 2026 checkpoint builds cleanly in Release and passes 559 regression
+The November 2026 checkpoint builds cleanly in Release and passes 683 regression
 checks. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -16,7 +16,7 @@ relying on a font being installed on the computer.
 
 | Surface | Checked in this pass | Remaining checks |
 | --- | --- | --- |
-| Main mod lists | Explicit per-pane enable target, matching-instance views, X/Escape filter recovery, visible shortcuts, pending header badges, Ctrl+S disk save, typing undo, 1100×700 English layout; copy unsaved lists while source disk remains unchanged | Long real lists, all-language main-window pass, Windows/macOS |
+| Main mod lists | Explicit per-pane enable target, matching-instance views, X/Escape filter recovery, visible shortcuts, pending header badges, Ctrl+S disk save, typing undo, 1100×700 English layout; copy unsaved lists while source disk remains unchanged | Long real lists, populated four-language main-window pass, Windows/macOS |
 | Confirmation | Long message fits, action buttons remain visible, safe initial focus and Escape | Extreme translated strings |
 | Rename | Empty input stays open with an error; Escape from button focus cancels | Filesystem rename failures on each OS |
 | Import mode | Full labels, unavailable-overwrite explanation, safe Cancel/Escape | Full native import matrix |
@@ -28,11 +28,11 @@ relying on a font being installed on the computer.
 | Update choices | Conflict semantics explicit; actions pinned outside scrolling area | Native mixed keep/replace update against isolated installation |
 | Completion | Long action labels fit; Close/Escape | All installer completion variants |
 | Index summary | Validation and keyboard behavior reviewed | Four-language keyboard walkthrough |
-| Missing mods/history | Long identifiers, empty history, corrupt-file errors, repair/refresh recovery, retained rows after another failure, repeated safe confirmation cancellation | Actionable links, large-list performance, platform permission recovery |
-| OSS settings | Scrolling inspected; named fields and failed-save preservation covered in code/tests | Stronger syntax validation; live upload failure matrix |
+| Missing mods/history | Long identifiers, empty history, corrupt-file errors, repair/refresh recovery, retained rows after another failure, repeated safe confirmation cancellation | Large-list performance, native external-browser failure, platform permission recovery |
+| OSS settings | Required/invalid field errors and focus, custom-port preview, disabling/cancel, scrolling; atomic failed-save preservation in checks | Four-language layout; live upload failure matrix |
 | Diagnostic log | Missing-file state, disabled Open, Refresh/Close inspected; read errors retain prior content in checks | Native permission-denied log and external opener failures |
 | Export wizard | All five pages inspected; custom title and repository URL survive Back/Next; intentional clearing survives navigation | Real Steam/Gitee/GitHub publishing, partial network failure, all languages |
-| Modpack catalog | Offline bundled entries, unavailable details, named disabled install actions, proportional split and pinned actions; minimum 1000×650 in all four languages | Loaded artwork, large catalog, online install and cancellation matrix |
+| Modpack catalog | Offline bundled entries, unavailable details, named disabled install actions, proportional split and pinned actions; minimum 1000×650 in all four languages; loaded/no-cover switching, scroll reset and selected-pack footer | Large catalog, online install and cancellation matrix |
 | Application update | Unavailable-asset state and release notes inspected | Long errors, small screen, real isolated replacement/recovery |
 
 ## Regression protections added
@@ -66,8 +66,7 @@ relying on a font being installed on the computer.
   expose localized accessible names. Native checks confirmed controls remain
   reachable at 1000×650 in English, Japanese, simplified and traditional Chinese.
 - The full suite now includes 39 additional history regression checks (538 total).
-  Live network installation/publishing and loaded-cover behavior remain separate
-  pending checks.
+  Live network installation/publishing remains a separate pending check.
 
 ## Main-list revision after user feedback
 
@@ -94,16 +93,43 @@ relying on a font being installed on the computer.
 - Availability/history: the **Missing** or history action below an active list.
 - Diagnostics: **Log**, in the bottom-left footer.
 
+## Recovery and validation checkpoint
+
+- Local mod deletion snapshots exact confirmed paths and uses the shared write
+  guard. Partial failures remain visible with counts and log access. Only successful
+  paths leave the catalog; duplicate-package copies and saved/pending orders remain.
+  Recursive deletion can partially fail; the UI says so. Unix symlinks are covered
+  with generated-file tests, while Windows junction behavior remains unverified.
+- A truly empty catalog keeps instance selectors, missing IDs and pending badges.
+  Native Refresh/filter changes and Ctrl+S were verified using an isolated empty
+  game fixture, not GUI deletion of real files. Missing-only load orders now point
+  to the Missing action instead of claiming the saved list is empty.
+- Native minimum-size empty-state layouts were checked in English, Japanese and
+  both Chinese variants. This does not substitute for populated-list coverage.
+- Missing mods and history offer localized, keyboard-accessible Open link actions,
+  retain copyable addresses, and disable missing/unsafe web links. A display-only
+  model leaves saved history unchanged. The 780×420 missing dialog fits. URI and
+  opener-failure tests use injected handlers; no external link was activated.
+- OSS fields validate supported endpoint/bucket formats before saving, preserve
+  custom ports and show the actual destination host. Field errors clear as input
+  is corrected. Save validates format, not network reachability or permissions.
+- Credential guidance accurately describes unencrypted local OSS storage,
+  retention when disabled, and clearing versus revocation. Publishing tokens stay
+  in the open wizard, not app configuration. GitHub's public flow recommends
+  public_repo, and Gitee index submission explains destination write access.
+- Cached catalog selection now gives relevant installation guidance. Late detail
+  results cannot overwrite newer operation results or errors.
+- Regression total: 683. Live publishing, installation, credentials and user-file
+  deletion were not exercised in native tests.
+
 ## Next passes
 
-1. Verify loaded cover art, large catalogs, and cached detail transitions; refine
-   install-action wording and native interaction states.
-2. Move remaining large local-copy/final-instance-creation operations off the UI
-   thread and unify their busy/failure feedback.
-3. Improve missing-mod/history links and large-list navigation without losing
-   selection during live refreshes.
-4. Review credential guidance, endpoint validation, focus order, and error recovery
-   across all export/setup pages.
-5. Repeat minimum-size, four-language, keyboard, and platform-specific walkthroughs
-   after each substantive change. Test live external operations only in explicitly
-   authorized isolated destinations.
+1. Review large catalogs and missing/history list navigation and performance;
+   retain keyboard focus and selection during live refreshes.
+2. Check populated main lists, long names and many pending instances in every
+   language, especially minimum window sizes and keyboard navigation.
+3. Complete native publishing-page credential guidance and error-recovery checks
+   in all languages, without using real credentials or submitting fixtures.
+4. Exercise isolated online install/update/cancel/recovery and external openers only
+   in explicitly authorized destinations. Windows/macOS-specific behavior remains
+   unverified on the Linux review desktop.

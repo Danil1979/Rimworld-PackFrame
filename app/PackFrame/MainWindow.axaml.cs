@@ -2474,7 +2474,7 @@ public partial class MainWindow : Window
     {
         foreach (var timer in _searchTimers.Values) timer.Stop();
         _searchSources.Clear();
-        if (_allMods.Count == 0)
+        if (_allMods.Count == 0 && _instances.Count == 0)
         {
             ResetCatalog();
             return;
@@ -4809,65 +4809,38 @@ public partial class MainWindow : Window
         }
     }
 
-    private static async Task<bool> TryDeleteModFolderAsync(ModInfo mod)
+    private async Task DeleteLocalModsCoreAsync(IReadOnlyList<ModInfo> mods)
     {
-        if (string.IsNullOrWhiteSpace(mod.Path) || !Directory.Exists(mod.Path))
-        {
-            return false;
-        }
-
-        try
-        {
-            await Task.Run(() => Directory.Delete(mod.Path, true));
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private async Task DeleteLocalModsAsync(IReadOnlyList<ModInfo> mods)
-    {
-        if (mods.Count == 0)
-        {
-            return;
-        }
-
+        if (mods.Count == 0 || !CanModifyInstanceFiles()) return;
         var language = _config.Language;
-        var message = mods.Count == 1
-            ? Localization.DeleteModConfirm(language, mods[0].Name)
-            : Localization.DeleteModsConfirm(language, mods.Count);
-        var confirm = new ConfirmWindow(
-            message,
-            Localization.DeleteModFiles(language),
-            Localization.CancelButton(language)
-        );
-        if (!await confirm.ShowDialog<bool>(this))
+        var result = await ConfirmAndDeleteLocalModsAsync(mods, async targets =>
         {
-            return;
+            var message = targets.Count == 1
+                ? Localization.DeleteModConfirm(language, targets[0].Name)
+                : Localization.DeleteModsConfirm(language, targets.Count);
+            message += "\n\n" + LocalModDeletionOrderNotice(language);
+            var confirm = new ConfirmWindow(message, Localization.DeleteModFiles(language),
+                Localization.CancelButton(language));
+            return await confirm.ShowDialog<bool>(this) && !_windowClosed && CanModifyInstanceFiles();
+        }, targets => RunInstanceWorkAsync(Localization.DeleteModFiles(language),
+            () => DeleteLocalModFolders(targets)));
+        if (result is null || _windowClosed) return;
+
+        if (result.Deleted.Count > 0)
+        {
+            var detailsPackageId = _packageValue.Text;
+            _allMods = WithoutDeletedModPaths(_allMods, result.Deleted);
+            _modsByPackage = _allMods.GroupBy(mod => mod.PackageId, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
+            _modsById = _modsByPackage.ToDictionary(pair => pair.Key, pair => pair.Value[0], StringComparer.OrdinalIgnoreCase);
+            // File deletion must not rewrite pending orders or discard another copy of this package.
+            RefreshManager(false);
+            ShowDetails(PaneSelectionSnapshot.ResolveDetails(GetCommandList(), detailsPackageId));
         }
 
-        ShowDetails(null);
-        var deleted = new List<ModInfo>();
-        foreach (var mod in mods)
-        {
-            if (await TryDeleteModFolderAsync(mod))
-            {
-                deleted.Add(mod);
-            }
-        }
-
-        if (deleted.Count > 0)
-        {
-            RemoveDeletedMods(deleted);
-        }
-
-        ShowToast(
-            deleted.Count == mods.Count
-                ? Localization.ModFilesDeleted(language)
-                : Localization.ModDeleteFailed(language)
-        );
+        if (result.Failed.Count > 0)
+            throw new LocalModDeletionException(result);
+        ShowToast(Localization.ModFilesDeleted(language) + "\n" + LocalModDeletionOrderNotice(language));
     }
 
     private static ulong? GetWorkshopId(ModInfo mod)

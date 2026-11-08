@@ -48,16 +48,13 @@ public partial class MainWindow
             AutomationProperties.SetName(reset, resetHint);
             var empty = Find<Border>($"PaneEmpty{column}");
             empty.IsVisible = pane.List.ItemCount == 0 && !_loadingMods;
-            Find<TextBlock>($"PaneEmptyTitle{column}").Text = filtered
-                ? WorkflowText("No matching mods", "没有匹配的模组", "沒有符合的模組", "一致する MOD がありません")
-                : WorkflowText("No mods here yet", "此处暂无模组", "此處尚無模組", "まだ MOD がありません");
-            Find<TextBlock>($"PaneEmptyBody{column}").Text = _gameInstallation is null
-                ? WorkflowText("Choose a RimWorld folder above to load your library.", "在上方选择 RimWorld 文件夹以加载模组库。", "在上方選擇 RimWorld 資料夾以載入模組庫。", "上部で RimWorld フォルダーを選択してライブラリを読み込みます。")
-                : filtered
-                    ? WorkflowText("Press Esc in this search field, or use its × to clear search and filters.", "在搜索框中按 Esc，或点击末尾的 × 清除搜索和筛选。", "在搜尋框中按 Esc，或點選末尾的 × 清除搜尋和篩選。", "検索欄で Esc を押すか、末尾の × で検索とフィルターを解除します。")
-                    : column == 0
-                        ? WorkflowText("Every available mod is already active in the selected instance.", "所选实例已启用所有可用模组。", "所選實例已啟用所有可用模組。", "選択中のインスタンスでは、利用できる MOD がすべて有効です。")
-                        : WorkflowText("Select mods in Inactive, then choose Enable above this list.", "在未启用列表中选择模组，然后点击此列表上方的“启用”按钮。", "在未啟用清單中選擇模組，然後點選此清單上方的「啟用」按鈕。", "無効リストで MOD を選び、このリストの上の「有効化」で追加します。");
+            var guidance = PaneEmptyGuidance.Create(_config.Language, _gameInstallation is not null,
+                _allMods.Count > 0, filtered, column > 0,
+                _searchSources.TryGetValue(pane.List, out var source) ? source.Count : 0,
+                column == 1 ? _missingMods1.Count : column == 2 ? _missingMods2.Count : 0,
+                column == 0 || GetInstanceForColumn(column) is not null);
+            Find<TextBlock>($"PaneEmptyTitle{column}").Text = guidance.Title;
+            Find<TextBlock>($"PaneEmptyBody{column}").Text = guidance.Body;
 
         }
         UpdateSelectionAction();

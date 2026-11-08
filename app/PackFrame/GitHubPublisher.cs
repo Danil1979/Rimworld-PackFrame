@@ -215,7 +215,7 @@ public static class GitHubPublisher
 
         createError +=
             "\nGitHub rejected repository creation. Check that the token can create repositories "
-            + "(classic: repo; fine-grained: All repositories + Administration read/write) "
+            + "(classic: public_repo for public repositories; fine-grained: repository creation permission) "
             + "and that the repository name is not already taken.";
 
         using var existing = await client.GetAsync(
@@ -233,7 +233,7 @@ public static class GitHubPublisher
             throw new InvalidOperationException(
                 createError + "\n" + getError
                 + "\nThe repository name may already exist but the token cannot access it. "
-                + "Use a classic token with repo scope, or add this repository to a fine-grained token."
+                + "For a public repository, use classic public_repo or grant that repository to a fine-grained token. Choose a different name if an inaccessible or private repository already uses it."
             );
         }
 
