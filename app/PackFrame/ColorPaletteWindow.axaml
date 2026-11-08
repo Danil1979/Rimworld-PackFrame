@@ -9,6 +9,40 @@
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource AppBackgroundBrush}"
         RequestedThemeVariant="Dark">
+    <Window.Resources>
+        <!-- Swatch color is information: interaction feedback must never replace its fill. -->
+        <ControlTheme x:Key="PaletteSwatchButton" TargetType="Button">
+            <Setter Property="FocusAdorner" Value="{x:Null}" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Grid>
+                        <Border Name="SwatchSurface" Background="{TemplateBinding Background}"
+                                BorderBrush="#66000000" BorderThickness="1" />
+                        <Border Name="HoverOutline" BorderBrush="White" BorderThickness="1"
+                                Margin="1" IsVisible="False" IsHitTestVisible="False" />
+                        <Border Name="PressedOutline" BorderBrush="#FF101820" BorderThickness="2"
+                                Margin="2" IsVisible="False" IsHitTestVisible="False" />
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          IsHitTestVisible="False" />
+                        <Border Name="FocusOutline" BorderBrush="White" BorderThickness="2"
+                                IsVisible="False" IsHitTestVisible="False">
+                            <Border BorderBrush="#FF101820" BorderThickness="2" />
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:pointerover /template/ Border#HoverOutline">
+                <Setter Property="IsVisible" Value="True" />
+            </Style>
+            <Style Selector="^:pressed /template/ Border#PressedOutline">
+                <Setter Property="IsVisible" Value="True" />
+            </Style>
+            <Style Selector="^:focus-visible /template/ Border#FocusOutline">
+                <Setter Property="IsVisible" Value="True" />
+            </Style>
+        </ControlTheme>
+    </Window.Resources>
     <Grid Margin="16" RowDefinitions="Auto,Auto,*,Auto,Auto">
         <TextBlock x:Name="TitleText"
                    FontSize="20"

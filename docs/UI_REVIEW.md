@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 1,991 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 1,998 regression
 checks. Earlier checkpoint counts below describe their historical snapshots. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -23,13 +23,13 @@ relying on a font being installed on the computer.
 | Config folder | Named current/proposed paths, bounded layout, native folder-picker Cancel, failed-save retention and repair/retry, pending-destination protection, no-op history preservation, four-language error layouts at 480×380 | Auto-detection integration and folder pickers on Windows/macOS |
 | Language | Named main action, current-language indicator, visible Cancel, four-language picker review, minimum Japanese and first-run layouts, selection/cancel results, pending edits and Undo across language switches; failed-save retention and repair/retry | Platform screen readers and OS-specific startup behavior |
 | Pending changes | Safe initial focus, wrapped message/actions inspected | Update-and-restart integration on each OS |
-| Color palette | Native edit/cancel persistence, corrupt-file retention, repair/retry, selected-color + label commit, brush rollback, Undo/Redo and persistent error/Log | Four-language recovery layouts; Windows/macOS permissions and races |
+| Color palette | Native edit/cancel persistence, corrupt-file retention, repair/retry, selected-color + label commit, brush rollback, Undo/Redo and persistent error/Log | Windows/macOS permissions and races |
 | Collection target | Explicit selection, duplicate-title IDs, mod addition/removal preview, name/ID search, hidden-selection recovery, 1,000-row keyboard navigation, compact four-language layouts, empty/cancel/result checks | Live Steam-owned collection retrieval and publishing |
 | Update choices | Separate file/order views, searchable virtualized files, retained decisions, bulk scope, 1,000-file native review, keyboard confirmation/cancel, all four languages and compact Japanese layout | Actual mixed keep/replace installation; no-conflict native confirmation remains unverified |
 | Completion | Long action labels fit; Close/Escape | All installer completion variants |
 | Index summary | Validation and keyboard behavior reviewed | Four-language keyboard walkthrough |
 | Missing mods/history | Long identifiers, empty history, corrupt-file errors, repair/refresh recovery, retained rows after another failure, repeated safe confirmation cancellation | Native external-browser failure, platform permission recovery; larger-than-1,000 native list stress |
-| OSS settings | Required/invalid field errors and focus, custom-port preview, disabling/cancel, scrolling; atomic failed-save preservation in checks | Four-language layout; live upload failure matrix |
+| OSS settings | Required/invalid field errors and focus, custom-port preview, disabling/cancel, scrolling; atomic failed-save preservation in checks | Live upload failure matrix |
 | Diagnostic log | Missing-file state, disabled Open, Refresh/Close inspected; read errors retain prior content in checks | Native permission-denied log and external opener failures |
 | Export wizard | Five stages at 640×560 in all four languages; local-only Save and close, required-name focus/recovery, missing-manifest failure and retry, explicit optional stages, scoped Close; draft/clear preservation in checks | Real Steam/Gitee/GitHub publishing, live partial network failure, native populated Workshop lists and successful-PR link rows |
 | Modpack catalog | Offline bundled entries, unavailable details, named disabled install actions, proportional split and pinned actions; minimum 1000×650 in all four languages; loaded/no-cover switching, scroll reset and selected-pack footer | Online install/cancellation matrix; very large selected-pack mod detail lists |
@@ -771,3 +771,30 @@ problem and the next recovery step rather than list unrelated possibilities.
 - Final Release build has zero warnings/errors; full suite: 1,991 PASS lines.
   Desktop coverage is Linux with synthetic fixtures. Windows/macOS, screen-reader
   acceptance, and live Steam/network installation or publishing remain unverified.
+
+
+## Color-picker feedback and translated settings review
+
+**Problem and principle.** The standard button hover changed the entire swatch to
+neutral gray, hiding the information being selected. The current pale color was
+marked only with a pale border. Feedback should preserve the object's meaning;
+selection should use a distinct shape, and keyboard focus should be visible.
+
+- Swatch-specific templates preserve the actual color. Hover and press affect
+  outlines only. Current color has a contrasting check badge, while keyboard focus
+  uses a separate light/dark outline. No shared button theme or color/label commit
+  behavior changed.
+- Matched native 620×420 screenshots `175-palette-hover-before.jpg` and
+  `176-palette-hover-after.jpg` hover the same golden swatch. Before it turns gray;
+  after it stays golden and the current pale swatch has an explicit check.
+- Native checks covered hover, keyboard Tab/Shift+Tab and Space activation, clear
+  focus on red and dark swatches, label editing retained after injected save
+  failure, scrolling to the last label, and Escape cancellation. Minimum layouts
+  and failure states were rendered in English, Japanese and both Chinese variants;
+  error content and actions stayed reachable. The fixture never persisted choices.
+- OSS settings were also reviewed in all four languages: labels, top/bottom
+  scrolling, complete security guidance, pinned controls, and Cancel/Escape.
+  Fields were empty, uploads disabled, no keys entered and no Save action used.
+- Final Linux Release build: zero warnings/errors; 1,998 PASS lines. Seven new
+  checks protect swatch templates and the constructed marker. Windows/macOS,
+  actual screen-reader operation, and live upload/install/publish flows remain open.

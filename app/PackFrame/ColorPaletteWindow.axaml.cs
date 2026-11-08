@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Styling;
 
 namespace PackFrame;
 
@@ -104,11 +105,9 @@ public partial class ColorPaletteWindow : Window
                 Height = 32,
                 Padding = new Thickness(0),
                 Background = new SolidColorBrush(color),
-                BorderBrush = isCurrent
-                    ? new SolidColorBrush(Colors.White)
-                    : ThemeService.SecondaryBrush,
-                BorderThickness = new Thickness(isCurrent ? 2 : 1),
-                CornerRadius = new CornerRadius(0)
+                Theme = (ControlTheme)this.FindResource("PaletteSwatchButton")!,
+                // A fixed-contrast shape identifies the current color, including pale swatches.
+                Content = isCurrent ? CreateCurrentColorMarker() : null
             };
             ToolTip.SetTip(button, hex);
             var selectedHex = hex;
@@ -153,6 +152,25 @@ public partial class ColorPaletteWindow : Window
         KeyDown += OnWindowKeyDown;
         Opened += (_, _) => this.FindControl<Button>("CancelButton")!.Focus();
     }
+
+    private static Border CreateCurrentColorMarker() => new()
+    {
+        Width = 20,
+        Height = 20,
+        CornerRadius = new CornerRadius(10),
+        Background = Brushes.White,
+        BorderBrush = new SolidColorBrush(Color.Parse("#101820")),
+        BorderThickness = new Thickness(1),
+        IsHitTestVisible = false,
+        Child = new Avalonia.Controls.Shapes.Path
+        {
+            Data = Geometry.Parse("M 0,4 L 3,7 L 9,0"),
+            Stroke = new SolidColorBrush(Color.Parse("#101820")),
+            StrokeThickness = 2,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+        }
+    };
 
     private Dictionary<string, string> ReadLabels()
     {

@@ -9,6 +9,8 @@
     <ProjectReference Include="../../app/PackFrame/PackFrame.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="../../app/PackFrame/ColorPaletteWindow.axaml" LogicalName="UiWiring.ColorPaletteWindow.axaml" />
+    <EmbeddedResource Include="../../app/PackFrame/ColorPaletteWindow.axaml.cs" LogicalName="UiWiring.ColorPaletteWindow.axaml.cs" />
     <EmbeddedResource Include="../../app/PackFrame/MainWindow.axaml" LogicalName="UiWiring.MainWindow.axaml" />
     <EmbeddedResource Include="../../app/PackFrame/MainWindow.axaml.cs" LogicalName="UiWiring.MainWindow.axaml.cs" />
   </ItemGroup>

@@ -457,6 +457,7 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
         "collection update computes additions and removals without duplicates");
     UpdateChecks.Run(root);
     ThemeContrastChecks.Run();
+    PaletteSwatchChecks.Run();
     Console.WriteLine("Rule and publishing checks passed.");
 }
 finally
