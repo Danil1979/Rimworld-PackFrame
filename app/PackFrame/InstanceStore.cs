@@ -350,16 +350,77 @@ public static class InstanceStore
         instance.Metadata = metadata;
     }
 
-    public static void RenameInstance(ManagedInstance instance, string? name)
+    public static void RenameInstance(ManagedInstance instance, string? name) =>
+        RenameInstance(instance, name, FileTransactions.WriteAtomic);
+
+    internal static void RenameInstance(
+        ManagedInstance instance,
+        string? name,
+        Action<string, Action<string>> writeAtomic
+    )
     {
         instance.EnsureHealthy();
-        var source = instance.Metadata?.Source;
-        WriteMetadata(
-            instance.DirectoryPath,
-            string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim(),
-            source ?? string.Empty
-        );
-        instance.Metadata = ReadMetadata(instance.DirectoryPath);
+        var path = Path.Combine(instance.DirectoryPath, MetadataFileName);
+        JsonDocument? document = null;
+        InstanceMetadata metadata;
+        try
+        {
+            if (!Directory.Exists(instance.DirectoryPath))
+                throw new DirectoryNotFoundException("Instance folder does not exist: " + instance.DirectoryPath);
+
+            // Validate and retain the same disk snapshot. A stale view must not
+            // overwrite another operation's binding/source or discard future fields.
+            if (File.Exists(path) || Directory.Exists(path))
+            {
+                document = JsonDocument.Parse(File.ReadAllText(path));
+                metadata = document.RootElement.Deserialize(PackFrameJsonContext.Default.InstanceMetadata)
+                    ?? throw new InvalidDataException("Instance metadata is null: " + path);
+            }
+            else metadata = new InstanceMetadata();
+        }
+        catch (Exception exception)
+        {
+            document?.Dispose();
+            AppLog.Error("Read instance metadata for rename: " + path, exception);
+            throw new IOException($"Could not read instance metadata: {path}", exception);
+        }
+
+        using (document)
+        {
+            name = string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim();
+            if (metadata.Name == name)
+            {
+                // An unchanged name needs no write, including on read-only installs.
+                instance.Metadata = metadata;
+                return;
+            }
+
+            metadata.Name = name;
+            writeAtomic(path, temporary =>
+            {
+                using var stream = File.Create(temporary);
+                using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true });
+                writer.WriteStartObject();
+                var hasName = false;
+                if (document is not null)
+                {
+                    foreach (var property in document.RootElement.EnumerateObject())
+                    {
+                        if (property.NameEquals("name"))
+                        {
+                            writer.WriteString("name", name);
+                            hasName = true;
+                        }
+                        else property.WriteTo(writer);
+                    }
+                }
+                if (!hasName) writer.WriteString("name", name);
+                writer.WriteEndObject();
+            });
+
+            // Publish only after replacement succeeds; failure retains the live view.
+            instance.Metadata = metadata;
+        }
     }
 
     internal static void SaveMetadata(ManagedInstance instance, InstanceMetadata metadata)

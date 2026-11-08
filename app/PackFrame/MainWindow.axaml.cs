@@ -6195,18 +6195,31 @@ public partial class MainWindow : Window
 
         var language = _config.Language;
         var dialog = new RenameWindow(
-            instance.DisplayName,
+            RenameWorkflow.EditableName(instance),
             Localization.RenameInstance(language),
             Localization.CancelButton(language),
-            language
+            language,
+            instance.DirectoryPath
         );
+        dialog.TryRenameAsync = async name =>
+        {
+            try
+            {
+                await RunInstanceWorkAsync(Localization.RenameInstance(language), () => InstanceStore.RenameInstance(instance, name));
+                return null;
+            }
+            catch (Exception exception)
+            {
+                AppLog.Error("Rename instance: " + instance.DirectoryPath, exception);
+                return RenameWorkflow.Failure(language);
+            }
+        };
         var name = await dialog.ShowDialog<string?>(this);
         if (name is null || _windowClosed)
         {
             return;
         }
 
-        await RunInstanceWorkAsync(Localization.RenameInstance(language), () => InstanceStore.RenameInstance(instance, name));
         ReloadInstances(instance.FolderName, column);
     }
 

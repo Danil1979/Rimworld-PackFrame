@@ -403,6 +403,8 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
     CollectionTargetChecks.Run();
     LanguageChoiceChecks.Run(root);
     ConfigFolderPreferenceChecks.Run(root);
+    RenameMetadataChecks.Run(root);
+    RenameWorkflowChecks.Run();
     OfficialConfigWorkflowChecks.Run(root);
     WorkshopSelectionRefreshChecks.Run();
     PaneLayoutChecks.Run();

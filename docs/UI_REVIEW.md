@@ -548,3 +548,40 @@ relying on a font being installed on the computer.
   was used.
 - Final Release build: zero warnings/errors; full console suite 1,113 PASS lines.
   Remaining platform permission/auto-detection checks are explicitly open.
+
+
+## Rename recovery and metadata preservation
+
+- Rename now stays open until its asynchronous write succeeds. Failure retains the
+  proposed text, provides a persistent recovery explanation and a direct Log
+  action, and supports retry without re-entering the name. Repeated submission,
+  Cancel and window close are blocked only while the write is active.
+- The dialog identifies the exact instance folder and clarifies that this changes
+  the display name, not the folder or mod list. The input uses the actual name,
+  not the generated `(cmd)` status suffix. Deliberately typed suffixes remain valid.
+- Current metadata is read and validated once, with only its name replaced in an
+  atomic write. Unknown/nested JSON and newer source/binding fields survive; the
+  live object changes only after success. An unchanged trimmed name refreshes the
+  validated metadata without writing. Missing optional legacy metadata is still
+  supported, but a missing instance directory is not recreated.
+- The full console suite covers malformed and incompatible metadata, a directory
+  occupying the metadata file, interrupted atomic replacement, vanished instance
+  directories, repair/retry, unknown fields, current bindings and unchanged
+  pending lists/configuration/other instances.
+- Native Linux baseline reproduced the lost-input failure with an agent-owned
+  metadata marker directory. Revised real-main-window checks covered blank-name
+  validation, Escape, a pending mod edit, failed rename with retained text, opening
+  and closing Log, repairing the exact synthetic path and pressing Enter to retry.
+  Undo remained available after rename and restored the mod edit without changing
+  the new name. Only the intended metadata name changed on disk.
+- The 560×340 dialog resizes to 420×300 with scrolling content and pinned Cancel,
+  Rename and error-only Log controls. English, Simplified Chinese, Traditional
+  Chinese and Japanese error layouts were checked at minimum size, including
+  automatic error scrolling, visible actions and safe Escape dismissal. The final
+  default-size screenshot uses the production dialog in a synthetic failure host.
+- A synthetic delayed callback confirmed repeated Enter, Escape and window close
+  do not dismiss or submit again while saving; controls re-enable on failure and
+  Cancel works afterward. Exactly one callback completed.
+- Final Release build: zero warnings/errors; full console suite 1,200 PASS lines.
+- No real game files, downloads, publishing UI or installer were used. Platform
+  permissions and screen-reader announcement behavior remain unverified.
