@@ -35,11 +35,7 @@ public partial class MainWindow
             "“对比”可添加另一视图，用于比较或在实例间复制模组。",
             "「比較」可新增另一個檢視，用於比較或在實例間複製模組。",
             "「比較」で別のビューを追加し、インスタンス間で比較やコピーができます。");
-        Find<TextBlock>("InactiveActionHint").Text = WorkflowText(
-            "Select mods, then Enable →",
-            "选择模组，然后在右侧启用 →",
-            "選擇模組，然後在右側啟用 →",
-            "MOD を選択して有効化 →");
+        UpdateAvailableTargetGuidance();
         var resize = OperationText.Choose(language,
             "Resize mod details. Drag, or use the arrow keys when focused.",
             "调整详情宽度：拖动分隔线，或聚焦后使用方向键。",
@@ -78,13 +74,29 @@ public partial class MainWindow
         UpdatePaneAccessibility();
     }
 
+    private void UpdateAvailableTargetGuidance()
+    {
+        if (!_workspaceReady) return;
+        var instance = GetSelectedInstance(_lastEnableColumn - 1);
+        var target = instance?.DisplayName;
+        var guidance = AvailableTargetGuidance.Create(_config.Language, target, instance?.ConfigDirectoryPath);
+        var subtitle = Find<TextBlock>("AvailableSubtitle");
+        subtitle.Text = guidance.Subtitle;
+        ToolTip.SetTip(subtitle, guidance.Help);
+        AutomationProperties.SetName(subtitle, guidance.Subtitle);
+        var hint = Find<TextBlock>("InactiveActionHint");
+        hint.Text = guidance.Action;
+        ToolTip.SetTip(hint, guidance.Help);
+        AutomationProperties.SetName(hint, guidance.Action);
+    }
+
     private void UpdatePaneAccessibility()
     {
         for (var column = 0; column < 3; column++)
         {
             var pane = PaneWorkflow(column);
             var field = column == 0 ? _inactiveSearchField : column == 1 ? _activeSearchField1 : _activeSearchField2;
-            var instance = column == 0 ? null : GetSelectedInstance(column - 1);
+            var instance = GetSelectedInstance(column == 0 ? _lastEnableColumn - 1 : column - 1);
             PaneAccessibility.Create(_config.Language, column, instance?.DisplayName).Apply(
                 pane.List, pane.Search, field,
                 column == 0 ? null : column == 1 ? _instanceCombo1 : _instanceCombo2,

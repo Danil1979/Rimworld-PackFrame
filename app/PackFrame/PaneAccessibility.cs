@@ -13,7 +13,7 @@ internal sealed record PaneAccessibility(string List, string Search, string Sear
             1 => OperationText.Choose(language, "Load order", "加载顺序", "載入順序", "読み込み順序"),
             _ => OperationText.Choose(language, "Comparison load order", "对比加载顺序", "比較載入順序", "比較用の読み込み順序")
         };
-        var context = column == 0 || string.IsNullOrWhiteSpace(instanceName) ? role : $"{role}: {instanceName}";
+        var context = string.IsNullOrWhiteSpace(instanceName) ? role : $"{role}: {instanceName}";
         return new(context,
             OperationText.Choose(language, "Search", "搜索", "搜尋", "検索") + ": " + context,
             OperationText.Choose(language, "Search field", "搜索字段", "搜尋欄位", "検索項目") + ": " + context,

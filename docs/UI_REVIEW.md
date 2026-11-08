@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 2,624 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 2,640 regression
 checks. Earlier checkpoint counts below describe their historical snapshots. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -977,3 +977,24 @@ Fixture configurations and executable were restored after the test.
 Release checks pass 2,624 assertions, including confirmation cancellation, save
 failure/exception, residual pending edits, success, and four-language target/path
 wording. Real-game launch and Windows/macOS dialog behavior remain unverified.
+
+## Visible available-catalog target
+
+In comparison mode, changing the active instance changes which mods appear in
+Available mods, and also changes the default Enter/double-click destination. The
+old generic “target list” caption left that relationship implicit. The catalog
+now names the current instance in both its subtitle and the default-action hint.
+Full names and configuration paths remain available in tooltips; accessible list,
+search and search-field names identify the same target. Explicit Enable buttons
+still choose their own destination.
+
+This addresses visibility of system state and wrong-target prevention without
+changing selection/move semantics. Each caption reserves a second line for the
+instance name, with ellipsis instead of overflow for long names. Native Linux
+1100×700 checks verified a 236-to-336 catalog switch between two fixture instances,
+Enter enabling only the named target, explicit Enable overriding that destination,
+Undo, and closing comparison restoring the remaining target. English and Japanese
+long-name layouts were inspected; full names remained available to accessibility.
+No edits were saved. Release checks pass 2,640 assertions, including four-language
+target changes, empty selections, reserved caption lines and accessible identities.
+Windows/macOS screen-reader announcements remain unverified.

@@ -4017,6 +4017,8 @@ public partial class MainWindow : Window
             if (active) header.Classes.Add("enable-target");
             else header.Classes.Remove("enable-target");
         }
+        UpdateAvailableTargetGuidance();
+        UpdatePaneAccessibility();
         UpdateLaunchButton();
     }
 

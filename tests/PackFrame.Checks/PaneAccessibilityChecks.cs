@@ -8,15 +8,15 @@ internal static class PaneAccessibilityChecks
     {
         foreach (var language in new[] { "en", "zh-Hans", "zh-Hant", "ja" })
         {
-            var available = PaneAccessibility.Create(language, 0, "Ignored target");
+            var available = PaneAccessibility.Create(language, 0, "Target colony");
             var primary = PaneAccessibility.Create(language, 1, "Frontier colony");
             var comparison = PaneAccessibility.Create(language, 2, "Frontier colony");
             Require(new[] { available.List, primary.List, comparison.List }.Distinct().Count() == 3,
                 "each pane has a distinct accessible list name even for the same instance in " + language);
             Require(new[] { available.Search, primary.Search, comparison.Search }.Distinct().Count() == 3,
                 "searches identify their pane in " + language);
-            Require(!available.List.Contains("Ignored target") && primary.List.Contains("Frontier colony") && comparison.List.Contains("Frontier colony"),
-                "instance identity is included only for load-order panes in " + language);
+            Require(available.List.Contains("Target colony") && primary.List.Contains("Frontier colony") && comparison.List.Contains("Frontier colony"),
+                "instance identity includes the available catalog target and load-order panes in " + language);
             var list = new ListBox(); var search = new TextBox(); var field = new ComboBox();
             var instance = new ComboBox(); var manage = new Button();
             primary.Apply(list, search, field, instance, manage);

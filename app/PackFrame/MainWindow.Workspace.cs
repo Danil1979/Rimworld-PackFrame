@@ -102,7 +102,7 @@ public partial class MainWindow
         }
         UpdateGameFolderToggle();
         Find<TextBlock>("AvailableHeading").Text = WorkflowText("Available mods", "可用模组", "可用模組", "利用可能な MOD");
-        Find<TextBlock>("AvailableSubtitle").Text = WorkflowText("Not enabled in the target list", "尚未在目标列表中启用", "尚未在目標清單中啟用", "対象リストで無効な MOD");
+        UpdateAvailableTargetGuidance();
         foreach (var column in new[] { 1, 2 })
             Find<TextBlock>($"LoadOrderHeading{column}").Text = WorkflowText("Load order", "加载顺序", "載入順序", "読み込み順序");
         Find<TextBlock>("DetailsHeading").Text = WorkflowText("MOD DETAILS", "模组详情", "模組詳情", "MOD 詳細");

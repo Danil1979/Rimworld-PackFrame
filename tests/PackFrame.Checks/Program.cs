@@ -436,6 +436,7 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
     ModStatusLinkChecks.Run();
     ModStatusLayoutChecks.Run();
     PaneAccessibilityChecks.Run();
+    AvailableTargetGuidanceChecks.Run();
     RealizedModListAutomationChecks.Run();
     ModOrderMoveChecks.Run();
     await LaunchSavePromptChecks.RunAsync();
