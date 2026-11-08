@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 764 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 783 regression
 checks. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -232,3 +232,28 @@ relying on a font being installed on the computer.
 - Clean Linux Release build: zero warnings/errors; 764 regression checks passed.
   This pass exercised Enable history, not drag reorder, color undo or ten-entry
   boundary behavior in the native app. Those remain separate follow-up checks.
+
+
+## Accurate unsaved-state checkpoint
+
+- Returning a staged list to the current saved contents now clears that instance's
+  Unsaved badge and removes it from the compact pending summary. Redo marks it
+  edited again. The comparison reads the current file rather than relying on an
+  obsolete undo baseline, and includes order, duplicate occurrences, game version
+  and known expansions.
+- Missing, malformed or unreadable files cannot be mistaken for a saved empty
+  list by this comparison. It never writes the configuration. Existing save and
+  reload error handling remains separate; concurrent external-write conflict
+  handling is not a new guarantee of this change.
+- Native matching before/after checks disabled Allow Tool and then undid the edit.
+  The prior build still showed Unsaved; the revised build removed it. With edits
+  in two instances, successive Undo actions reduced the pending count from two to
+  one to none, without changing the other instance's list. Redo restored pending.
+- Closing after reverting to saved state required neither a Save nor a discard
+  prompt. Both synthetic configuration files retained exactly the same bytes and
+  modification timestamps. The pre-existing missing package IDs were retained.
+- An older import-isolation test now stages a genuinely new second-instance edit
+  after its earlier Save, rather than expecting a no-op to count as pending.
+- Clean Linux Release build: zero warnings/errors; 783 regression checks passed.
+  Windows/macOS, live external-write races and interrupted multi-file saves remain
+  separate verification work.

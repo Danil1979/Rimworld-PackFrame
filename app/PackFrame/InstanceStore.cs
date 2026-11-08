@@ -420,11 +420,33 @@ public static class InstanceStore
 
         var key = Path.GetFullPath(configDirectory);
         instance.ActivePackageIds = active;
+        if (MatchesSavedMods(instance, active))
+        {
+            Pending.Remove(key);
+            return;
+        }
         Pending[key] = new PendingActiveMods(
             active,
             instance.GameVersion,
             instance.KnownExpansions.ToList()
         );
+    }
+
+    private static bool MatchesSavedMods(ManagedInstance instance, IReadOnlyList<string> active)
+    {
+        try
+        {
+            // Compare the current file, not an earlier undo snapshot. External edits,
+            // missing files and read failures must not be mistaken for a clean state.
+            var saved = ReadModsConfig(Path.Combine(instance.ConfigDirectoryPath, "ModsConfig.xml"), requireExists: true);
+            return active.Select(NormalizePackageId).SequenceEqual(saved.Active, StringComparer.OrdinalIgnoreCase) &&
+                string.Equals(instance.GameVersion?.Trim(), saved.Version, StringComparison.Ordinal) &&
+                instance.KnownExpansions.Select(NormalizePackageId).SequenceEqual(saved.Known, StringComparer.OrdinalIgnoreCase);
+        }
+        catch (IOException)
+        {
+            return false;
+        }
     }
 
     public static void SavePendingMods()
@@ -1457,14 +1479,14 @@ public static class InstanceStore
         }
     }
     private static (List<string> Active, string? Version, List<string> Known) ReadModsConfig(
-        string modsConfigPath
+        string modsConfigPath, bool requireExists = false
     )
     {
         var active = new List<string>();
         string? version = null;
         var known = new List<string>();
 
-        if (File.Exists(modsConfigPath))
+        if (requireExists || File.Exists(modsConfigPath))
         {
             try
             {

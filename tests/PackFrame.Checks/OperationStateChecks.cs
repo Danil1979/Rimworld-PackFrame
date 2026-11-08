@@ -70,7 +70,8 @@ internal static class OperationStateChecks
             var zip = Path.Combine(root, "instance.zip");
             ZipFile.CreateFromDirectory(source.DirectoryPath, zip);
             InstanceStore.StageActiveMods(target, new[] { "archive.pending" });
-            InstanceStore.StageActiveMods(other, new[] { "other.pending" });
+            // The earlier Save persisted other.pending; stage a genuinely new edit.
+            InstanceStore.StageActiveMods(other, new[] { "other.archive.pending" });
             Require(InstanceStore.ImportArchiveOverwrite(target, zip) && !HasPending(target) && HasPending(other),
                 "successful archive overwrite clears only its target pending changes");
 

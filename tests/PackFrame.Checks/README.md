@@ -274,3 +274,10 @@ UI action-wiring checks embed the current MainWindow markup and constructor sour
 to ensure Undo/Redo are not subscribed in both places. They also verify code-only
 Language/Browse wiring and test the duplicate-detection rule against synthetic
 examples. Native Linux two-edit tests verify the actual single-step history flow.
+
+
+Pending-edit identity checks cover no-op/revert/redo, saved-baseline changes,
+independent instances, order and duplicate occurrences, normalized IDs, version
+and expansion changes, official/scratch modes, and missing/corrupt/unreadable file
+comparisons. Native checks additionally verify badge/banner recovery, clean close,
+and unchanged config bytes and timestamps when returning to saved state.
