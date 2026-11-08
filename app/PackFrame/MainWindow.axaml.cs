@@ -847,7 +847,7 @@ public partial class MainWindow : Window
             var pane = PaneWorkflow(column);
             if (!pane.List.IsEffectivelyVisible) continue;
             var action = ModPaneKeyboard.Resolve(e.Key, e.KeyModifiers,
-                pane.List.IsKeyboardFocusWithin, pane.Search.IsKeyboardFocusWithin);
+                pane.List.IsKeyboardFocusWithin, pane.Search.IsKeyboardFocusWithin, canReorder: column > 0);
             if (action == ModPaneKeyAction.None) continue;
             if (_loadingMods || _painting || _customDragActive) { e.Handled = true; return; }
             if (action == ModPaneKeyAction.FocusResults)
@@ -870,6 +870,8 @@ public partial class MainWindow : Window
                     ShowModContextMenu(pane.List, selected, atPointer: false);
                 }
             }
+            else if (action is ModPaneKeyAction.MoveUp or ModPaneKeyAction.MoveDown)
+                ReorderSelection(column, action == ModPaneKeyAction.MoveUp ? -1 : 1);
             else if (action == ModPaneKeyAction.Toggle) MoveModsOnDoubleClick(pane.List);
             else MoveModSelection(pane.List,
                 action is ModPaneKeyAction.Previous or ModPaneKeyAction.ExtendPrevious ? -1 : 1,
@@ -4562,6 +4564,17 @@ public partial class MainWindow : Window
     {
         var language = _config.Language;
         var flyout = new MenuFlyout();
+        var reorderColumn = GetListColumn(list);
+        if (reorderColumn > 0)
+        {
+            foreach (var direction in new[] { -1, 1 })
+            {
+                var shortcut = direction < 0 ? "Alt+↑" : "Alt+↓";
+                flyout.Items.Add(CreateMenuItem(ModOrderMove.Label(language, direction) + " · " + shortcut,
+                    CanReorderSelection(reorderColumn, direction), () => ReorderSelection(reorderColumn, direction)));
+            }
+            flyout.Items.Add(new Separator());
+        }
         var steamUrl = GetSteamOpenUrl(mod);
         flyout.Items.Add(CreateMenuItem(
             Localization.OpenInSteam(language),

@@ -69,7 +69,7 @@ public partial class MainWindow
         {
             var pane = PaneWorkflow(column);
             AutomationProperties.SetHelpText(pane.Search, searchHelp);
-            AutomationProperties.SetHelpText(pane.List, listHelp);
+            AutomationProperties.SetHelpText(pane.List, listHelp + (column > 0 ? " " + ModOrderMove.Help(language) : string.Empty));
             var hint = Find<TextBlock>($"SearchShortcutHint{column}");
             hint.Text = System.OperatingSystem.IsMacOS() ? "⌘F · ↓" : "Ctrl+F · ↓";
             hint.IsHitTestVisible = true;

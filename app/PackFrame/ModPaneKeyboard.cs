@@ -2,15 +2,17 @@ using Avalonia.Input;
 
 namespace PackFrame;
 
-internal enum ModPaneKeyAction { None, FocusResults, Previous, Next, ExtendPrevious, ExtendNext, Toggle, ContextMenu }
+internal enum ModPaneKeyAction { None, FocusResults, Previous, Next, ExtendPrevious, ExtendNext, Toggle, ContextMenu, MoveUp, MoveDown }
 
 internal static class ModPaneKeyboard
 {
-    internal static ModPaneKeyAction Resolve(Key key, KeyModifiers modifiers, bool listFocused, bool searchFocused)
+    internal static ModPaneKeyAction Resolve(Key key, KeyModifiers modifiers, bool listFocused, bool searchFocused, bool canReorder = false)
     {
         if (searchFocused && modifiers == KeyModifiers.None && key is Key.Down or Key.Enter)
             return ModPaneKeyAction.FocusResults;
         if (!listFocused) return ModPaneKeyAction.None;
+        if (canReorder && modifiers == KeyModifiers.Alt && key is Key.Up or Key.Down)
+            return key == Key.Up ? ModPaneKeyAction.MoveUp : ModPaneKeyAction.MoveDown;
         if ((key == Key.Apps && modifiers == KeyModifiers.None) ||
             (key == Key.F10 && modifiers == KeyModifiers.Shift)) return ModPaneKeyAction.ContextMenu;
         if (modifiers == KeyModifiers.None)

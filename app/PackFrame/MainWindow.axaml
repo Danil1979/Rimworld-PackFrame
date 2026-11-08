@@ -448,13 +448,19 @@
                             <Grid Height="38" RowDefinitions="0,38">
                                 <TextBlock x:Name="PaneActionTarget1" IsVisible="False" Margin="2,0" TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
-                                <Grid Grid.Row="1" ColumnDefinitions="*,*">
+                                <Grid Grid.Row="1" ColumnDefinitions="*,*,Auto,Auto">
                                     <Button x:Name="EnableSelection1" Tag="0:1" Margin="0,0,3,4"
                                             Theme="{StaticResource FlatButton}" HorizontalAlignment="Stretch" Padding="4,2"
                                             Click="OnSelectionActionClick" />
                                     <Button x:Name="DisableSelection1" Grid.Column="1" Tag="1:0" Margin="3,0,0,4"
                                             Theme="{StaticResource FlatButton}" HorizontalAlignment="Stretch" Padding="4,2"
                                             Click="OnSelectionActionClick" />
+                                    <Button x:Name="MoveUp1" Grid.Column="2" Tag="1:-1" Content="↑"
+                                            Theme="{StaticResource FlatButton}" Width="28" MinWidth="28" Padding="0"
+                                            Margin="4,0,0,4" Click="OnReorderClick" />
+                                    <Button x:Name="MoveDown1" Grid.Column="3" Tag="1:1" Content="↓"
+                                            Theme="{StaticResource FlatButton}" Width="28" MinWidth="28" Padding="0"
+                                            Margin="2,0,0,4" Click="OnReorderClick" />
                                 </Grid>
                             </Grid>
                         <local:AccessibleModListBox Grid.Row="1" x:Name="ActiveList1"
@@ -607,13 +613,19 @@
                             <Grid Height="38" RowDefinitions="0,38">
                                 <TextBlock x:Name="PaneActionTarget2" IsVisible="False" Margin="2,0" TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
-                                <Grid Grid.Row="1" ColumnDefinitions="*,*">
+                                <Grid Grid.Row="1" ColumnDefinitions="*,*,Auto,Auto">
                                     <Button x:Name="EnableSelection2" Tag="0:2" Margin="0,0,3,4"
                                             Theme="{StaticResource FlatButton}" HorizontalAlignment="Stretch" Padding="4,2"
                                             Click="OnSelectionActionClick" />
                                     <Button x:Name="DisableSelection2" Grid.Column="1" Tag="2:0" Margin="3,0,0,4"
                                             Theme="{StaticResource FlatButton}" HorizontalAlignment="Stretch" Padding="4,2"
                                             Click="OnSelectionActionClick" />
+                                    <Button x:Name="MoveUp2" Grid.Column="2" Tag="2:-1" Content="↑"
+                                            Theme="{StaticResource FlatButton}" Width="28" MinWidth="28" Padding="0"
+                                            Margin="4,0,0,4" Click="OnReorderClick" />
+                                    <Button x:Name="MoveDown2" Grid.Column="3" Tag="2:1" Content="↓"
+                                            Theme="{StaticResource FlatButton}" Width="28" MinWidth="28" Padding="0"
+                                            Margin="2,0,0,4" Click="OnReorderClick" />
                                 </Grid>
                             </Grid>
                         <local:AccessibleModListBox Grid.Row="1" x:Name="ActiveList2"

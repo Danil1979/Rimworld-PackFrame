@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 1,998 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 2,609 regression
 checks. Earlier checkpoint counts below describe their historical snapshots. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -902,3 +902,33 @@ named for their purpose rather than their implementation class.
 A separate remaining usability opportunity is keyboard load-order rearrangement.
 Arrow keys currently select, Enter enables/disables, and the mod action menu has
 no move-up/down action. Dragging is still required for manual order changes.
+
+## Keyboard load-order rearrangement (November 2026)
+
+The enabled lists now expose adjacent up/down buttons, matching context-menu actions,
+and Alt+Up/Down when the list has keyboard focus. The available list and search
+editors keep their existing keys. Names, tooltips, and pane help describe the full
+load-order scope in all four supported languages.
+
+Design principles: visible actions support recognition rather than memorization;
+placing controls in each enabled pane makes the target instance explicit; disabled
+boundary actions prevent no-op operations; one staged change and one Undo entry per
+move keep experimentation reversible. The left-hand inspector is unchanged.
+
+Selected contiguous blocks move one position, while disjoint selections retain their
+relative order. Hidden and missing entries remain in the full order and are not
+skipped. Selection and search survive the move. Matching-instance comparison views
+refresh together; different-instance views do not silently change. Save remains the
+explicit disk-write boundary.
+
+Evidence: Release regression run passed 2,609 checks, including exhaustive selected
+subsets for lists of lengths 1–7 in both directions, boundary/no-op cases, duplicate
+IDs/casing, hidden entries, localized help, and shortcut scope. These are assertions,
+not 2,609 independent manual workflows. Native Linux fixture checks verified two-row
+selection, repeated shortcut moves, disabled upper boundary, Undo restoration, a
+filtered move across a missing entry, visible-button activation, keyboard context
+menu activation, matching-instance synchronization, and isolated changes/Undo in a
+different comparison instance. English 1180×812 single and comparison layouts were
+visually inspected. Fixture changes were undone before closing; no player data was
+used. Windows/macOS shortcut and screen-reader behavior, translated compact toolbar
+layouts for these new buttons, and live user-sized mod collections remain unverified.

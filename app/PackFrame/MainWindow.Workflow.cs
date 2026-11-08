@@ -92,6 +92,7 @@ public partial class MainWindow
     {
         for (var column = 1; column <= 2; column++)
         {
+            UpdateReorderActions(column);
             var instance = GetInstanceForColumn(column);
             var target = instance?.IsScratch == true ? InstanceCreationHistory.ScratchName(_config.Language)
                 : instance?.DisplayName ?? WorkflowText("Choose an instance", "选择实例", "選擇實例", "インスタンスを選択");
