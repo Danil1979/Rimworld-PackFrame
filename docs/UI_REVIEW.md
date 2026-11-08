@@ -28,7 +28,7 @@ relying on a font being installed on the computer.
 | Update choices | Conflict semantics explicit; actions pinned outside scrolling area | Native mixed keep/replace update against isolated installation |
 | Completion | Long action labels fit; Close/Escape | All installer completion variants |
 | Index summary | Validation and keyboard behavior reviewed | Four-language keyboard walkthrough |
-| Missing mods/history | Long identifiers, empty history, corrupt-file errors, repair/refresh recovery, retained rows after another failure, repeated safe confirmation cancellation | Large-list performance, native external-browser failure, platform permission recovery |
+| Missing mods/history | Long identifiers, empty history, corrupt-file errors, repair/refresh recovery, retained rows after another failure, repeated safe confirmation cancellation | Native external-browser failure, platform permission recovery; larger-than-1,000 native list stress |
 | OSS settings | Required/invalid field errors and focus, custom-port preview, disabling/cancel, scrolling; atomic failed-save preservation in checks | Four-language layout; live upload failure matrix |
 | Diagnostic log | Missing-file state, disabled Open, Refresh/Close inspected; read errors retain prior content in checks | Native permission-denied log and external opener failures |
 | Export wizard | All five pages inspected; custom title and repository URL survive Back/Next; intentional clearing survives navigation | Real Steam/Gitee/GitHub publishing, partial network failure, all languages |
@@ -124,12 +124,44 @@ relying on a font being installed on the computer.
 
 ## Next passes
 
-1. Review large catalogs and missing/history list navigation and performance;
-   retain keyboard focus and selection during live refreshes.
-2. Check populated main lists, long names and many pending instances in every
-   language, especially minimum window sizes and keyboard navigation.
+1. Review large catalogs and further recovery-list edge cases, including selection
+   moving out of an active status filter and platform-specific keyboard behavior.
+2. Continue populated main-list workflows beyond the four-language minimum-size
+   and many-pending-instance pass, including reorder/undo and interrupted writes.
 3. Complete native publishing-page credential guidance and error-recovery checks
    in all languages, without using real credentials or submitting fixtures.
 4. Exercise isolated online install/update/cancel/recovery and external openers only
    in explicitly authorized destinations. Windows/macOS-specific behavior remains
    unverified on the Linux review desktop.
+
+## Large recovery lists and pending-instance review
+
+- Missing/history lists now virtualize their rows, with a bordered search field,
+  trailing ×, visible Ctrl+F/⌘F and Escape guidance, filtered counts and no-match
+  feedback. Search covers names, authors, package IDs, links, states and dates.
+  The first Escape clears a query; a subsequent Escape closes the dialog.
+- Stable row wrappers update changed properties without replacing focused controls.
+  Native tests with 1,000 synthetic entries verified search/refresh, row-specific
+  accessible names, Tab from a row to its link, Shift+Tab back, and Tab out to the
+  footer. A focused link stayed focused while its row alternated status. No real
+  external link was opened. Minimum 780×420 layouts were checked in English and
+  Japanese; full four-language recovery-dialog navigation remains unverified.
+- Clear History explicitly warns that hidden search results are included. Native
+  cancellation retained both the query and all 1,000 saved entries. Synthetic
+  regression checks cover filtering and incremental reconciliation at 10,000 rows;
+  these are not wall-clock performance benchmarks.
+- The unsaved banner no longer expands with every instance name. It shows a compact
+  count and explicit all-instance Save scope, with a keyboard-accessible Review
+  instances flyout containing complete names and distinct configuration paths.
+  Long instance selectors truncate while their tooltips retain complete names.
+- A real MainWindow fixture with 40 pending instances, duplicate names and a
+  300-character name was verified at 1100×700 in English, Japanese, simplified and
+  traditional Chinese. The lists stayed usable. Keyboard review, PageDown,
+  Escape/focus return, saving all, and a subsequent one-instance edit were checked.
+  The new review showed only the newly edited instance. Native copy-to-clipboard
+  and discard flows were not exercised in this pass.
+- Empty-catalog filter reset now refreshes both header counts and status-filter
+  appearance. Native checks retained two missing IDs and the pending badge, then
+  saved both IDs through Ctrl+S.
+- Clean Linux Release build: zero warnings/errors; 717 regression checks passed.
+  Windows/macOS and live network transactions remain unverified in this pass.

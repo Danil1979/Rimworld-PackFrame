@@ -14,6 +14,8 @@ public partial class MissingHistoryWindow : Window
     private bool _isClearing;
     private bool _canClear;
 
+    private ModStatusList? _rowList;
+
     public MissingHistoryWindow()
     {
         InitializeComponent();
@@ -24,6 +26,7 @@ public partial class MissingHistoryWindow : Window
     {
         _instance = instance;
         _language = language;
+        _rowList = new ModStatusList(this, language);
         var title = Localization.MissingHistoryTitle(language);
         Title = $"Rimworld PackFrame - {title}";
         this.FindControl<TextBlock>("TitleText")!.Text = title;
@@ -76,8 +79,7 @@ public partial class MissingHistoryWindow : Window
     {
         if (_instance is null) return;
         this.FindControl<TextBlock>("StatusText")!.IsVisible = false;
-        this.FindControl<ItemsControl>("Rows")!.ItemsSource = rows.Select(row =>
-            ModStatusDisplayRow.From(row, _language)).ToList();
+        _rowList?.Update(rows.Select(row => ModStatusDisplayRow.From(row, _language)));
         this.FindControl<TextBlock>("SummaryText")!.Text =
             Localization.MissingHistorySummary(
                 _language,
@@ -100,7 +102,12 @@ public partial class MissingHistoryWindow : Window
         try
         {
             var confirm = new ConfirmWindow(
-                Localization.ClearHistoryConfirm(_language, _instance.DisplayName),
+                Localization.ClearHistoryConfirm(_language, _instance.DisplayName) + "\n\n" +
+                OperationText.Choose(_language,
+                    "This clears all saved entries, including entries hidden by search.",
+                    "这将清除全部已保存的记录，包括被搜索隐藏的记录。",
+                    "這將清除全部已儲存的記錄，包括被搜尋隱藏的記錄。",
+                    "検索で非表示になっている項目を含め、保存済みの全履歴を消去します。"),
                 Localization.ClearHistory(_language),
                 Localization.CancelButton(_language));
             if (!await confirm.ShowDialog<bool>(this)) return;
@@ -146,7 +153,7 @@ public partial class MissingHistoryWindow : Window
 
     private void OnOpenLinkClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Button { DataContext: ModStatusDisplayRow row }) return;
+        if (sender is not Button { DataContext: ModStatusListRow { Snapshot: var row } }) return;
         var status = this.FindControl<TextBlock>("LinkStatusText")!;
         if (ModStatusLink.TryOpen(row.Link, out var error))
         {
@@ -160,7 +167,7 @@ public partial class MissingHistoryWindow : Window
 
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Escape)
+        if (!e.Handled && e.Key == Key.Escape)
         {
             Close();
             e.Handled = true;

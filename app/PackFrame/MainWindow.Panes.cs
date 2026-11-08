@@ -137,10 +137,14 @@ public partial class MainWindow
             ((TextBlock)badge.Child!).Text = Localization.SameList(_config.Language);
             ToolTip.SetTip(badge, Localization.SameListHint(_config.Language));
         }
-        ToolTip.SetTip(_instanceCombo1, first?.LoadError);
-        ToolTip.SetTip(_instanceCombo2, second?.LoadError);
+        ToolTip.SetTip(_instanceCombo1, InstanceHeaderHint(first));
+        ToolTip.SetTip(_instanceCombo2, InstanceHeaderHint(second));
         UpdateSplitViewButton();
     }
+
+    private static string? InstanceHeaderHint(ManagedInstance? instance) => instance is null ? null
+        : string.IsNullOrWhiteSpace(instance.LoadError) ? instance.DisplayName
+        : $"{instance.DisplayName}\n{instance.LoadError}";
 
     private void UpdateLaunchTarget(ManagedInstance? instance)
     {

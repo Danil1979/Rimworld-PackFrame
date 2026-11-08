@@ -11,6 +11,8 @@ public partial class MissingModsWindow : Window
     private readonly ManagedInstance? _instance;
     private readonly string? _language;
 
+    private ModStatusList? _rowList;
+
     public MissingModsWindow()
     {
         InitializeComponent();
@@ -25,6 +27,7 @@ public partial class MissingModsWindow : Window
     {
         _instance = instance;
         _language = language;
+        _rowList = new ModStatusList(this, language);
         var title = Localization.ModAvailabilityTitle(language);
         Title = $"Rimworld PackFrame - {title}";
         this.FindControl<TextBlock>("TitleText")!.Text = title;
@@ -55,8 +58,7 @@ public partial class MissingModsWindow : Window
             _language, _instance?.DisplayName ?? string.Empty, missing, downloading, unknown, checking);
         this.FindControl<TextBlock>("RefreshNoteText")!.IsVisible = _instance?.IsSteamCmd == false &&
             rows.Any(row => row.WorkshopId is not null && row.Availability != WorkshopModAvailability.Missing);
-        this.FindControl<ItemsControl>("Rows")!.ItemsSource = rows.Select(row =>
-            ModStatusDisplayRow.From(row, _language)).ToList();
+        _rowList?.Update(rows.Select(row => ModStatusDisplayRow.From(row, _language)));
     }
 
     private async void OnHistoryClick(object? sender, RoutedEventArgs e)
@@ -72,7 +74,7 @@ public partial class MissingModsWindow : Window
 
     private void OnOpenLinkClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Button { DataContext: ModStatusDisplayRow row }) return;
+        if (sender is not Button { DataContext: ModStatusListRow { Snapshot: var row } }) return;
         var status = this.FindControl<TextBlock>("LinkStatusText")!;
         if (ModStatusLink.TryOpen(row.Link, out var error))
         {
@@ -86,7 +88,7 @@ public partial class MissingModsWindow : Window
 
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Escape)
+        if (!e.Handled && e.Key == Key.Escape)
         {
             Close();
             e.Handled = true;

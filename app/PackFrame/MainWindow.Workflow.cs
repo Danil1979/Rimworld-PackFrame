@@ -1,8 +1,10 @@
 using System;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Templates;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 
@@ -11,6 +13,8 @@ namespace PackFrame;
 public partial class MainWindow
 {
     private long _lastSelectionAction;
+    private readonly ObservableCollection<PendingInstanceRow> _pendingInstanceRows = new();
+    private Flyout? _pendingInstancesFlyout;
 
     private string WorkflowText(string en, string hans, string hant, string ja) =>
         OperationText.Choose(_config.Language, en, hans, hant, ja);
@@ -79,7 +83,7 @@ public partial class MainWindow
         if (_searchTimers.TryGetValue(pane.List, out timer)) timer.Stop();
         UpdateSourceButton(pane.Source, pane.State, _config.Language);
         if (_allMods.Count > 0) RefreshSearch(pane.List);
-        else UpdatePaneWorkflow();
+        else UpdateHeaders();
         pane.Search.Focus();
     }
 
@@ -137,17 +141,19 @@ public partial class MainWindow
     private void UpdateEditStatus()
     {
         var pending = InstanceStore.PendingConfigDirectories;
-        var names = pending.Select(path => _instances.FirstOrDefault(instance =>
-            !string.IsNullOrWhiteSpace(instance.ConfigDirectoryPath) &&
-            string.Equals(Path.GetFullPath(instance.ConfigDirectoryPath), path, StringComparison.OrdinalIgnoreCase))?.DisplayName
-            ?? Path.GetFileName(Path.GetDirectoryName(path)) ?? path).ToList();
-        var text = pending.Count > 0
-            ? WorkflowText($"Unsaved mod lists: {string.Join(", ", names)} · Save applies to all edited instances",
-                $"未保存的模组列表：{string.Join("、", names)} · 保存将应用于所有已编辑实例",
-                $"未儲存的模組清單：{string.Join("、", names)} · 儲存將套用至所有已編輯實例",
-                $"未保存の MOD リスト: {string.Join(", ", names)} · 保存は編集した全インスタンスに適用")
-            : WorkflowText("No unsaved mod-list changes", "模组列表没有未保存的修改", "模組清單沒有未儲存的修改", "MOD リストに未保存の変更はありません");
+        var rows = PendingInstanceSummary.Rows(pending, _instances);
+        if (!_pendingInstanceRows.SequenceEqual(rows))
+        {
+            _pendingInstanceRows.Clear();
+            foreach (var row in rows) _pendingInstanceRows.Add(row);
+        }
+        var text = PendingInstanceSummary.Caption(_config.Language, pending.Count);
         Find<Border>("EditStatusBanner").IsVisible = pending.Count > 0;
+        if (pending.Count == 0) _pendingInstancesFlyout?.Hide();
+        var review = Find<Button>("ReviewPendingInstancesButton");
+        review.Content = PendingInstanceSummary.ReviewLabel(_config.Language) + " ▾";
+        AutomationProperties.SetName(review, PendingInstanceSummary.ReviewLabel(_config.Language));
+        AutomationProperties.SetHelpText(review, text);
         for (var column = 1; column <= 2; column++)
         {
             var instance = GetInstanceForColumn(column);
@@ -163,5 +169,29 @@ public partial class MainWindow
         ToolTip.SetTip(status, text);
         ToolTip.SetTip(_saveButton, WorkflowText("Save all edited mod lists (Ctrl+S / ⌘S)",
             "保存所有已编辑的模组列表（Ctrl+S / ⌘S）", "儲存所有已編輯的模組清單（Ctrl+S / ⌘S）", "編集した MOD リストをすべて保存（Ctrl+S / ⌘S）"));
+    }
+
+    private void OnReviewPendingInstancesClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || _pendingInstanceRows.Count == 0) return;
+        _pendingInstancesFlyout?.Hide();
+        var scroll = new ScrollViewer
+        {
+            Width = 460,
+            MaxHeight = 300,
+            Focusable = true,
+            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
+            VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
+            Content = new ItemsControl
+            {
+                ItemsSource = _pendingInstanceRows,
+                ItemTemplate = (IDataTemplate)Resources["PendingInstanceTemplate"]!
+            }
+        };
+        AutomationProperties.SetName(scroll, PendingInstanceSummary.ReviewLabel(_config.Language));
+        _pendingInstancesFlyout = new Flyout { Content = scroll };
+        _pendingInstancesFlyout.Opened += (_, _) => scroll.Focus();
+        _pendingInstancesFlyout.ShowAt(button);
+        e.Handled = true;
     }
 }

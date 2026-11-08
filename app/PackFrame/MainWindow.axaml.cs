@@ -803,6 +803,9 @@ public partial class MainWindow : Window
     }
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)
     {
+        // The read-only pending review owns its scrolling and dismissal keys.
+        // Do not let its arrow keys change the underlying mod selection.
+        if (_pendingInstancesFlyout?.IsOpen == true) return;
         if (_instanceWriteInProgress)
         {
             e.Handled = true;

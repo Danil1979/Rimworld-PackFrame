@@ -11,6 +11,21 @@
         Background="{DynamicResource AppBackgroundBrush}"
         RequestedThemeVariant="Dark">
     <Window.Resources>
+        <DataTemplate x:Key="InstanceNameTemplate">
+            <TextBlock Text="{ReflectionBinding}" TextTrimming="CharacterEllipsis"
+                       TextWrapping="NoWrap" MaxWidth="480" />
+        </DataTemplate>
+        <DataTemplate x:Key="PendingInstanceTemplate" x:DataType="local:PendingInstanceRow">
+            <Border BorderBrush="{DynamicResource SecondaryBrush}" BorderThickness="0,0,0,1"
+                    Padding="0,8">
+                <StackPanel Spacing="4">
+                    <SelectableTextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                         Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
+                    <SelectableTextBlock Text="{Binding ConfigDirectoryPath}" FontSize="12"
+                                         Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
         <DataTemplate x:Key="ModTemplate" x:DataType="local:ModInfo">
             <Border Background="{Binding RowBrush}">
                 <Grid ColumnDefinitions="Auto,*,Auto" Opacity="{Binding SearchOpacity}">
@@ -47,6 +62,9 @@
         </DataTemplate>
     </Window.Resources>
     <Window.Styles>
+        <Style Selector="ComboBox.instance-selector ComboBoxItem">
+            <Setter Property="ToolTip.Tip" Value="{ReflectionBinding}" />
+        </Style>
         <Style Selector="Button.summary-filter">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Padding" Value="5,3" />
@@ -356,7 +374,10 @@
                             <Grid RowDefinitions="34,30,24" Margin="2,0,2,0">
                             <Grid ColumnDefinitions="*,Auto,Auto">
                                 <ComboBox x:Name="InstanceCombo1"
+                                          Classes="instance-selector"
                                           MinWidth="0"
+                                          ItemTemplate="{StaticResource InstanceNameTemplate}"
+                                          HorizontalContentAlignment="Stretch"
                                           FontWeight="SemiBold"
                                           HorizontalAlignment="Stretch"
                                           VerticalAlignment="Center"
@@ -515,7 +536,10 @@
                             <Grid RowDefinitions="34,30,24" Margin="2,0,2,0">
                             <Grid ColumnDefinitions="*,Auto,Auto">
                                 <ComboBox x:Name="InstanceCombo2"
+                                          Classes="instance-selector"
                                           MinWidth="0"
+                                          ItemTemplate="{StaticResource InstanceNameTemplate}"
+                                          HorizontalContentAlignment="Stretch"
                                           FontWeight="SemiBold"
                                           HorizontalAlignment="Stretch"
                                           VerticalAlignment="Center"
@@ -658,10 +682,15 @@
         <Grid Grid.Row="3"
               ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto"
               Margin="0,8,0,0">
-            <Border x:Name="EditStatusBanner" Grid.ColumnSpan="2" Margin="0,0,0,8" Padding="10,7" Background="#553EA6B5"
+            <Border x:Name="EditStatusBanner" Grid.ColumnSpan="2" Margin="0,0,0,8" Padding="10,5" Background="#553EA6B5"
                     BorderBrush="{DynamicResource SecondaryBrush}" BorderThickness="1">
-                <TextBlock x:Name="EditStatusText" Foreground="{DynamicResource PrimaryTextBrush}"
-                           TextWrapping="Wrap" />
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock x:Name="EditStatusText" Foreground="{DynamicResource PrimaryTextBrush}"
+                               VerticalAlignment="Center" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                    <Button x:Name="ReviewPendingInstancesButton" Grid.Column="1" Margin="12,0,0,0"
+                            Theme="{StaticResource FlatButton}" MinHeight="28" Padding="8,3"
+                            Click="OnReviewPendingInstancesClick" />
+                </Grid>
             </Border>
             <StackPanel Grid.Row="1" Orientation="Horizontal"
                         VerticalAlignment="Center"

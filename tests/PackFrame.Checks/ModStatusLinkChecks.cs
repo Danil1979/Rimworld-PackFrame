@@ -4,6 +4,7 @@ internal static class ModStatusLinkChecks
 {
     internal static void Run()
     {
+        ModStatusListChecks.Run();
         var accepted = new[]
         {
             "https://steamcommunity.com/sharedfiles/filedetails/?id=1234567890",

@@ -213,7 +213,8 @@ on failure. Confirm existing unsaved orders survive catalog refreshes.
 - At 1180×812 and the 1100×700 minimum, test single and split layouts in English and Chinese. Action rows remain fixed-height when selections/counts change. Each active list names its target above its Enable/Disable controls.
 - Select several inactive mods, then click Enable over the other active pane without focusing its list first. Confirm the named target receives that exact selection; Disable removes only its own pane's selection. Repeat with both views on the same instance. Double-click and drag keep their existing target behavior.
 - In each search, test text-only, source-only, status-only and combined filters. The trailing × and Escape in the search/list clear the same query/source/status state, including a no-results list. Search field/view preferences remain intact. Ctrl+F (⌘F on Mac) focuses the current pane's search; Ctrl+Z while typing remains text undo. Escape in dialogs or combo menus must not reset a pane.
-- Edit two different instances: each affected header says Unsaved, the bottom status names both, and Save changes shows its shortcut and emphasis. Save or discard removes badges/emphasis. Returning to an already-edited instance restores its badge.
+- Edit two different instances: each affected header says Unsaved, the bottom status counts both and states that Save applies to all edited instances, and Save changes shows its shortcut and emphasis. Review instances opens their full names and configuration paths. Save or discard removes badges/emphasis and closes an open review. Returning to an already-edited instance restores its badge.
+- At 1100×700, edit 40 synthetic instances, including duplicate display names and 300-character names, in single/split layouts and all four languages. The banner must stay one line with the same height and usable list space. Instance selectors truncate instead of expanding, with full names available on hover. Review instances must remain inside the window, scroll to the last entry, preserve distinct configuration paths, allow copying full text, and dismiss with Escape/outside click without clearing pane filters. Tab/Enter opens it, arrow/Page Up/Page Down scroll, and focus returns to the button after dismissal. Reopen after saving/discarding or editing another instance to check for stale names. These are native checks, not assertions made by the console suite.
 
 Local-mod deletion checks use generated temporary folders only. They cover cancelled
 and delayed confirmation, captured targets after selection changes, mixed and total
@@ -233,3 +234,17 @@ accessible actions. Tests capture the intended URI without opening a browser,
 reject unsafe schemes, credentials and control characters, and exercise opener
 failures. Empty-pane checks distinguish missing-only load orders, absent game
 folders, empty catalogs and filtered installed rows.
+
+### Large missing/history lists
+
+- With 1,000 or more fixture rows, Ctrl+F/⌘F focuses search; matching name, author,
+  package ID, URL, status or history date updates the visible count. × and the first
+  Escape restore all rows. A second Escape closes. No search writes saved data.
+- Select a row with keyboard arrows, then Tab to its enabled recovery link;
+  Shift+Tab returns to the row and Tab again leaves the list. Disabled links are
+  skipped. Refresh/status changes retain search, unchanged row containers, and a
+  focused link even when that row changes status. Never open synthetic external
+  links during automated fixture checks.
+- While history is filtered, Clear History must explicitly include hidden entries
+  in its confirmation. Cancel retains the query and saved history; read failures
+  retain displayed rows and disable unsafe clearing.

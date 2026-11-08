@@ -10,7 +10,7 @@
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource AppBackgroundBrush}"
         RequestedThemeVariant="Dark">
-    <Grid Margin="16" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+    <Grid Margin="16" RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto">
         <Grid ColumnDefinitions="*,Auto">
             <TextBlock x:Name="TitleText"
                        FontSize="21"
@@ -37,7 +37,20 @@
         <TextBlock x:Name="LinkStatusText" Grid.Row="3" IsVisible="False" TextWrapping="Wrap"
                    Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,10,0,0" />
 
-        <Border Grid.Row="4"
+        <StackPanel Grid.Row="4" Margin="0,10,0,0" Spacing="4">
+            <Border Classes="field" CornerRadius="0">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBox x:Name="SearchBox" MinHeight="32" Background="#01000000" BorderThickness="0"
+                         Padding="8,4" VerticalContentAlignment="Center" />
+                <Button x:Name="ClearSearchButton" Grid.Column="1" Content="×" MinWidth="32" MinHeight="32"
+                        Theme="{StaticResource FlatButton}" Margin="4,0,0,0" />
+            </Grid>
+            </Border>
+            <TextBlock x:Name="SearchHintText" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+            <TextBlock x:Name="FilterCountText" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <Border Grid.Row="5"
                 Margin="0,12,0,0"
                 BorderBrush="{StaticResource SecondaryBrush}"
                 BorderThickness="1">
@@ -71,46 +84,50 @@
                 </Border>
 
                 <Grid Grid.Row="1">
-                    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-                        <ItemsControl x:Name="Rows">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="local:ModStatusDisplayRow">
+                    <ListBox x:Name="Rows" Grid.Row="1" SelectionMode="Single" AutoScrollToSelectedItem="False"
+                             Background="Transparent" BorderThickness="0" Padding="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                        <ListBox.Styles>
+                            <Style Selector="ListBoxItem"><Setter Property="AutomationProperties.Name" Value="{ReflectionBinding AccessibleName}" /><Setter Property="Padding" Value="0" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /></Style>
+                        </ListBox.Styles>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="local:ModStatusListRow">
                                     <Border BorderBrush="{DynamicResource SecondaryBrush}"
                                             BorderThickness="0,0,0,1"
                                             Padding="12,9">
                                         <Grid ColumnDefinitions="2*,1.1*,1.5*,2*,1.2*">
-                                            <SelectableTextBlock Text="{Binding Label}"
+                                            <SelectableTextBlock Text="{Binding Snapshot.Label}"
                                                                  Foreground="{DynamicResource PrimaryTextBrush}"
                                                                  TextWrapping="Wrap"
                                                                  Margin="0,0,12,0" />
                                             <SelectableTextBlock Grid.Column="1"
-                                                                 Text="{Binding Author}"
+                                                                 Text="{Binding Snapshot.Author}"
                                                                  Foreground="{DynamicResource PrimaryTextBrush}"
                                                                  TextWrapping="Wrap"
                                                                  Margin="0,0,12,0" />
                                             <SelectableTextBlock Grid.Column="2"
-                                                                 Text="{Binding PackageId}"
+                                                                 Text="{Binding Snapshot.PackageId}"
                                                                  Foreground="{DynamicResource PrimaryTextBrush}"
                                                                  TextWrapping="Wrap"
                                                                  Margin="0,0,12,0" />
                                             <StackPanel Grid.Column="3" Margin="0,0,12,0" Spacing="6">
-                                            <SelectableTextBlock Text="{Binding Link}"
+                                            <SelectableTextBlock Text="{Binding Snapshot.Link}"
                                                 Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
-                                            <Button Theme="{StaticResource FlatButton}" Content="{Binding LinkAction}"
-                                                IsEnabled="{Binding CanOpenLink}" AutomationProperties.Name="{Binding LinkAccessibleName}"
-                                                ToolTip.Tip="{Binding Link}" HorizontalAlignment="Left" MinHeight="30"
+                                            <Button Theme="{StaticResource FlatButton}" Content="{Binding Snapshot.LinkAction}"
+                                                IsEnabled="{Binding Snapshot.CanOpenLink}" AutomationProperties.Name="{Binding Snapshot.LinkAccessibleName}"
+                                                ToolTip.Tip="{Binding Snapshot.Link}" HorizontalAlignment="Left" MinHeight="30"
                                                 Click="OnOpenLinkClick" />
                                         </StackPanel>
                                             <SelectableTextBlock Grid.Column="4"
-                                                                 Text="{Binding LastMissingAt}"
+                                                                 Text="{Binding Snapshot.LastMissingAt}"
                                                                  Foreground="{DynamicResource PrimaryTextBrush}"
                                                                  TextWrapping="Wrap" />
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
                     <TextBlock x:Name="EmptyText"
                                Foreground="{DynamicResource SecondaryTextBrush}"
                                HorizontalAlignment="Center"
@@ -120,7 +137,7 @@
             </Grid>
         </Border>
 
-        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
         <Button x:Name="RefreshButton" Theme="{StaticResource FlatButton}"
                 MinHeight="32" Margin="0,0,8,0" Click="OnRefreshClick" />
         <Button x:Name="FooterCloseButton"
@@ -128,7 +145,6 @@
                 MinHeight="32"
                 Padding="24,6"
                 HorizontalAlignment="Right"
-                IsCancel="True"
                 Click="OnCloseClick" />
         </StackPanel>
     </Grid>
