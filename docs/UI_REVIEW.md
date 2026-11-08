@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 2,609 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 2,611 regression
 checks. Earlier checkpoint counts below describe their historical snapshots. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -932,3 +932,19 @@ different comparison instance. English 1180×812 single and comparison layouts w
 visually inspected. Fixture changes were undone before closing; no player data was
 used. Windows/macOS shortcut and screen-reader behavior, translated compact toolbar
 layouts for these new buttons, and live user-sized mod collections remain unverified.
+
+## Compact rearrangement toolbar follow-up
+
+A native 1100×700 Japanese comparison fixture with 1,000 selected mods exposed a
+clipped Disable count: inline arrow controls left too little width. Reordering now
+has its own two-button row with short translated labels, keeping the Enable/Disable
+row full-width. This spends 34 vertical pixels to preserve decision-critical counts,
+improve target size, and distinguish membership changes from ordering changes.
+
+Native Linux screenshots verified all four languages at 1100×700 with the left
+inspector and comparison pane open, including the complete 1,000-selection count.
+A 1,000-row fixture also verified End navigation, two consecutive upward moves from
+the last position, retained selection/scroll visibility, and two Undos returning to
+the original last position without saving. Windows/macOS remain unverified.
+Release checks pass 2,611 assertions, including two structural regressions ensuring
+the reorder controls cannot consume columns from the Enable/Disable row.

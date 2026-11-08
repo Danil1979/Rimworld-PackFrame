@@ -24,6 +24,7 @@ public partial class MainWindow
         foreach (var direction in new[] { -1, 1 })
         {
             var button = Find<Button>($"Move{(direction < 0 ? "Up" : "Down")}{column}");
+            button.Content = ModOrderMove.ButtonLabel(_config.Language, direction);
             var shortcut = direction < 0 ? "Alt+↑" : "Alt+↓";
             var name = $"{ModOrderMove.Label(_config.Language, direction)} ({shortcut}): {instance?.DisplayName}";
             AutomationProperties.SetName(button, name);

@@ -34,6 +34,10 @@ internal static class ModOrderMove
         return result;
     }
 
+    internal static string ButtonLabel(string? language, int direction) => direction < 0
+        ? OperationText.Choose(language, "↑ Move up", "↑ 上移", "↑ 上移", "↑ 上へ")
+        : OperationText.Choose(language, "↓ Move down", "↓ 下移", "↓ 下移", "↓ 下へ");
+
     internal static string Label(string? language, int direction) => direction < 0
         ? OperationText.Choose(language, "Move up in full load order", "在完整加载顺序中上移", "在完整載入順序中上移", "読み込み順序全体で上へ移動")
         : OperationText.Choose(language, "Move down in full load order", "在完整加载顺序中下移", "在完整載入順序中下移", "読み込み順序全体で下へ移動");

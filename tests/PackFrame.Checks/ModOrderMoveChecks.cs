@@ -21,8 +21,19 @@ internal static class ModOrderMoveChecks
    var result=ModOrderMove.Apply(order,ids,direction);
    Require(result.Count==count&&result.Order().SequenceEqual(order.Order())&&result.Where(ids.Contains).SequenceEqual(ids)&&result.Where(x=>!ids.Contains(x)).SequenceEqual(order.Where(x=>!ids.Contains(x)))&&ModOrderMove.CanMove(order,ids,direction)==!order.SequenceEqual(result),$"move invariants n={count} selection={mask} direction={direction}");
   }
+  using var markup = typeof(ModOrderMoveChecks).Assembly.GetManifestResourceStream("UiWiring.MainWindow.axaml")!;
+  var document = System.Xml.Linq.XDocument.Load(markup);
+  System.Xml.Linq.XNamespace x = "http://schemas.microsoft.com/winfx/2006/xaml";
+  foreach (var pane in new[] { 1, 2 })
+  {
+   var up = document.Descendants().Single(e => (string?)e.Attribute(x + "Name") == $"MoveUp{pane}");
+   var down = document.Descendants().Single(e => (string?)e.Attribute(x + "Name") == $"MoveDown{pane}");
+   Require((string?)up.Attribute("Grid.Row") == "1" && (string?)down.Attribute("Grid.Row") == "1" &&
+    (string?)up.Parent!.Attribute("ColumnDefinitions") == "*,*" && up.Attribute("Width") is null,
+    "reorder controls leave a full-width enable/disable row in pane " + pane);
+  }
   foreach(var language in new[]{"en","zh-Hans","zh-Hant","ja"})
-   Require(ModOrderMove.Label(language,-1)!=ModOrderMove.Label(language,1)&&ModOrderMove.Help(language).Contains("Alt+↑"),"localized direction and keyboard help in "+language);
+   Require(ModOrderMove.ButtonLabel(language,-1)!=ModOrderMove.ButtonLabel(language,1)&&ModOrderMove.Label(language,-1)!=ModOrderMove.Label(language,1)&&ModOrderMove.Help(language).Contains("Alt+↑"),"localized direction and keyboard help in "+language);
   Require(ModPaneKeyboard.Resolve(Key.Up,KeyModifiers.Alt,true,false,true)==ModPaneKeyAction.MoveUp&&ModPaneKeyboard.Resolve(Key.Down,KeyModifiers.Alt,true,false,true)==ModPaneKeyAction.MoveDown,"Alt arrows reorder only eligible focused lists");
   Require(ModPaneKeyboard.Resolve(Key.Up,KeyModifiers.Alt,false,true,true)==ModPaneKeyAction.None&&ModPaneKeyboard.Resolve(Key.Up,KeyModifiers.Alt,true,false,false)==ModPaneKeyAction.None&&ModPaneKeyboard.Resolve(Key.Up,KeyModifiers.Alt|KeyModifiers.Shift,true,false,true)==ModPaneKeyAction.None,"search, available pane and unrelated modifiers retain their keys");
  }
