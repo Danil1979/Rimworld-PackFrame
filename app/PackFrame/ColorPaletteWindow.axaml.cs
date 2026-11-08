@@ -1,12 +1,23 @@
 using System;
 using System.Collections.Generic;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 
 namespace PackFrame;
+
+internal static class ModColorChoiceCommit
+{
+    internal static bool SaveLabels(string packRoot, ModColorChoice? choice)
+    {
+        if (choice is null || choice.Cancelled) return false;
+        ModColorStore.SetLabels(packRoot, choice.Labels);
+        return true;
+    }
+}
 
 public partial class ColorPaletteWindow : Window
 {
@@ -109,6 +120,23 @@ public partial class ColorPaletteWindow : Window
                 PlaceholderText = Localization.ColorLabelPlaceholder(language),
                 Text = labels.TryGetValue(hex, out var label) ? label : string.Empty
             };
+            var chooseText = OperationText.Choose(language,
+                "Choose color ", "选择颜色 ", "選擇顏色 ", "色を選択 ") + hex;
+            var currentText = isCurrent ? OperationText.Choose(language,
+                " (current color)", "（当前颜色）", "（目前顏色）", "（現在の色）") : string.Empty;
+            void UpdateAccessibleName()
+            {
+                var labelText = labelBox.Text?.Trim();
+                var name = chooseText + currentText + (string.IsNullOrEmpty(labelText) ? string.Empty : ": " + labelText);
+                AutomationProperties.SetName(button, name);
+                ToolTip.SetTip(button, name);
+            }
+            UpdateAccessibleName();
+            labelBox.TextChanged += (_, _) => UpdateAccessibleName();
+            AutomationProperties.SetName(labelBox, OperationText.Choose(language,
+                "Label for color ", "颜色标签 ", "顏色標籤 ", "色のラベル ") + hex);
+            AutomationProperties.SetLabeledBy(labelBox, button);
+            AutomationProperties.SetHelpText(labelBox, Localization.ColorPaletteHint(language));
             item.Children.Add(labelBox);
             _labelBoxes[hex] = labelBox;
             panel.Children.Add(item);
@@ -139,7 +167,7 @@ public partial class ColorPaletteWindow : Window
     {
         if (e.Key == Key.Escape)
         {
-            Close(new ModColorChoice(true, false, null, ReadLabels()));
+            Close(null);
             e.Handled = true;
         }
     }
@@ -151,6 +179,6 @@ public partial class ColorPaletteWindow : Window
 
     private void OnCancelClick(object? sender, RoutedEventArgs e)
     {
-        Close(new ModColorChoice(true, false, null, ReadLabels()));
+        Close(null);
     }
 }

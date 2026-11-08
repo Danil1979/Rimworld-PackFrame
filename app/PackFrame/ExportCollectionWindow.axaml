@@ -65,17 +65,21 @@
                                          VerticalContentAlignment="Top" />
                             </Border>
                         </StackPanel>
-                        <Border x:Name="CoverPicker"
+                        <Button x:Name="CoverPicker"
+                                Theme="{StaticResource FlatButton}"
                                 Grid.Column="1"
                                 Width="256"
                                 Height="144"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Top"
                                 Background="Transparent"
+                                Padding="0"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch"
                                 BorderBrush="{DynamicResource SecondaryBrush}"
                                 BorderThickness="1"
                                 Cursor="Hand"
-                                PointerPressed="OnCoverPickerPressed">
+                                Click="OnCoverPickerClick">
                             <Panel>
                                 <Image x:Name="CoverPreview"
                                        Stretch="Uniform"
@@ -87,8 +91,11 @@
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center" />
                             </Panel>
-                        </Border>
+                        </Button>
                     </Grid>
+                    <TextBlock x:Name="CoverStatus"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               TextWrapping="Wrap" />
 
                     <StackPanel Spacing="4" Margin="0,8,0,0">
                         <TextBlock x:Name="PackVersionLabel" Foreground="{DynamicResource SecondaryTextBrush}" FontWeight="SemiBold" />
@@ -136,14 +143,17 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <Grid x:Name="SteamPage"
+            <ScrollViewer x:Name="SteamPage"
                   IsVisible="False"
-                  RowDefinitions="Auto,*,Auto,Auto,Auto">
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+              <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                 <TextBlock x:Name="WorkshopHeader2"
                            Foreground="{DynamicResource SecondaryTextBrush}"
                            FontWeight="SemiBold" />
                 <ListBox x:Name="WorkshopList2"
                          Grid.Row="1"
+                         Height="180"
                          Margin="0,8,0,8"
                          BorderBrush="{DynamicResource SecondaryBrush}"
                          BorderThickness="1" />
@@ -211,7 +221,8 @@
                             Margin="8,0,0,0"
                             Click="OnCancelCreateClick" />
                 </Grid>
-            </Grid>
+              </Grid>
+            </ScrollViewer>
 
             <ScrollViewer x:Name="GithubPage"
                           IsVisible="False"
@@ -243,6 +254,10 @@
                                Foreground="{DynamicResource MutedTextBrush}"
                                TextWrapping="Wrap" />
 
+                    <TextBlock x:Name="GithubDestinationText"
+                               Foreground="{DynamicResource PrimaryTextBrush}"
+                               TextWrapping="Wrap"
+                               Margin="0,8,0,0" />
                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
                         <Button x:Name="UploadGithubButton"
                                 Theme="{StaticResource FlatButton}"
@@ -366,6 +381,10 @@
                                  VerticalContentAlignment="Center" />
                     </Border>
 
+                    <TextBlock x:Name="GiteeDestinationText"
+                               Foreground="{DynamicResource PrimaryTextBrush}"
+                               TextWrapping="Wrap"
+                               Margin="0,8,0,0" />
                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
                         <Button x:Name="UploadGiteeButton"
                                 Theme="{StaticResource FlatButton}"
@@ -484,14 +503,23 @@
         </Grid>
 
         <Grid Grid.Row="2"
+              RowDefinitions="Auto,Auto"
               ColumnDefinitions="Auto,*,Auto"
               Margin="0,12,0,0">
+            <TextBlock x:Name="OperationNotice"
+                       Grid.ColumnSpan="3"
+                       IsVisible="False"
+                       Foreground="{DynamicResource SecondaryTextBrush}"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,8" />
             <Button x:Name="BackButton"
+                    Grid.Row="1"
                     Theme="{StaticResource FlatButton}"
                     MinHeight="38"
                     Padding="24,8"
                     Click="OnBackClick" />
             <Button x:Name="NextButton"
+                    Grid.Row="1"
                     Grid.Column="2"
                     Theme="{StaticResource FlatButton}"
                     MinHeight="38"

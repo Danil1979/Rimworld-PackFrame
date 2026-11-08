@@ -23,7 +23,8 @@ public sealed record GitHubPackInfo(
     string Id,
     string Name,
     string Summary,
-    IReadOnlyList<string> PackageIds
+    IReadOnlyList<string> PackageIds,
+    string? ManifestUrl = null
 );
 
 public static class GitHubIndexPublisher
@@ -36,12 +37,25 @@ public static class GitHubIndexPublisher
         CancellationToken cancellationToken = default
     )
     {
+        using var client = CreateClient(token);
+        return await ResolvePackAsync(client, Http, repositoryUrl, cancellationToken);
+    }
+
+    internal static async Task<GitHubPackInfo> ResolvePackAsync(
+        HttpClient client,
+        HttpClient rawClient,
+        string repositoryUrl,
+        CancellationToken cancellationToken = default
+    )
+    {
         if (!TryParseRepositoryUrl(repositoryUrl, out var owner, out var repository))
         {
             throw new InvalidOperationException("Invalid GitHub repository URL.");
         }
+        if (ReferenceEquals(client, rawClient) || rawClient.DefaultRequestHeaders.Authorization is not null ||
+            rawClient.DefaultRequestHeaders.Contains("Cookie"))
+            throw new InvalidOperationException("Public pack verification requires an anonymous HTTP client.");
 
-        using (var client = CreateClient(token))
         {
             try
             {
@@ -55,9 +69,20 @@ public static class GitHubIndexPublisher
                         cancellationToken
                     );
                     var root = document.RootElement;
-                    var encoded = root.GetProperty("content").GetString() ?? string.Empty;
-                    var json = Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
-                    return ParsePackInfo(owner, repository, json);
+                    var downloadUrl = root.TryGetProperty("download_url", out var download)
+                        ? download.GetString() : null;
+                    downloadUrl = PublicManifestUrl(downloadUrl, owner, repository);
+                    if (downloadUrl is null)
+                    {
+                        var branch = await GetDefaultBranchAsync(client, owner, repository, string.Empty, cancellationToken);
+                        if (string.IsNullOrWhiteSpace(branch))
+                            throw new InvalidOperationException("The repository default branch could not be determined.");
+                        downloadUrl = RawManifestUrl(owner, repository, branch);
+                    }
+                    // Authenticated Contents API responses can expose private metadata and
+                    // temporary download credentials. Publish only the clean, anonymously
+                    // readable URL and derive index metadata from its public response.
+                    return await ReadPublicPackAsync(rawClient, downloadUrl, owner, repository, cancellationToken);
                 }
 
                 if (response.StatusCode != HttpStatusCode.NotFound)
@@ -78,8 +103,9 @@ public static class GitHubIndexPublisher
         {
             try
             {
-                using var response = await Http.GetAsync(
-                    $"https://raw.githubusercontent.com/{owner}/{repository}/{branch}/pack.json",
+                var downloadUrl = RawManifestUrl(owner, repository, branch);
+                using var response = await rawClient.GetAsync(
+                    downloadUrl,
                     cancellationToken
                 );
                 if (!response.IsSuccessStatusCode)
@@ -88,8 +114,9 @@ public static class GitHubIndexPublisher
                 }
 
                 var json = await response.Content.ReadAsStringAsync(cancellationToken);
-                return ParsePackInfo(owner, repository, json);
+                return ParsePackInfo(owner, repository, json) with { ManifestUrl = downloadUrl };
             }
+            catch (OperationCanceledException) { throw; }
             catch
             {
             }
@@ -98,6 +125,36 @@ public static class GitHubIndexPublisher
         throw new InvalidOperationException(
             "pack.json was not found in the repository root."
         );
+    }
+
+    private static string RawManifestUrl(string owner, string repository, string branch) =>
+        $"https://raw.githubusercontent.com/{owner}/{repository}/{Uri.EscapeDataString(branch)}/pack.json";
+
+    private static string? PublicManifestUrl(string? url, string owner, string repository)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps ||
+            !uri.IsDefaultPort || uri.UserInfo.Length > 0 ||
+            !uri.Host.Equals("raw.githubusercontent.com", StringComparison.OrdinalIgnoreCase) ||
+            !uri.AbsolutePath.StartsWith($"/{owner}/{repository}/", StringComparison.OrdinalIgnoreCase) ||
+            !uri.AbsolutePath.EndsWith("/pack.json", StringComparison.Ordinal)) return null;
+        return uri.GetLeftPart(UriPartial.Path);
+    }
+
+    private static async Task<GitHubPackInfo> ReadPublicPackAsync(HttpClient client, string downloadUrl,
+        string owner, string repository, CancellationToken cancellationToken)
+    {
+        const string unavailable = "The pack manifest must be publicly accessible without authentication before it can be submitted to the index.";
+        try
+        {
+            using var response = await client.GetAsync(downloadUrl, cancellationToken);
+            if (!response.IsSuccessStatusCode) throw new InvalidOperationException(unavailable);
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            return ParsePackInfo(owner, repository, json) with { ManifestUrl = downloadUrl };
+        }
+        catch (HttpRequestException exception)
+        {
+            throw new InvalidOperationException(unavailable, exception);
+        }
     }
 
     public static bool TryParseRepositoryUrl(

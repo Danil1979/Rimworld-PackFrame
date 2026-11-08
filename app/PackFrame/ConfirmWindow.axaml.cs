@@ -8,6 +8,7 @@ public partial class ConfirmWindow : Window
     public ConfirmWindow()
     {
         InitializeComponent();
+        Opened += (_, _) => this.FindControl<Button>("CancelButton")!.Focus();
     }
 
     public ConfirmWindow(string message, string confirmText, string cancelText)

@@ -49,19 +49,28 @@ public sealed class AppConfig
 
     public void Save()
     {
+        TrySave();
+    }
+
+    public bool TrySave() => TrySave(ConfigPath);
+
+    internal AppConfig Copy() => (AppConfig)MemberwiseClone();
+
+    internal bool TrySave(string path)
+    {
         try
         {
             var json = JsonSerializer.Serialize(
                 this,
                 PackFrameJsonContext.Default.AppConfig
             );
-            var temporaryPath = ConfigPath + ".tmp";
-            File.WriteAllText(temporaryPath, json);
-            File.Move(temporaryPath, ConfigPath, true);
+            FileTransactions.WriteAtomic(path, temporary => File.WriteAllText(temporary, json));
+            return true;
         }
         catch (Exception exception)
         {
-            AppLog.Error("Save app config: " + ConfigPath, exception);
+            AppLog.Error("Save app config: " + path, exception);
+            return false;
         }
     }
 }

@@ -7,6 +7,7 @@ namespace PackFrame;
 public partial class IndexSummaryWindow : Window
 {
     private readonly string _language;
+    private string? _summaryHint;
 
     public IndexSummaryWindow()
     {
@@ -39,6 +40,9 @@ public partial class IndexSummaryWindow : Window
             "このテキストは index.json の summary に書き込まれます。MOD パックの説明は変更されません。"
         );
         SummaryBox.Text = summary;
+        _summaryHint = HintText.Text;
+        SummaryBox.TextChanged += (_, _) => HintText.Text = _summaryHint;
+        Avalonia.Automation.AutomationProperties.SetName(SummaryBox, HeadingText.Text);
         ConfirmButton.Content = Localization.ConfirmButton(_language);
         CancelButton.Content = Localization.CancelButton(_language);
         Opened += (_, _) =>
@@ -47,7 +51,7 @@ public partial class IndexSummaryWindow : Window
             SummaryBox.CaretIndex = SummaryBox.Text?.Length ?? 0;
             SummaryBox.KeyDown += (_, e) =>
             {
-                if (e.Key == Key.Enter && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+                if (e.Key == Key.Enter && (e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta)))
                 {
                     Confirm();
                     e.Handled = true;
@@ -70,6 +74,8 @@ public partial class IndexSummaryWindow : Window
         var summary = SummaryBox.Text?.Trim() ?? string.Empty;
         if (summary.Length == 0)
         {
+            HintText.Text = OperationText.Choose(_language, "Enter a summary before continuing.",
+                "请输入简介后继续。", "請輸入簡介後繼續。", "概要を入力してから続行してください。");
             SummaryBox.Focus();
             return;
         }

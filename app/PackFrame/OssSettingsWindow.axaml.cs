@@ -1,5 +1,6 @@
 using System;
 using Avalonia.Controls;
+using Avalonia.Automation;
 using Avalonia.Interactivity;
 
 namespace PackFrame;
@@ -81,11 +82,18 @@ public partial class OssSettingsWindow : Window
         );
         CancelButton.Content = OperationText.Choose(_language, "Cancel", "取消", "取消", "キャンセル");
         SaveButton.Content = OperationText.Choose(_language, "Save", "保存", "儲存", "保存");
+        CancelButton.IsCancel = true;
+        SaveButton.IsDefault = true;
         EndpointBox.Text = _config.OssEndpoint ?? string.Empty;
         BucketBox.Text = _config.OssBucket ?? string.Empty;
         PrefixBox.Text = _config.OssPrefix ?? string.Empty;
         AccessKeyIdBox.Text = _config.OssAccessKeyId ?? string.Empty;
         AccessKeySecretBox.Text = _config.OssAccessKeySecret ?? string.Empty;
+        foreach (var (input, label) in new[]
+        {
+            (EndpointBox, EndpointLabel), (BucketBox, BucketLabel), (PrefixBox, PrefixLabel),
+            (AccessKeyIdBox, AccessKeyIdLabel), (AccessKeySecretBox, AccessKeySecretLabel)
+        }) AutomationProperties.SetName(input, label.Text);
     }
 
     private void OnSaveClick(object? sender, RoutedEventArgs e)
@@ -108,16 +116,28 @@ public partial class OssSettingsWindow : Window
                 "Endpoint、Bucket、AccessKey ID 和 AccessKey Secret 都必須填寫。",
                 "Endpoint、Bucket、AccessKey ID、AccessKey Secret は必須です。"
             );
+            var missing = string.IsNullOrWhiteSpace(endpoint) ? EndpointBox :
+                string.IsNullOrWhiteSpace(bucket) ? BucketBox :
+                string.IsNullOrWhiteSpace(accessKeyId) ? AccessKeyIdBox : AccessKeySecretBox;
+            missing.Focus();
+            StatusText.BringIntoView();
             return;
         }
 
-        _config.OssEndpoint = endpoint;
-        _config.OssBucket = bucket;
-        _config.OssPrefix = PrefixBox.Text?.Trim();
-        _config.OssAccessKeyId = accessKeyId;
-        _config.OssAccessKeySecret = accessKeySecret;
-        _config.OssEnabled = enabled;
-        _config.Save();
+        var draft = new OssSettingsDraft(enabled, endpoint, bucket, PrefixBox.Text?.Trim(),
+            accessKeyId, accessKeySecret);
+        if (!draft.TrySave(_config))
+        {
+            StatusText.Text = OperationText.Choose(
+                _language,
+                "Settings could not be saved. Check that the PackFrame folder is writable and the disk has free space, then try Save again. Your previous settings are unchanged.",
+                "无法保存设置。请检查 PackFrame 文件夹的写入权限和磁盘剩余空间，然后重试保存。原有设置未改变。",
+                "無法儲存設定。請檢查 PackFrame 資料夾的寫入權限和磁碟剩餘空間，然後重試儲存。原有設定未變更。",
+                "設定を保存できません。PackFrame フォルダーの書き込み権限とディスクの空き容量を確認し、もう一度保存してください。以前の設定は変更されていません。"
+            );
+            StatusText.BringIntoView();
+            return;
+        }
         Close(true);
     }
 

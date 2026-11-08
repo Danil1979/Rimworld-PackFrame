@@ -130,11 +130,12 @@ public partial class MainWindow
 
     // Keep the popup's row anchor and selectable content intact until it closes.
     private bool CanApplyWorkshopRefresh => !_windowClosed && !_loadingMods && !_customDragActive &&
-        !_painting && !_instanceDragActive && !_refreshing && !_modBadgePopup.IsOpen;
+        !_painting && !_instanceDragActive && !_refreshing && !_modBadgePopup.IsOpen && !_instanceWriteInProgress;
 
     private async Task PollWorkshopDownloadsAsync()
     {
-        if (_pollingWorkshop || _windowClosed || _loadingMods || _gameInstallation?.IsValid != true) return;
+        if (_pollingWorkshop || _windowClosed || _loadingMods || _instanceWriteInProgress ||
+            _gameInstallation?.IsValid != true) return;
         var game = _gameInstallation;
         var gamePath = game.GamePath;
         if (string.IsNullOrWhiteSpace(gamePath)) return;
@@ -159,18 +160,20 @@ public partial class MainWindow
         if (ids.Count == 0) return;
         _pollingWorkshop = true;
         var version = _loadVersion;
+        var instanceFileVersion = _instanceFileVersion;
         var root = _packRoot;
         try
         {
             var snapshot = await SteamWorkshopClient.QueryDownloadStateAsync(gamePath, ids.ToList(), _workshopMonitorCancellation.Token);
-            if (!WorkshopContextCurrent(gamePath, version)) return;
+            if (!WorkshopContextCurrent(gamePath, version) || instanceFileVersion != _instanceFileVersion) return;
             _workshopDownloads.Observe(snapshot);
             if (CanApplyWorkshopRefresh) RefreshWorkshopAvailabilityUI();
             var ready = _workshopDownloads.ReadyToRefresh;
             if (ready.Count > 0 && CanApplyWorkshopRefresh)
             {
                 var mods = await ModCatalog.LoadAsync(game, root);
-                if (!WorkshopContextCurrent(gamePath, version) || !CanApplyWorkshopRefresh || mods.Count == 0) return;
+                if (!WorkshopContextCurrent(gamePath, version) || instanceFileVersion != _instanceFileVersion ||
+                    !CanApplyWorkshopRefresh || mods.Count == 0) return;
                 _allMods = mods;
                 _modsByPackage = mods.GroupBy(mod => mod.PackageId, StringComparer.OrdinalIgnoreCase)
                     .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);

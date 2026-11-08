@@ -383,12 +383,18 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
     Check(ModpackService.ResolveImage(packManifest, "https://example.com/cover.png") ==
         "https://example.com/cover.png", "absolute cover image stays absolute");
     InstanceCopyChecks.Run(root);
+    OperationStateChecks.Run(root);
+    ArchiveImportChecks.Run(root);
+    await ModpackOperationChecks.Run(root);
     LoadOrderChecks.Run();
     DropPreviewChecks.Run();
     PaneSelectionChecks.Run();
     WorkshopSelectionRefreshChecks.Run();
     PaneLayoutChecks.Run();
     ProblemFilterChecks.Run();
+    DialogStateChecks.Run(root);
+    DiagnosticLogChecks.Run();
+    await IndexSubmissionChecks.Run();
     await UpdateServiceChecks.Run();
     await AppUpdateChecks.Run(root);
     await WorkshopDownloadStateChecks.Run();

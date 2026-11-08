@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -14,6 +15,80 @@ using Avalonia.Threading;
 
 namespace PackFrame;
 
+internal sealed class ExportCollectionDraft
+{
+    private string? _lastShown;
+    private bool _edited;
+
+    internal string RefreshDefault(string? current, string nextDefault)
+    {
+        if (_lastShown is not null && !string.Equals(current, _lastShown, StringComparison.Ordinal))
+            _edited = true;
+        _lastShown = _edited ? current ?? string.Empty : nextDefault;
+        return _lastShown;
+    }
+}
+
+internal sealed class ExportOperationGate
+{
+    internal bool IsActive { get; private set; }
+
+    internal bool TryBegin()
+    {
+        if (IsActive) return false;
+        IsActive = true;
+        return true;
+    }
+
+    internal void End() => IsActive = false;
+}
+
+internal enum IndexDestination { GitHub, Gitee }
+
+internal sealed class ExportIndexSubmissionState
+{
+    private sealed record Success(string PullRequestUrl, string? ManifestUrl);
+    private readonly Dictionary<IndexDestination, string> _targets = new();
+    private readonly Dictionary<IndexDestination, Dictionary<string, Success>> _successes = new();
+
+    internal void SetTarget(IndexDestination destination, string? target) => _targets[destination] = Key(target);
+    internal bool IsRequested(IndexDestination destination) => _targets.TryGetValue(destination, out var target) && target.Length > 0;
+    internal bool NeedsSubmission(IndexDestination destination) => IsRequested(destination) && SuccessUrl(destination) is null;
+    internal bool HasPending => NeedsSubmission(IndexDestination.GitHub) || NeedsSubmission(IndexDestination.Gitee);
+    internal bool HasSuccess => SuccessUrl(IndexDestination.GitHub) is not null || SuccessUrl(IndexDestination.Gitee) is not null;
+    internal bool AllSubmitted => !HasPending && HasSuccess;
+
+    private Success? GetSuccess(IndexDestination destination)
+    {
+        return _targets.TryGetValue(destination, out var target) &&
+            _successes.TryGetValue(destination, out var successes) && successes.TryGetValue(target, out var url)
+                ? url : null;
+    }
+    internal string? SuccessUrl(IndexDestination destination) => GetSuccess(destination)?.PullRequestUrl;
+    internal string? SuccessManifestUrl(IndexDestination destination) => GetSuccess(destination)?.ManifestUrl;
+
+    internal void MarkSuccess(IndexDestination destination, string target, string pullRequestUrl, string? manifestUrl = null)
+    {
+        var key = Key(target);
+        if (key.Length == 0 || string.IsNullOrWhiteSpace(pullRequestUrl))
+            throw new ArgumentException("A repository target and pull request URL are required.");
+        if (!_successes.TryGetValue(destination, out var successes))
+            _successes[destination] = successes = new Dictionary<string, Success>(StringComparer.OrdinalIgnoreCase);
+        successes[key] = new Success(pullRequestUrl, manifestUrl);
+    }
+
+    private static string Key(string? target)
+    {
+        var value = target?.Trim().TrimEnd('/') ?? string.Empty;
+        if (Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
+            uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) &&
+            GitHubIndexPublisher.TryParseRepositoryUrl(value, out var owner, out var repository))
+            return $"https://github.com/{owner}/{repository}";
+        if (value.EndsWith(".git", StringComparison.OrdinalIgnoreCase)) value = value[..^4];
+        return value;
+    }
+}
+
 public partial class ExportCollectionWindow : Window
 {
     private readonly ModpackRepoExportResult _result;
@@ -22,10 +97,14 @@ public partial class ExportCollectionWindow : Window
     private readonly string _indexUrl;
     private readonly AppConfig _appConfig;
     private int _page = 1;
-    private bool _busy;
+    private readonly ExportOperationGate _operation = new();
     private string? _collectionUrl;
     private string _packName = string.Empty;
     private string _packDescription = string.Empty;
+    private readonly ExportCollectionDraft _collectionNameDraft = new();
+    private readonly ExportCollectionDraft _collectionDescriptionDraft = new();
+    private readonly ExportCollectionDraft _indexGithubUrlDraft = new();
+    private readonly ExportCollectionDraft _indexGiteeUrlDraft = new();
     private Bitmap? _coverBitmap;
     private string? _githubUrl;
     private string? _giteeUrl;
@@ -33,13 +112,12 @@ public partial class ExportCollectionWindow : Window
     private string _lastGiteeRepoNameDefault = string.Empty;
     private string? _indexPrUrl;
     private string? _giteeIndexPrUrl;
-    private bool _indexSubmitted;
-    private bool _indexSubmitting;
+    private readonly ExportIndexSubmissionState _indexSubmissions = new();
+    private string? _indexSummaryDraft;
     private CancellationTokenSource? _createCancellation;
     private readonly ManagedInstance? _sourceInstance;
     private readonly Func<Action<string>, Task>? _packLocalMods;
     private bool _localModsPacked;
-    private bool _packing;
     private ulong? _boundCollectionId;
 
     public ExportCollectionWindow()
@@ -85,10 +163,21 @@ public partial class ExportCollectionWindow : Window
             _indexUrl = GitHubIndexPublisher.DefaultIndexUrl;
         }
         Configure();
-        Closing += (_, _) =>
+        Closing += (_, e) =>
         {
-            _createCancellation?.Cancel();
+            if (_operation.IsActive)
+            {
+                e.Cancel = true;
+                OperationNotice.IsVisible = true;
+                return;
+            }
             _coverBitmap?.Dispose();
+        };
+        KeyDown += (_, e) =>
+        {
+            if (e.Key != Key.Escape) return;
+            Close();
+            e.Handled = true;
         };
     }
 
@@ -101,6 +190,14 @@ public partial class ExportCollectionWindow : Window
         PackNameLabel.Text = Localization.ExportCollectionPackName(_language);
         PackDescriptionLabel.Text =
             Localization.ExportCollectionPackDescription(_language);
+        AutomationProperties.SetName(CoverPicker, OperationText.Choose(_language,
+            "Choose cover image", "选择封面图片", "選擇封面圖片", "カバー画像を選択"));
+        ToolTip.SetTip(CoverPicker, AutomationProperties.GetName(CoverPicker));
+        OperationNotice.Text = OperationText.Choose(_language,
+            "An operation is in progress. Wait for it to finish before leaving this window.",
+            "操作正在进行。请等待完成后再离开此窗口。",
+            "操作正在進行。請等待完成後再離開此視窗。",
+            "処理中です。完了してからこのウィンドウを閉じてください。");
         _packName = _result.Name;
         _packDescription = _result.Description;
         PackNameBox.Text = _packName;
@@ -164,14 +261,22 @@ public partial class ExportCollectionWindow : Window
             Localization.ExportCollectionDescriptionLabel(_language);
         InsertFrameworkLinkButton.Content =
             Localization.ExportCollectionInsertFrameworkLink(_language);
-        CollectionNameBox.Text = _packName;
-        CollectionDescriptionBox.Text = _packDescription;
+        CollectionNameBox.Text = _collectionNameDraft.RefreshDefault(null, _packName);
+        CollectionDescriptionBox.Text = _collectionDescriptionDraft.RefreshDefault(null, _packDescription);
         PrivateNote.Text = Localization.ExportCollectionHint(_language);
         StatusText.Text = string.Empty;
         CreateCollectionButton.IsEnabled = _result.WorkshopIds.Count > 0;
         if (_result.WorkshopIds.Count == 0)
         {
             StatusText.Text = Localization.ExportCollectionNoWorkshop(_language);
+        }
+        else if (string.IsNullOrWhiteSpace(_gamePath))
+        {
+            StatusText.Text = OperationText.Choose(_language,
+                "Choose the RimWorld game folder in the main window before creating a Workshop collection.",
+                "请先在主窗口选择 RimWorld 游戏文件夹，再创建工坊合集。",
+                "請先在主視窗選擇 RimWorld 遊戲資料夾，再建立工坊合集。",
+                "ワークショップコレクションを作成する前に、メイン画面で RimWorld のゲームフォルダを選択してください。");
         }
 
         IndexIntro.Text = OperationText.Choose(
@@ -228,10 +333,10 @@ public partial class ExportCollectionWindow : Window
         GithubTokenHint.Text = Localization.ExportCollectionTokenHint(_language);
         GithubRepoDescriptionLabel.Text = OperationText.Choose(
             _language,
-            "Gitee repository description",
-            "Gitee 仓库描述",
-            "Gitee 倉庫描述",
-            "Gitee リポジトリの説明"
+            "Repository description (GitHub and Gitee)",
+            "仓库描述（GitHub 和 Gitee）",
+            "倉庫描述（GitHub 和 Gitee）",
+            "リポジトリの説明（GitHub と Gitee）"
         );
         GithubCollectionUrlLabel.Text =
             Localization.ExportCollectionCollectionUrl(_language);
@@ -293,8 +398,26 @@ public partial class ExportCollectionWindow : Window
         UploadGiteeButton.IsEnabled = true;
         UploadGithubButton.IsEnabled = true;
 
+        foreach (var (input, label) in new (TextBox, TextBlock)[]
+        {
+            (PackNameBox, PackNameLabel), (PackDescriptionBox, PackDescriptionLabel),
+            (PackVersionBox, PackVersionLabel), (PackChangelogBox, PackChangelogLabel),
+            (CollectionNameBox, CollectionNameLabel), (CollectionDescriptionBox, CollectionDescriptionLabel),
+            (GithubTokenBox, GithubTokenLabel), (GiteeTokenBox, GiteeTokenLabel),
+            (GiteeRepoNameBox, GiteeRepoNameLabel), (GithubRepoDescriptionBox, GithubRepoDescriptionLabel),
+            (GithubCollectionUrlBox, GithubCollectionUrlLabel), (IndexRepoUrlBox, IndexRepoLabel),
+            (IndexGiteeRepoUrlBox, IndexGiteeRepoLabel), (IndexTokenBox, IndexTokenLabel),
+            (IndexGiteeTokenBox, IndexGiteeTokenLabel)
+        })
+        {
+            AutomationProperties.SetLabeledBy(input, label);
+            AutomationProperties.SetName(input, label.Text ?? string.Empty);
+        }
         LoadExistingCover();
+        IndexRepoUrlBox.TextChanged += (_, _) => RefreshIndexSubmissionState();
+        IndexGiteeRepoUrlBox.TextChanged += (_, _) => RefreshIndexSubmissionState();
         ShowPage(1);
+        RefreshOperationControls();
     }
 
     private void LocalModsHeader()
@@ -334,25 +457,17 @@ public partial class ExportCollectionWindow : Window
             : Localization.ExportCollectionNext(_language);
         if (page == 2)
         {
-            CollectionNameBox.Text = _packName;
-            CollectionDescriptionBox.Text = _packDescription;
+            CollectionNameBox.Text = _collectionNameDraft.RefreshDefault(CollectionNameBox.Text, _packName);
+            CollectionDescriptionBox.Text = _collectionDescriptionDraft.RefreshDefault(CollectionDescriptionBox.Text, _packDescription);
         }
         if (page == 5)
         {
-            if (!string.IsNullOrWhiteSpace(_githubUrl) &&
-                string.IsNullOrWhiteSpace(IndexRepoUrlBox.Text))
-            {
-                IndexRepoUrlBox.Text = _githubUrl;
-            }
+            IndexRepoUrlBox.Text = _indexGithubUrlDraft.RefreshDefault(IndexRepoUrlBox.Text, _githubUrl ?? string.Empty);
             if (string.IsNullOrWhiteSpace(IndexTokenBox.Text))
             {
                 IndexTokenBox.Text = GithubTokenBox.Text;
             }
-            if (!string.IsNullOrWhiteSpace(_giteeUrl) &&
-                string.IsNullOrWhiteSpace(IndexGiteeRepoUrlBox.Text))
-            {
-                IndexGiteeRepoUrlBox.Text = _giteeUrl;
-            }
+            IndexGiteeRepoUrlBox.Text = _indexGiteeUrlDraft.RefreshDefault(IndexGiteeRepoUrlBox.Text, _giteeUrl ?? string.Empty);
             if (string.IsNullOrWhiteSpace(IndexGiteeTokenBox.Text))
             {
                 IndexGiteeTokenBox.Text = GiteeTokenBox.Text;
@@ -374,6 +489,7 @@ public partial class ExportCollectionWindow : Window
             }
         }
         RefreshGithubStatus();
+        RefreshIndexSubmissionState();
     }
 
     private void LoadExistingCover()
@@ -410,7 +526,7 @@ public partial class ExportCollectionWindow : Window
         }
     }
 
-    private async void OnCoverPickerPressed(object? sender, PointerPressedEventArgs e)
+    private async void OnCoverPickerClick(object? sender, RoutedEventArgs e)
     {
         await PickCoverAsync();
     }
@@ -418,27 +534,24 @@ public partial class ExportCollectionWindow : Window
     private async Task PickCoverAsync()
     {
         var storage = TopLevel.GetTopLevel(this)?.StorageProvider;
-        if (storage is null)
+        if (storage is null || !TryBeginOperation())
         {
             return;
         }
-
-        var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            AllowMultiple = false,
-            FileTypeFilter = new[] { FilePickerFileTypes.ImageAll }
-        });
-        if (files.Count == 0)
-        {
-            return;
-        }
-
-        var localPath = files[0].TryGetLocalPath();
+        string? temporary = null;
         try
         {
+            CoverStatus.Text = string.Empty;
+            var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                AllowMultiple = false,
+                FileTypeFilter = new[] { FilePickerFileTypes.ImageAll }
+            });
+            if (files.Count == 0) return;
+            var localPath = files[0].TryGetLocalPath();
             if (string.IsNullOrWhiteSpace(localPath))
             {
-                var temporary = Path.Combine(
+                temporary = Path.Combine(
                     Path.GetTempPath(),
                     "packframe-cover-" + Guid.NewGuid().ToString("N")
                 );
@@ -459,9 +572,72 @@ public partial class ExportCollectionWindow : Window
                 LoadCover(cover);
             }
         }
-        catch
+        catch (Exception exception)
         {
+            AppLog.Error("Choose export cover", exception);
+            CoverStatus.Text = OperationText.Choose(_language,
+                "Could not load the cover image: ", "无法加载封面图片：", "無法載入封面圖片：", "カバー画像を読み込めませんでした: ") + exception.Message;
         }
+        finally
+        {
+            if (temporary is not null)
+            {
+                try { File.Delete(temporary); }
+                catch (Exception exception) { AppLog.Error("Remove temporary export cover", exception); }
+            }
+            EndOperation();
+        }
+    }
+
+    private bool TryBeginOperation()
+    {
+        if (!_operation.TryBegin()) return false;
+        RefreshOperationControls();
+        return true;
+    }
+
+    private void EndOperation()
+    {
+        _operation.End();
+        RefreshOperationControls();
+    }
+
+    private void RefreshOperationControls()
+    {
+        var enabled = !_operation.IsActive;
+        BackButton.IsEnabled = enabled;
+        NextButton.IsEnabled = enabled;
+        CoverPicker.IsEnabled = enabled;
+        OssSettingsButton.IsEnabled = enabled;
+        InsertFrameworkLinkButton.IsEnabled = enabled;
+        CreateCollectionButton.IsEnabled = enabled && _result.WorkshopIds.Count > 0 && !string.IsNullOrWhiteSpace(_gamePath);
+        PackLocalModsButton.IsEnabled = enabled && !_localModsPacked;
+        UploadGiteeButton.IsEnabled = enabled;
+        UploadGithubButton.IsEnabled = enabled;
+        OperationNotice.IsVisible = !enabled;
+        foreach (var input in new[] { PackNameBox, PackDescriptionBox, PackVersionBox, PackChangelogBox,
+            CollectionNameBox, CollectionDescriptionBox, GithubTokenBox, GiteeTokenBox, GiteeRepoNameBox,
+            GithubRepoDescriptionBox, GithubCollectionUrlBox, IndexRepoUrlBox, IndexGiteeRepoUrlBox,
+            IndexTokenBox, IndexGiteeTokenBox })
+            input.IsReadOnly = !enabled;
+        RefreshIndexSubmissionState();
+    }
+
+    private void RefreshIndexSubmissionState()
+    {
+        _indexSubmissions.SetTarget(IndexDestination.GitHub, IndexRepoUrlBox.Text);
+        _indexSubmissions.SetTarget(IndexDestination.Gitee, IndexGiteeRepoUrlBox.Text);
+        _indexPrUrl = _indexSubmissions.SuccessUrl(IndexDestination.GitHub);
+        _giteeIndexPrUrl = _indexSubmissions.SuccessUrl(IndexDestination.Gitee);
+        OpenIndexPrButton.IsVisible = _indexPrUrl is not null;
+        OpenGiteeIndexPrButton.IsVisible = _giteeIndexPrUrl is not null;
+        SubmitIndexButton.IsEnabled = !_operation.IsActive && !_indexSubmissions.AllSubmitted;
+        SubmitIndexButton.Content = _indexSubmissions.HasPending && _indexSubmissions.HasSuccess
+            ? OperationText.Choose(_language, "Submit remaining destination", "提交剩余平台", "提交剩餘平台", "未送信の宛先へ送信")
+            : Localization.ExportCollectionSubmitIndex(_language);
+        if (_page == 5)
+            NextButton.Content = _indexSubmissions.AllSubmitted
+                ? Localization.CloseButton(_language) : Localization.ExportCollectionFinish(_language);
     }
 
     private string? GetCoverPath()
@@ -502,7 +678,7 @@ public partial class ExportCollectionWindow : Window
 
     private async void OnCreateCollectionClick(object? sender, RoutedEventArgs e)
     {
-        if (_busy ||
+        if (_operation.IsActive ||
             string.IsNullOrWhiteSpace(_gamePath) ||
             _result.WorkshopIds.Count == 0)
         {
@@ -516,10 +692,9 @@ public partial class ExportCollectionWindow : Window
         }
         var collectionDescription =
             CollectionDescriptionBox.Text?.Trim() ?? _packDescription;
+        if (!TryBeginOperation()) return;
         using var cancellation = new CancellationTokenSource();
         _createCancellation = cancellation;
-        _busy = true;
-        CreateCollectionButton.IsEnabled = false;
         CancelCreateButton.IsVisible = true;
         StatusText.Text = Localization.ExportCollectionUploading(_language);
         try
@@ -600,9 +775,8 @@ public partial class ExportCollectionWindow : Window
             {
                 _createCancellation = null;
             }
-            _busy = false;
             CancelCreateButton.IsVisible = false;
-            CreateCollectionButton.IsEnabled = _result.WorkshopIds.Count > 0;
+            EndOperation();
         }
     }
 
@@ -613,6 +787,7 @@ public partial class ExportCollectionWindow : Window
     }
     private void OnBackClick(object? sender, RoutedEventArgs e)
     {
+        if (_operation.IsActive) return;
         if (_page == 1)
         {
             Close();
@@ -625,9 +800,17 @@ public partial class ExportCollectionWindow : Window
 
     private void OnNextClick(object? sender, RoutedEventArgs e)
     {
+        if (_operation.IsActive) return;
         if (_page == 1)
         {
-            SavePackInfo();
+            try { SavePackInfo(); }
+            catch (Exception exception)
+            {
+                AppLog.Error("Save export details", exception);
+                CoverStatus.Text = OperationText.Choose(_language,
+                    "Could not save export details: ", "无法保存导出信息：", "無法儲存匯出資訊：", "出力情報を保存できませんでした: ") + exception.Message;
+                return;
+            }
         }
 
         if (_page < 5)
@@ -650,80 +833,59 @@ public partial class ExportCollectionWindow : Window
 
     private async void OnSubmitIndexClick(object? sender, RoutedEventArgs e)
     {
-        if (_indexSubmitting || _indexSubmitted)
+        if (_operation.IsActive) return;
+        RefreshIndexSubmissionState();
+        var githubUrl = IndexRepoUrlBox.Text?.Trim();
+        var giteeUrl = IndexGiteeRepoUrlBox.Text?.Trim();
+        var submitGithub = _indexSubmissions.NeedsSubmission(IndexDestination.GitHub);
+        var submitGitee = _indexSubmissions.NeedsSubmission(IndexDestination.Gitee);
+        if (!submitGithub && !submitGitee)
         {
+            if (!_indexSubmissions.AllSubmitted)
+                IndexStatus.Text = OperationText.Choose(_language,
+                    "At least one repository link is required.", "至少填写一个合集仓库链接。",
+                    "至少填寫一個合集倉庫連結。", "少なくとも 1 つのリポジトリリンクを入力してください。");
             return;
         }
 
         var token = IndexTokenBox.Text?.Trim();
         var giteeToken = IndexGiteeTokenBox.Text?.Trim();
-        var githubUrl = IndexRepoUrlBox.Text?.Trim();
-        var giteeUrl = IndexGiteeRepoUrlBox.Text?.Trim();
-        var hasGithub = !string.IsNullOrWhiteSpace(githubUrl);
-        var hasGitee = !string.IsNullOrWhiteSpace(giteeUrl);
-        if (!hasGithub && !hasGitee)
+        if (submitGithub && string.IsNullOrWhiteSpace(token))
         {
-            IndexStatus.Text = Localization.ExportCollectionIndexFailed(
-                _language,
-                OperationText.Choose(
-                    _language,
-                    "At least one repository link is required.",
-                    "至少填写一个合集仓库链接。",
-                    "至少填寫一個合集倉庫連結。",
-                    "少なくとも 1 つのリポジトリリンクを入力してください。"
-                )
-            );
+            IndexStatus.Text = OperationText.Choose(_language,
+                "Enter a GitHub token to submit the GitHub destination.", "请填写 GitHub Token 以提交到 GitHub。",
+                "請填寫 GitHub Token 以提交到 GitHub。", "GitHub に送信するには GitHub トークンを入力してください。");
+            IndexTokenBox.Focus();
             return;
         }
-        if (hasGithub && string.IsNullOrWhiteSpace(token))
+        if (submitGitee && string.IsNullOrWhiteSpace(giteeToken))
         {
-            IndexStatus.Text = Localization.ExportCollectionIndexFailed(
-                _language,
-                OperationText.Choose(
-                    _language,
-                    "GitHub Token is required when a GitHub repository link is filled.",
-                    "填写 GitHub 仓库链接时必须填写 GitHub Token。",
-                    "填寫 GitHub 倉庫連結時必須填寫 GitHub Token。",
-                    "GitHub リポジトリリンクを入力する場合は GitHub Token が必要です。"
-                )
-            );
-            return;
-        }
-        if (hasGitee && string.IsNullOrWhiteSpace(giteeToken) && !hasGithub)
-        {
-            IndexStatus.Text = Localization.ExportCollectionIndexFailed(
-                _language,
-                OperationText.Choose(
-                    _language,
-                    "Gitee Token is required when only a Gitee repository link is filled.",
-                    "只填写 Gitee 仓库链接时必须填写 Gitee Token。",
-                    "只填寫 Gitee 倉庫連結時必須填寫 Gitee Token。",
-                    "Gitee リポジトリリンクのみ入力する場合は Gitee Token が必要です。"
-                )
-            );
+            IndexStatus.Text = OperationText.Choose(_language,
+                "Enter a Gitee token to submit the Gitee destination, or clear its repository link to skip it.",
+                "请填写 Gitee Token 以提交到 Gitee，或清空其仓库链接以跳过。",
+                "請填寫 Gitee Token 以提交到 Gitee，或清空其倉庫連結以略過。",
+                "Gitee に送信するには Gitee トークンを入力してください。省略する場合はリポジトリリンクを消してください。");
+            IndexGiteeTokenBox.Focus();
             return;
         }
 
-        _indexSubmitting = true;
-        SubmitIndexButton.IsEnabled = false;
+        if (!TryBeginOperation()) return;
         IndexStatus.Text = Localization.ExportCollectionIndexSubmitting(_language);
         var successes = new List<string>();
         var failures = new List<string>();
+        foreach (var destination in new[] { IndexDestination.GitHub, IndexDestination.Gitee })
+            if (_indexSubmissions.SuccessUrl(destination) is { } savedUrl)
+                successes.Add(destination + ": " + savedUrl);
         try
         {
             GitHubPackInfo info;
-            string? githubFile = null;
-            var giteeFile = !string.IsNullOrWhiteSpace(giteeUrl)
-                ? GiteePublisher.NormalizePackRawUrl(giteeUrl)
-                : _giteePackUrl;
-            if (!string.IsNullOrWhiteSpace(githubUrl))
+            var githubFile = _indexSubmissions.SuccessManifestUrl(IndexDestination.GitHub);
+            var giteeFile = _indexSubmissions.IsRequested(IndexDestination.Gitee)
+                ? GiteePublisher.NormalizePackRawUrl(giteeUrl!) : null;
+            if (submitGithub)
             {
-                info = await GitHubIndexPublisher.ResolvePackAsync(
-                    token!,
-                    githubUrl
-                );
-                githubFile =
-                    $"https://raw.githubusercontent.com/{info.Owner}/{info.Repository}/main/pack.json";
+                info = await GitHubIndexPublisher.ResolvePackAsync(token!, githubUrl!);
+                githubFile = info.ManifestUrl ?? throw new InvalidOperationException("The GitHub pack download URL could not be verified.");
             }
             else
             {
@@ -736,30 +898,19 @@ public partial class ExportCollectionWindow : Window
                 IndexStatus.Text = Localization.OperationCancelled(_language);
                 return;
             }
-
+            _indexSummaryDraft = summary;
             var repoFullName = $"{info.Owner}/{info.Repository}";
-            if (hasGithub)
+            if (submitGithub)
             {
                 try
                 {
                     var result = await GitHubIndexPublisher.PublishAsync(
-                        token!,
-                        _indexUrl,
-                        info.Owner,
-                        info.Repository,
-                        info.Id,
-                        info.Name,
-                        summary,
-                        info.PackageIds,
-                        GithubCollectionUrlBox.Text?.Trim() ?? string.Empty,
+                        token!, _indexUrl, info.Owner, info.Repository, info.Id, info.Name, summary,
+                        info.PackageIds, GithubCollectionUrlBox.Text?.Trim() ?? string.Empty,
                         text => Dispatcher.UIThread.Post(() => IndexStatus.Text = text),
-                        language: _language,
-                        giteeFile: giteeFile,
-                        githubFile: githubFile
-                    );
-                    _indexPrUrl = result.PullRequestUrl;
-                    successes.Add("GitHub: " + _indexPrUrl);
-                    OpenIndexPrButton.IsVisible = true;
+                        language: _language, giteeFile: giteeFile, githubFile: githubFile);
+                    _indexSubmissions.MarkSuccess(IndexDestination.GitHub, githubUrl!, result.PullRequestUrl, githubFile);
+                    successes.Add("GitHub: " + result.PullRequestUrl);
                 }
                 catch (Exception exception)
                 {
@@ -767,72 +918,38 @@ public partial class ExportCollectionWindow : Window
                 }
             }
 
-            if (!string.IsNullOrWhiteSpace(giteeFile))
+            if (submitGitee)
             {
-                if (string.IsNullOrWhiteSpace(giteeToken))
+                try
                 {
-                    failures.Add(OperationText.Choose(
-                        _language,
-                        "Gitee: token is empty.",
-                        "Gitee：Token 为空。",
-                        "Gitee：Token 為空。",
-                        "Gitee: トークンが空です。"
-                    ));
+                    var result = await GiteeIndexPublisher.PublishAsync(
+                        giteeToken!, ModpackService.GiteeIndexUrl, info.Id, info.Name, summary,
+                        githubFile, giteeFile, repoFullName, info.PackageIds.Count,
+                        text => Dispatcher.UIThread.Post(() => IndexStatus.Text = text), language: _language);
+                    _indexSubmissions.MarkSuccess(IndexDestination.Gitee, giteeUrl!, result.PullRequestUrl, giteeFile);
+                    successes.Add("Gitee: " + result.PullRequestUrl);
                 }
-                else
+                catch (Exception exception)
                 {
-                    try
-                    {
-                        var result = await GiteeIndexPublisher.PublishAsync(
-                            giteeToken,
-                            ModpackService.GiteeIndexUrl,
-                            info.Id,
-                            info.Name,
-                            summary,
-                            githubFile,
-                            giteeFile,
-                            repoFullName,
-                            info.PackageIds.Count,
-                            text => Dispatcher.UIThread.Post(() => IndexStatus.Text = text),
-                            language: _language
-                        );
-                        _giteeIndexPrUrl = result.PullRequestUrl;
-                        successes.Add("Gitee: " + _giteeIndexPrUrl);
-                        OpenGiteeIndexPrButton.IsVisible = true;
-                    }
-                    catch (Exception exception)
-                    {
-                        failures.Add("Gitee: " + exception.Message);
-                    }
+                    failures.Add("Gitee: " + exception.Message);
                 }
             }
 
-            IndexStatus.Text = string.Join(
-                Environment.NewLine,
-                successes.Concat(failures.Select(message => "FAILED " + message))
-            );
-            _indexSubmitted = successes.Count > 0;
-            if (_indexSubmitted)
-            {
-                NextButton.Content = Localization.CloseButton(_language);
-            }
+            var failed = OperationText.Choose(_language, "Failed: ", "失败：", "失敗：", "失敗: ");
+            IndexStatus.Text = string.Join(Environment.NewLine, successes.Concat(failures.Select(message => failed + message)));
         }
         catch (Exception exception)
         {
-            IndexStatus.Text = Localization.ExportCollectionIndexFailed(
-                _language,
-                exception.Message
-            );
+            IndexStatus.Text = Localization.ExportCollectionIndexFailed(_language, exception.Message);
         }
         finally
         {
-            _indexSubmitting = false;
-            SubmitIndexButton.IsEnabled = true;
+            EndOperation();
         }
     }
     private async Task<string?> ShowIndexSummaryAsync(string fallback)
     {
-        var inherited = PackDescriptionBox.Text?.Trim();
+        var inherited = _indexSummaryDraft ?? PackDescriptionBox.Text?.Trim();
         if (string.IsNullOrWhiteSpace(inherited))
         {
             inherited = _packDescription;
@@ -884,7 +1001,7 @@ public partial class ExportCollectionWindow : Window
 
     private async void OnUploadGithubClick(object? sender, RoutedEventArgs e)
     {
-        if (_busy || _packing)
+        if (_operation.IsActive)
         {
             return;
         }
@@ -901,29 +1018,20 @@ public partial class ExportCollectionWindow : Window
             return;
         }
 
-        if (!await EnsureOssArchiveUploadedAsync(GithubStatus))
-        {
-            return;
-        }
-
-        var fallbackArchive = _localModsPacked &&
-            !OssPublisher.IsEnabled(_appConfig)
-            ? StageFallbackArchive()
-            : null;
-        SavePackInfo();
-        var description = GithubRepoDescriptionBox.Text?.Trim() ?? string.Empty;
-        var collectionUrl = GithubCollectionUrlBox.Text?.Trim() ?? string.Empty;
-        if (!string.IsNullOrWhiteSpace(collectionUrl))
-        {
-            ModpackRepoExporter.SetCollectionUrl(_result.RepoPath, collectionUrl);
-        }
-        ModpackRepoExporter.UpdateReadmeCover(_result.RepoPath);
-
-        _busy = true;
-        UploadGithubButton.IsEnabled = false;
+        if (!TryBeginOperation()) return;
+        string? fallbackArchive = null;
         GithubStatus.Text = Localization.ExportCollectionGithubUploading(_language);
         try
         {
+            if (!await EnsureOssArchiveUploadedAsync(GithubStatus)) return;
+            fallbackArchive = _localModsPacked && !OssPublisher.IsEnabled(_appConfig)
+                ? StageFallbackArchive() : null;
+            SavePackInfo();
+            var description = GithubRepoDescriptionBox.Text?.Trim() ?? string.Empty;
+            var collectionUrl = GithubCollectionUrlBox.Text?.Trim() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(collectionUrl))
+                ModpackRepoExporter.SetCollectionUrl(_result.RepoPath, collectionUrl);
+            ModpackRepoExporter.UpdateReadmeCover(_result.RepoPath);
             var published = await Task.Run(() => GitHubPublisher.PublishAsync(
                 _result.RepoPath,
                 token,
@@ -948,7 +1056,9 @@ public partial class ExportCollectionWindow : Window
         }
         catch (Exception exception)
         {
-            RestoreFallbackArchive(fallbackArchive);
+            try { RestoreFallbackArchive(fallbackArchive); }
+            catch (Exception restoreException) { AppLog.Error("Restore GitHub export archive", restoreException); }
+            AppLog.Error("Publish GitHub export", exception);
             GithubStatus.Text = Localization.ExportCollectionGithubFailed(
                 _language,
                 exception.Message
@@ -956,8 +1066,7 @@ public partial class ExportCollectionWindow : Window
         }
         finally
         {
-            _busy = false;
-            UploadGithubButton.IsEnabled = true;
+            EndOperation();
         }
     }
 
@@ -989,7 +1098,15 @@ public partial class ExportCollectionWindow : Window
             _language,
             GiteePublisher.NormalizeRepositoryName(input)
         );
+        GithubDestinationText.Text = DestinationText("GitHub", GitHubPublisher.NormalizeRepositoryName(input));
+        GiteeDestinationText.Text = DestinationText("Gitee", GiteePublisher.NormalizeRepositoryName(input));
     }
+
+    private string DestinationText(string service, string repository) => OperationText.Choose(_language,
+        $"Destination: {service} repository “{repository}” in the account associated with this token.",
+        $"上传目标：此 Token 所属账户中的 {service} 仓库“{repository}”。",
+        $"上傳目標：此 Token 所屬帳戶中的 {service} 倉庫「{repository}」。",
+        $"送信先: このトークンのアカウントにある {service} リポジトリ「{repository}」。");
 
     private void OnGetGiteeTokenClick(object? sender, RoutedEventArgs e)
     {
@@ -1002,6 +1119,7 @@ public partial class ExportCollectionWindow : Window
 
     private async void OnOssSettingsClick(object? sender, RoutedEventArgs e)
     {
+        if (_operation.IsActive) return;
         var window = new OssSettingsWindow(_appConfig, _language);
         if (await window.ShowDialog<bool>(this))
         {
@@ -1245,7 +1363,7 @@ public partial class ExportCollectionWindow : Window
 
     private async void OnPackLocalModsClick(object? sender, RoutedEventArgs e)
     {
-        if (_busy || _packing || _localModsPacked)
+        if (_operation.IsActive || _localModsPacked)
         {
             return;
         }
@@ -1262,10 +1380,7 @@ public partial class ExportCollectionWindow : Window
             return;
         }
 
-        _packing = true;
-        PackLocalModsButton.IsEnabled = false;
-        UploadGiteeButton.IsEnabled = false;
-        UploadGithubButton.IsEnabled = false;
+        if (!TryBeginOperation()) return;
         PackLocalModsStatus.Text = OperationText.Choose(
             _language,
             "Preparing local mods...",
@@ -1293,8 +1408,6 @@ public partial class ExportCollectionWindow : Window
                 "本地模組已打包",
                 "ローカル MOD パッケージ済み"
             );
-            UploadGiteeButton.IsEnabled = true;
-            UploadGithubButton.IsEnabled = true;
         }
         catch (Exception exception)
         {
@@ -1308,19 +1421,13 @@ public partial class ExportCollectionWindow : Window
         }
         finally
         {
-            _packing = false;
-            UploadGiteeButton.IsEnabled = true;
-            UploadGithubButton.IsEnabled = true;
-            if (!_localModsPacked)
-            {
-                PackLocalModsButton.IsEnabled = true;
-            }
+            EndOperation();
         }
     }
 
     private async void OnUploadGiteeClick(object? sender, RoutedEventArgs e)
     {
-        if (_busy || _packing)
+        if (_operation.IsActive)
         {
             return;
         }
@@ -1340,30 +1447,21 @@ public partial class ExportCollectionWindow : Window
             return;
         }
 
-        if (!await EnsureOssArchiveUploadedAsync(GiteeStatus))
-        {
-            return;
-        }
-
-        var fallbackArchive = _localModsPacked &&
-            !OssPublisher.IsEnabled(_appConfig)
-            ? StageFallbackArchive()
-            : null;
-        SavePackInfo();
-        var description = GithubRepoDescriptionBox.Text?.Trim() ?? string.Empty;
-        var collectionUrl = GithubCollectionUrlBox.Text?.Trim() ?? string.Empty;
-        if (!string.IsNullOrWhiteSpace(collectionUrl))
-        {
-            ModpackRepoExporter.SetCollectionUrl(_result.RepoPath, collectionUrl);
-        }
-        ModpackRepoExporter.UpdateReadmeCover(_result.RepoPath);
-
-        _busy = true;
-        UploadGiteeButton.IsEnabled = false;
+        if (!TryBeginOperation()) return;
+        string? fallbackArchive = null;
         _giteePackUrl = null;
         GiteeStatus.Text = OperationText.GiteeLogin(_language);
         try
         {
+            if (!await EnsureOssArchiveUploadedAsync(GiteeStatus)) return;
+            fallbackArchive = _localModsPacked && !OssPublisher.IsEnabled(_appConfig)
+                ? StageFallbackArchive() : null;
+            SavePackInfo();
+            var description = GithubRepoDescriptionBox.Text?.Trim() ?? string.Empty;
+            var collectionUrl = GithubCollectionUrlBox.Text?.Trim() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(collectionUrl))
+                ModpackRepoExporter.SetCollectionUrl(_result.RepoPath, collectionUrl);
+            ModpackRepoExporter.UpdateReadmeCover(_result.RepoPath);
             var published = await Task.Run(() => GiteePublisher.PublishAsync(
                 _result.RepoPath,
                 token,
@@ -1387,7 +1485,9 @@ public partial class ExportCollectionWindow : Window
         }
         catch (Exception exception)
         {
-            RestoreFallbackArchive(fallbackArchive);
+            try { RestoreFallbackArchive(fallbackArchive); }
+            catch (Exception restoreException) { AppLog.Error("Restore Gitee export archive", restoreException); }
+            AppLog.Error("Publish Gitee export", exception);
             GiteeStatus.Text = OperationText.Choose(
                 _language,
                 "Gitee upload failed: ",
@@ -1398,8 +1498,7 @@ public partial class ExportCollectionWindow : Window
         }
         finally
         {
-            _busy = false;
-            UploadGiteeButton.IsEnabled = true;
+            EndOperation();
         }
     }
 

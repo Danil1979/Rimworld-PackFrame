@@ -2,17 +2,19 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="PackFrame.RenameWindow"
         Title="Rimworld PackFrame"
-        Width="320"
-        Height="140"
+        Width="480"
+        SizeToContent="Height"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource AppBackgroundBrush}"
         RequestedThemeVariant="Dark">
-    <Grid Margin="16" RowDefinitions="*,Auto">
+    <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,Auto">
+        <TextBlock x:Name="NameLabel" FontSize="18" FontWeight="SemiBold"
+                   Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
         <Border Classes="field"
-                Width="240"
+                Grid.Row="1" Margin="0,12,0,0"
                 Height="36"
-                HorizontalAlignment="Center"
+                HorizontalAlignment="Stretch"
                 VerticalAlignment="Top"
                 CornerRadius="0">
             <TextBox x:Name="NameBox"
@@ -21,16 +23,20 @@
                      CornerRadius="0"
                      VerticalContentAlignment="Center" />
         </Border>
-        <StackPanel Grid.Row="1"
+        <TextBlock x:Name="ValidationText" Grid.Row="2" Margin="0,8,0,0" IsVisible="False"
+                   Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+        <StackPanel Grid.Row="3"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Spacing="8"
                     Margin="0,12,0,0">
             <Button x:Name="CancelButton"
+                    IsCancel="True"
                     Theme="{StaticResource FlatButton}"
                     MinHeight="32"
                     Click="OnCancelClick" />
             <Button x:Name="ConfirmButton"
+                    IsDefault="True"
                     Theme="{StaticResource FlatButton}"
                     MinHeight="32"
                     Click="OnConfirmClick" />

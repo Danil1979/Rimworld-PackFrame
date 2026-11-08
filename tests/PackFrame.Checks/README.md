@@ -193,3 +193,9 @@ Readability/accessibility follow-up:
   buttons. Inspect mod row accessible names for the name/status, not a model dump.
 - No selected mod shows setup/edit/save instructions; missing previews reserve no
   blank image area. Long mod names wrap and the instruction panel scrolls.
+
+Dialog and operation-state checks also cover palette cancellation, retained wizard
+input, destination-specific index retries, anonymous manifest verification,
+transactional OSS settings, malformed archive rejection, recursive config rollback,
+install cancellation tails, and distinct diagnostic-log read failures. See
+[UI review coverage](../../docs/UI_REVIEW.md) for native checks and remaining gaps.

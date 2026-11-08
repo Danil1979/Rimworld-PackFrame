@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Templates;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
@@ -11,26 +13,53 @@ internal sealed class CollectionTargetWindow : Window
 {
     public CollectionTargetWindow(IReadOnlyList<OwnedCollection> candidates, string language)
     {
-        Title = "PackFrame — Steam Workshop"; Width = 650; Height = 360;
+        string T(string en, string hans, string hant, string ja) => OperationText.Choose(language, en, hans, hant, ja);
+        Title = T("Choose Workshop collection", "选择创意工坊合集", "選擇工作坊合集", "Workshop コレクションの選択");
+        Width = 680; Height = 440; MinWidth = 480; MinHeight = 300;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         RequestedThemeVariant = ThemeVariant.Dark;
         Background = ThemeService.BackgroundBrush;
-        var panel = new StackPanel { Margin = new Thickness(16), Spacing = 12 };
-        panel.Children.Add(new TextBlock { Text = OperationText.Choose(language,
-            "Select your collection to update, or create a new one.", "选择要更新的本人合集，或另建新合集。",
-            "選擇要更新的本人合集，或另建新合集。", "更新する自分のコレクションを選ぶか、新規作成してください。") });
-        var list = new ListBox { Height = 190 };
-        foreach (var item in candidates)
-            list.Items.Add($"{item.Title}\nhttps://steamcommunity.com/sharedfiles/filedetails/?id={item.Id}");
-        list.SelectedIndex = 0; panel.Children.Add(list);
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
-        var update = new Button { Content = OperationText.Choose(language, "Update selected", "更新所选合集", "更新所選合集", "選択を更新") };
-        update.Click += (_, _) => { if (list.SelectedIndex >= 0) Close((ulong?)candidates[list.SelectedIndex].Id); };
-        var create = new Button { Content = OperationText.Choose(language, "Create new", "另建新合集", "另建新合集", "新規作成") };
-        create.Click += (_, _) => Close((ulong?)0UL);
-        var cancel = new Button { Content = Localization.CancelButton(language) };
+        Foreground = ThemeService.PrimaryTextBrush;
+        var grid = new Grid { Margin = new Thickness(20), RowDefinitions = new RowDefinitions("Auto,*,Auto") };
+        grid.Children.Add(new TextBlock { Text = T(
+            "Select a collection you own to update, or create a separate collection.",
+            "选择您拥有的合集进行更新，或创建独立合集。", "選擇您擁有的合集進行更新，或建立獨立合集。",
+            "自分のコレクションを選んで更新するか、別のコレクションを作成します。"), TextWrapping = TextWrapping.Wrap });
+        var list = new ListBox
+        {
+            ItemsSource = candidates, Margin = new Thickness(0,16,0,16),
+            ItemTemplate = new FuncDataTemplate<OwnedCollection>((item, _) => new StackPanel
+            {
+                Spacing = 4, Margin = new Thickness(4,8), Children =
+                {
+                    new TextBlock { Text = item?.Title, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap },
+                    new TextBlock { Text = $"steamcommunity.com/sharedfiles/filedetails/?id={item?.Id}",
+                        FontSize = 12, TextWrapping = TextWrapping.Wrap, Foreground = ThemeService.SecondaryTextBrush }
+                }
+            })
+        };
+        AutomationProperties.SetName(list, Title);
+        ScrollViewer.SetHorizontalScrollBarVisibility(list, Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled);
+        Grid.SetRow(list, 1); grid.Children.Add(list);
+        var empty = new TextBlock { Text = T("No owned collections are available. You can create a new collection.",
+            "暂无可用的本人合集。您可以创建新合集。", "尚無可用的本人合集。您可以建立新合集。", "利用できる自分のコレクションがありません。新規作成できます。"),
+            IsVisible = candidates.Count == 0, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4,24),
+            Foreground = ThemeService.SecondaryTextBrush };
+        Grid.SetRow(empty,1); grid.Children.Add(empty);
+        var buttons = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right };
+        Button Make(string text) => new() { Content = text, MinHeight = 36, Margin = new Thickness(8,4,0,0),
+            Theme = Application.Current?.FindResource("FlatButton") as ControlTheme };
+        var cancel = Make(Localization.CancelButton(language)); cancel.IsCancel = true;
         cancel.Click += (_, _) => Close();
-        buttons.Children.Add(update); buttons.Children.Add(create); buttons.Children.Add(cancel);
-        panel.Children.Add(buttons); Content = panel;
+        var create = Make(T("Create new", "另建新合集", "另建新合集", "新規作成"));
+        create.Click += (_, _) => Close((ulong?)0UL);
+        var update = Make(T("Update selected", "更新所选合集", "更新所選合集", "選択を更新"));
+        update.IsEnabled = candidates.Count > 0;
+        update.Click += (_, _) => { if (list.SelectedItem is OwnedCollection selected) Close((ulong?)selected.Id); };
+        list.SelectionChanged += (_, _) => update.IsEnabled = list.SelectedItem is OwnedCollection;
+        list.SelectedIndex = candidates.Count > 0 ? 0 : -1;
+        buttons.Children.Add(cancel); buttons.Children.Add(create); buttons.Children.Add(update);
+        Grid.SetRow(buttons,2); grid.Children.Add(buttons); Content = grid;
+        Opened += (_, _) => cancel.Focus();
     }
 }

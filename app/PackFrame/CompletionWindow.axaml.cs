@@ -36,6 +36,7 @@ public partial class CompletionWindow : Window
         this.FindControl<Button>("OpenFolderButton")!.Content = openFolderText;
         this.FindControl<Button>("CloseButton")!.Content = closeText;
         KeyDown += OnWindowKeyDown;
+        Opened += (_, _) => this.FindControl<Button>("CloseButton")!.Focus();
     }
 
     private void OnMissingClick(object? sender, RoutedEventArgs e)

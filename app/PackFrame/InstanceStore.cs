@@ -295,13 +295,16 @@ public static class InstanceStore
         FileTransactions.WriteAtomic(path, temporary => File.WriteAllText(temporary, metadata.ToJsonString()));
     }
 
-    public static void DeleteInstance(ManagedInstance instance)
+    public static void DeleteInstance(ManagedInstance instance) =>
+        DeleteInstance(instance, path => Directory.Delete(path, true));
+
+    internal static void DeleteInstance(ManagedInstance instance, Action<string> deleteDirectory)
     {
-        RemovePending(instance);
         if (Directory.Exists(instance.DirectoryPath))
         {
-            Directory.Delete(instance.DirectoryPath, true);
+            deleteDirectory(instance.DirectoryPath);
         }
+        RemovePending(instance);
     }
 
     public static void SetPackBinding(
@@ -621,7 +624,9 @@ public static class InstanceStore
                     return false;
                 }
 
-                CopyDirectory(sourceConfig, target.ConfigDirectoryPath, overwrite: true);
+                ValidateImportedInstance(root);
+                FileTransactions.ApplyFiles(sourceConfig, target.ConfigDirectoryPath, includeSubdirectories: true);
+                RemovePending(target);
                 return true;
             }
             finally
@@ -656,6 +661,7 @@ public static class InstanceStore
                 : profile.GameVersion,
             knownExpansions
         );
+        RemovePending(target);
         return true;
     }
 
@@ -692,6 +698,7 @@ public static class InstanceStore
             target.Metadata?.Name ?? string.Empty,
             Path.GetFileNameWithoutExtension(file)
         );
+        RemovePending(target);
         return true;
     }
 
@@ -727,6 +734,7 @@ public static class InstanceStore
             gameVersion,
             target.Metadata?.Name ?? string.Empty
         );
+        RemovePending(target);
         return true;
     }
 
@@ -804,6 +812,7 @@ public static class InstanceStore
                 );
                 break;
         }
+        RemovePending(target);
     }
 
     public static List<ManagedInstance> ImportAll(string packRoot, string? gameVersion)
@@ -885,6 +894,7 @@ public static class InstanceStore
             throw new IOException("Source and target instance folders overlap.");
         }
 
+        ValidateImportedInstance(sourcePath);
         var backupPath = targetPath + ".backup-" + Guid.NewGuid().ToString("N");
         Directory.Move(targetPath, backupPath);
         try
@@ -893,6 +903,7 @@ public static class InstanceStore
             Directory.CreateDirectory(Path.Combine(targetPath, "Config"));
             Directory.CreateDirectory(Path.Combine(targetPath, "Saves"));
             WriteMetadata(targetPath, displayName, sourceName);
+            ValidateImportedInstance(targetPath);
         }
         catch (Exception failure)
         {
@@ -1094,6 +1105,7 @@ public static class InstanceStore
 
     private static ManagedInstance ImportDirectory(string packRoot, string source, string sourceName)
     {
+        ValidateImportedInstance(source);
         var folderName = $"profile{GetNextIndex(packRoot)}";
         var directory = Path.Combine(packRoot, InstancesFolderName, folderName);
         if (Directory.Exists(directory))
@@ -1344,6 +1356,29 @@ public static class InstanceStore
         }
 
         return null;
+    }
+
+    private static void ValidateImportedInstance(string directory)
+    {
+        var configDirectory = Path.Combine(directory, "Config");
+        var modsConfig = Path.Combine(configDirectory, "ModsConfig.xml");
+        if (!File.Exists(modsConfig))
+            throw new IOException("Imported instance is missing Config/ModsConfig.xml.");
+
+        // Validate disk contents directly. LoadInstance would apply pending edits
+        // and could hide an invalid or stale list in the incoming archive.
+        ReadModsConfig(modsConfig);
+        ReadMetadata(directory);
+        foreach (var file in Directory.EnumerateFiles(configDirectory, "*", SearchOption.AllDirectories))
+        {
+            if (!Path.GetExtension(file).Equals(".xml", StringComparison.OrdinalIgnoreCase) ||
+                PathsEqual(file, modsConfig)) continue;
+            try { XDocument.Load(file); }
+            catch (Exception exception) when (exception is XmlException or IOException or UnauthorizedAccessException)
+            {
+                throw new IOException("Could not read imported configuration: " + file, exception);
+            }
+        }
     }
 
     public static ManagedInstance LoadOfficial(string? configDirectory, string displayName)

@@ -379,6 +379,7 @@ public static class ModpackService
         IReadOnlyDictionary<string, string>? recordedOverlays = null
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (string.IsNullOrWhiteSpace(game.GamePath))
         {
             throw new InvalidOperationException("RimWorld game path is not set.");
@@ -531,6 +532,7 @@ public static class ModpackService
 
         foreach (var mod in mods.Where(item => item is not null))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var source = NormalizeSource(mod);
             var packageId = NormalizePackageId(mod.PackageId);
             if (source == "github")
@@ -721,6 +723,7 @@ public static class ModpackService
                 .ToList();
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         if (downloadedArchivePath is not null)
         {
             TryDeleteFile(downloadedArchivePath);
@@ -761,7 +764,8 @@ public static class ModpackService
         string targetConfigDirectory,
         Action<string>? status = null,
         CancellationToken cancellationToken = default,
-        string? language = null
+        string? language = null,
+        Action? commitStarting = null
     )
     {
         if (string.IsNullOrWhiteSpace(configBaseUrl) || configFiles.Count == 0)
@@ -786,11 +790,42 @@ public static class ModpackService
                 if (Path.GetExtension(name).Equals(".xml", StringComparison.OrdinalIgnoreCase))
                     XDocument.Load(destination);
             }
-            cancellationToken.ThrowIfCancellationRequested();
-            // Once commit starts, finish or roll back rather than interrupting it.
-            await Task.Run(() => FileTransactions.ApplyFiles(staging, targetConfigDirectory));
+            await CommitConfigFilesAsync(staging, targetConfigDirectory, cancellationToken, commitStarting);
         }
         finally { FileTransactions.TryDeleteDirectory(staging); }
+    }
+
+    internal static async Task CommitConfigFilesAsync(string staging, string targetConfigDirectory,
+        CancellationToken cancellationToken, Action? commitStarting = null)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        // Notify the UI before writes begin, on the caller's context. From here the
+        // owner must remain open until all replacements or rollback have finished.
+        commitStarting?.Invoke();
+        await Task.Run(() => FileTransactions.ApplyFiles(staging, targetConfigDirectory));
+    }
+
+    internal static async Task<ModpackInstallResult> AwaitInstallCompletionAsync(
+        Task<ModpackInstallResult> operation, CancellationToken cancellationToken)
+    {
+        var result = await operation;
+        // Steam's subscription helper cannot be interrupted once it starts. Do
+        // not publish an instance when cancellation arrived during that tail.
+        cancellationToken.ThrowIfCancellationRequested();
+        return result;
+    }
+
+    internal static bool TryResolveWorkshopOverride(string? link, string? manifestLink, out string? overrideLink)
+    {
+        link = link?.Trim();
+        overrideLink = null;
+        // Local/GitHub-only packs need no Workshop link. An empty field also
+        // means to use the fresh manifest, rather than override its collection.
+        if (string.IsNullOrWhiteSpace(link)) return true;
+        if (ParseWorkshopId(link) is null) return false;
+        if (!string.Equals(link, manifestLink?.Trim(), StringComparison.OrdinalIgnoreCase))
+            overrideLink = link;
+        return true;
     }
 
     private static async Task DownloadConfigAsync(

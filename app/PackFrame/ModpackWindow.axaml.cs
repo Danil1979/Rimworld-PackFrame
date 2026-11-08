@@ -549,8 +549,9 @@ public partial class ModpackWindow : Window
         Find<Button>("RepoMenuButton").IsEnabled = ready;
         Find<ListBox>("PackList").IsEnabled = ready;
         Find<Button>("CancelOperationButton").IsVisible =
-            _operationCancellation is not null;
-        Find<Button>("CloseButton").IsEnabled = true;
+            _operationCancellation is not null && !_committingUpdate;
+        Find<Button>("CancelOperationButton").IsEnabled = _operationCancellation?.IsCancellationRequested != true;
+        Find<Button>("CloseButton").IsEnabled = !_committingUpdate;
         Find<Button>("InstallButton").IsEnabled = ready && _canInstall;
         Find<Button>("SteamCmdButton").IsEnabled = ready && _canInstall;
         Find<Button>("ApplyConfigButton").IsEnabled =
@@ -666,7 +667,7 @@ public partial class ModpackWindow : Window
     private async Task InstallFromLinkAsync(bool useSteamCmd, bool skipModsDownload = false)
     {
         var link = Find<TextBox>("LinkBox").Text?.Trim();
-        if (ModpackService.ParseWorkshopId(link) is null)
+        if (!ModpackService.TryResolveWorkshopOverride(link, _workshopUrl, out var overrideLink))
         {
             Find<TextBlock>("StatusText").Text =
                 Localization.ModpackLinkInvalid(_language);
@@ -675,8 +676,6 @@ public partial class ModpackWindow : Window
 
         // An auto-filled collection must follow the fresh manifest used for installation.
         // Preserve a link the user explicitly changed as an additional source.
-        var overrideLink = string.Equals(link, _workshopUrl, StringComparison.OrdinalIgnoreCase)
-            ? null : link;
         await InstallAsync(overrideLink, useSteamCmd, skipModsDownload);
     }
 
@@ -741,12 +740,23 @@ public partial class ModpackWindow : Window
                 _currentInstance.ConfigDirectoryPath,
                 text => Dispatcher.UIThread.Post(() =>
                 {
-                    if (!_closed) Find<TextBlock>("StatusText").Text = text;
-                }), cancellation.Token, _language
+                    if (!_closed && !_committingUpdate && !cancellation.IsCancellationRequested)
+                        Find<TextBlock>("StatusText").Text = text;
+                }), cancellation.Token, _language, commitStarting: () =>
+                {
+                    _committingUpdate = true;
+                    SetControls(false);
+                    Find<TextBlock>("StatusText").Text = T(
+                        "Applying configuration. Please keep this window open until it finishes.",
+                        "正在应用配置。请等待完成后再关闭此窗口。",
+                        "正在套用設定。請等待完成後再關閉此視窗。",
+                        "設定を適用中です。完了するまでこのウィンドウを開いたままお待ちください。");
+                }
             );
             ConfigApplied = true;
             InstanceStore.SetPackBinding(_currentInstance, pack.Id,
                 pack.ConfigBaseUrl, pack.ConfigFiles, _currentInstance.IsSteamCmd);
+            _committingUpdate = false;
             if (!_closed) Close();
         }
         catch (OperationCanceledException)
@@ -761,6 +771,7 @@ public partial class ModpackWindow : Window
         }
         finally
         {
+            _committingUpdate = false;
             if (ReferenceEquals(_operationCancellation, cancellation)) _operationCancellation = null;
             _busy = false;
             if (!_closed)
@@ -796,7 +807,7 @@ public partial class ModpackWindow : Window
             ShowResumeDownload();
             ShowOssFallback(pack, skipModsDownload);
             Find<TextBlock>("StatusText").Text = Localization.ModpackStatusInstalling(_language);
-            var result = await ModpackService.InstallAsync(
+            var result = await ModpackService.AwaitInstallCompletionAsync(ModpackService.InstallAsync(
                 pack,
                 _game,
                 _packRoot,
@@ -808,7 +819,7 @@ public partial class ModpackWindow : Window
                 {
                     Dispatcher.UIThread.Post(() =>
                     {
-                        if (!_closed)
+                        if (!_closed && !cancellation.IsCancellationRequested)
                         {
                             Find<TextBlock>("StatusText").Text = text;
                         }
@@ -817,7 +828,7 @@ public partial class ModpackWindow : Window
                 cancellation.Token,
                 _language,
                 _archiveDownloadControl
-            );
+            ), cancellation.Token);
             if (!_closed)
             {
                 Close(result);
@@ -900,7 +911,7 @@ public partial class ModpackWindow : Window
 
     private void OnResumeDownloadClick(object? sender, RoutedEventArgs e)
     {
-        if (_operationCancellation is null || _closed)
+        if (_operationCancellation is null || _operationCancellation.IsCancellationRequested || _closed)
         {
             return;
         }
@@ -961,9 +972,17 @@ public partial class ModpackWindow : Window
 
     private void OnCancelOperationClick(object? sender, RoutedEventArgs e)
     {
+        if (_committingUpdate || _operationCancellation is null) return;
+        _resumeDownloadRequested = false;
         _operationCancellation?.Cancel();
-        Find<TextBlock>("StatusText").Text =
-            Localization.OperationCancelled(_language);
+        HideResumeDownload();
+        HideOssFallback();
+        Find<Button>("CancelOperationButton").IsEnabled = false;
+        Find<TextBlock>("StatusText").Text = T(
+            "Cancelling. Waiting for the current step to stop...",
+            "正在取消，等待当前步骤结束...",
+            "正在取消，等待目前步驟結束...",
+            "キャンセル中です。現在の処理が停止するまでお待ちください...");
     }
     private static string StagingFolder(string? packId)
     {

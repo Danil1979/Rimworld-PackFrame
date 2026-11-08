@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Media;
 using System;
 
 namespace PackFrame;
@@ -26,5 +27,7 @@ internal static class Program
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
+            .WithInterFont()
+            .With(new FontManagerOptions { DefaultFamilyName = "fonts:Inter#Inter" })
             .LogToTrace();
 }

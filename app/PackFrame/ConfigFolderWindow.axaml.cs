@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Avalonia.Controls;
+using Avalonia.Automation;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
@@ -12,6 +13,7 @@ public partial class ConfigFolderWindow : Window
     private readonly Border _pathField;
     private readonly TextBlock _autoDetectStatus;
     private string _autoDetectFailedText = string.Empty;
+    private string? _language;
 
     public ConfigFolderWindow()
     {
@@ -33,11 +35,15 @@ public partial class ConfigFolderWindow : Window
         string cancelText,
         string watermark,
         string autoDetectText,
-        string autoDetectFailedText
+        string autoDetectFailedText,
+        string? language = null
     )
         : this()
     {
+        _language = language;
+        Title = OperationText.Choose(language, "RimWorld configuration folder", "RimWorld 配置文件夹", "RimWorld 設定資料夾", "RimWorld 設定フォルダー");
         var pathBox = this.FindControl<TextBox>("PathBox")!;
+        AutomationProperties.SetName(pathBox, Title);
         pathBox.Text = currentPath ?? string.Empty;
         pathBox.PlaceholderText = watermark;
         this.FindControl<TextBlock>("DescriptionText")!.Text = description;
@@ -91,7 +97,7 @@ public partial class ConfigFolderWindow : Window
             .Trim('"');
         if (text.Length == 0)
         {
-            SetInvalid(true);
+            ShowPathError(OperationText.Choose(_language, "Enter a folder path or choose Browse.", "请输入文件夹路径，或点击浏览。", "請輸入資料夾路徑，或點選瀏覽。", "フォルダーのパスを入力するか、参照で選択してください。"));
             return;
         }
 
@@ -102,13 +108,13 @@ public partial class ConfigFolderWindow : Window
         }
         catch
         {
-            SetInvalid(true);
+            ShowPathError(OperationText.Choose(_language, "This path is not valid. Check it and try again.", "路径格式无效，请检查后重试。", "路徑格式無效，請檢查後重試。", "パスが無効です。確認して再試行してください。"));
             return;
         }
 
         if (!Directory.Exists(fullPath))
         {
-            SetInvalid(true);
+            ShowPathError(OperationText.Choose(_language, "This folder does not exist or cannot be accessed. Choose an existing folder.", "文件夹不存在或无法访问，请选择现有文件夹。", "資料夾不存在或無法存取，請選擇現有資料夾。", "フォルダーが存在しないか、アクセスできません。既存のフォルダーを選択してください。"));
             return;
         }
 
@@ -142,6 +148,7 @@ public partial class ConfigFolderWindow : Window
             var storage = TopLevel.GetTopLevel(this)?.StorageProvider;
             if (storage is null)
             {
+                ShowPathError(OperationText.Choose(_language, "The folder picker is unavailable. Enter the path directly.", "文件夹选择器不可用，请直接输入路径。", "資料夾選擇器無法使用，請直接輸入路徑。", "フォルダー選択を利用できません。パスを直接入力してください。"));
                 return;
             }
 
@@ -163,9 +170,18 @@ public partial class ConfigFolderWindow : Window
             this.FindControl<TextBox>("PathBox")!.Text = path;
             SetInvalid(false);
         }
-        catch
+        catch (Exception ex)
         {
+            AppLog.Error("Open configuration folder picker", ex);
+            ShowPathError(OperationText.Choose(_language, "Could not open the folder picker. Enter the path directly or try again.", "无法打开文件夹选择器，请直接输入路径或重试。", "無法開啟資料夾選擇器，請直接輸入路徑或重試。", "フォルダー選択を開けませんでした。パスを入力するか再試行してください。"));
         }
+    }
+
+    private void ShowPathError(string message)
+    {
+        _autoDetectStatus.Text = message;
+        SetInvalid(true);
+        this.FindControl<TextBox>("PathBox")!.Focus();
     }
 
     private void SetInvalid(bool invalid)

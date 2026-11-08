@@ -803,6 +803,11 @@ public partial class MainWindow : Window
     }
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)
     {
+        if (_instanceWriteInProgress)
+        {
+            e.Handled = true;
+            return;
+        }
         if (e.Handled)
         {
             return;
@@ -3716,7 +3721,8 @@ public partial class MainWindow : Window
             Localization.CancelButton(language),
             Localization.ConfigFolderWatermark(language),
             Localization.AutoDetectButton(language),
-            Localization.AutoDetectConfigFailed(language)
+            Localization.AutoDetectConfigFailed(language),
+            language
         );
         var path = await dialog.ShowDialog<string?>(this);
         var comboBox = column == 0 ? _instanceCombo1 : _instanceCombo2;
@@ -3773,7 +3779,8 @@ public partial class MainWindow : Window
             Localization.CancelButton(language),
             Localization.ConfigFolderWatermark(language),
             Localization.AutoDetectButton(language),
-            Localization.AutoDetectConfigFailed(language)
+            Localization.AutoDetectConfigFailed(language),
+            language
         );
         var path = await dialog.ShowDialog<string?>(this);
         if (string.IsNullOrWhiteSpace(path))
@@ -4965,13 +4972,7 @@ public partial class MainWindow : Window
             _config.Language
         );
         var choice = await picker.ShowDialog<ModColorChoice?>(this);
-        if (choice is null)
-        {
-            return;
-        }
-
-        ModColorStore.SetLabels(_packRoot, choice.Labels);
-        if (choice.Cancelled)
+        if (choice is null || !ModColorChoiceCommit.SaveLabels(_packRoot, choice))
         {
             return;
         }
@@ -6117,41 +6118,29 @@ public partial class MainWindow : Window
         RefreshManager(true);
     }
 
-    private async Task CreateInstanceAsync(int column)
+    private async Task CreateInstanceCoreAsync(int column)
     {
         if (_packRoot is null)
         {
             return;
         }
 
-        try
+        var source = GetSelectedInstance(column);
+        var initialMods = source?.IsScratch == true
+            ? source.ActivePackageIds.ToList()
+            : null;
+        var created = await RunInstanceWorkAsync(Localization.NewInstance(_config.Language), () =>
+            InstanceStore.CreateNew(_packRoot, source, _gameVersion, initialMods));
+        if (source?.IsScratch == true)
         {
-            var source = GetSelectedInstance(column);
-            var initialMods = source?.IsScratch == true
-                ? source.ActivePackageIds.ToList()
-                : null;
-            var created = await Task.Run(() =>
-                InstanceStore.CreateNew(
-                    _packRoot,
-                    source,
-                    _gameVersion,
-                    initialMods
-                )
-            );
-            if (source?.IsScratch == true)
-            {
-                _scratchActiveIds.Clear();
-            }
+            _scratchActiveIds.Clear();
+        }
 
-            ReloadInstances(created.FolderName, column);
-            ClearUndoHistory();
-        }
-        catch
-        {
-        }
+        ReloadInstances(created.FolderName, column);
+        ClearUndoHistory();
     }
 
-    private async Task CopyInstanceAsync(int column)
+    private async Task CopyInstanceCoreAsync(int column)
     {
         if (_packRoot is null)
         {
@@ -6164,20 +6153,15 @@ public partial class MainWindow : Window
             return;
         }
 
-        try
-        {
-            var copied = await Task.Run(() => source.IsOfficial
-                ? InstanceStore.CopyOfficial(_packRoot, source)
-                : InstanceStore.CopyInstance(_packRoot, source, _gameVersion));
-            ReloadInstances(copied.FolderName, column);
-            ClearUndoHistory();
-        }
-        catch
-        {
-        }
+        if (!CanModifyInstanceFiles()) return;
+        var copied = await RunInstanceWorkAsync(Localization.CopyInstance(_config.Language), () => source.IsOfficial
+            ? InstanceStore.CopyOfficial(_packRoot, source)
+            : InstanceStore.CopyInstance(_packRoot, source, _gameVersion));
+        ReloadInstances(copied.FolderName, column);
+        ClearUndoHistory();
     }
 
-    private async Task RenameInstanceAsync(int column)
+    private async Task RenameInstanceCoreAsync(int column)
     {
         var instance = GetSelectedInstance(column);
         if (instance is null || instance.IsOfficial)
@@ -6189,25 +6173,20 @@ public partial class MainWindow : Window
         var dialog = new RenameWindow(
             instance.DisplayName,
             Localization.RenameInstance(language),
-            Localization.CancelButton(language)
+            Localization.CancelButton(language),
+            language
         );
         var name = await dialog.ShowDialog<string?>(this);
-        if (name is null)
+        if (name is null || _windowClosed)
         {
             return;
         }
 
-        try
-        {
-            await Task.Run(() => InstanceStore.RenameInstance(instance, name));
-            ReloadInstances(instance.FolderName, column);
-        }
-        catch
-        {
-        }
+        await RunInstanceWorkAsync(Localization.RenameInstance(language), () => InstanceStore.RenameInstance(instance, name));
+        ReloadInstances(instance.FolderName, column);
     }
 
-    private async Task DeleteInstanceAsync(int column)
+    private async Task DeleteInstanceCoreAsync(int column)
     {
         if (_packRoot is null)
         {
@@ -6220,29 +6199,25 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (!CanModifyInstanceFiles()) return;
         var language = _config.Language;
         var confirm = new ConfirmWindow(
-            Localization.DeleteConfirmMessage(language, instance.FolderName),
+            Localization.DeleteConfirmMessage(language, instance.DisplayName + " (" + instance.FolderName + ")"),
             Localization.DeleteButton(language),
             Localization.CancelButton(language)
         );
         var confirmed = await confirm.ShowDialog<bool>(this);
-        if (!confirmed)
+        if (!confirmed || _windowClosed)
         {
             return;
         }
 
         var replacement = GetNextOrPreviousFolder(instance.FolderName);
 
-        try
-        {
-            await Task.Run(() => InstanceStore.DeleteInstance(instance));
-            ReloadInstancesAfterDelete(instance.FolderName, replacement, column);
-            ClearUndoHistory();
-        }
-        catch
-        {
-        }
+        if (!CanModifyInstanceFiles()) return;
+        await RunInstanceWorkAsync(Localization.DeleteInstance(language), () => InstanceStore.DeleteInstance(instance));
+        ReloadInstancesAfterDelete(instance.FolderName, replacement, column);
+        ClearUndoHistory();
     }
 
     private string? GetNextOrPreviousFolder(string folderName)
@@ -6515,141 +6490,77 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task ImportInstancesAsync(int column)
+    private async Task ImportInstancesCoreAsync(int column)
     {
-        if (_packRoot is null)
+        if (_packRoot is null) return;
+        var target = GetSelectedInstance(column);
+        if (target?.IsScratch == true) target = null;
+        var storage = TopLevel.GetTopLevel(this)?.StorageProvider;
+        if (storage is null) throw new IOException("The file picker is unavailable.");
+
+        var inputFolder = Path.Combine(_packRoot, "Input profile");
+        Directory.CreateDirectory(inputFolder);
+        var startLocation = await storage.TryGetFolderFromPathAsync(inputFolder);
+        var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
         {
+            AllowMultiple = false,
+            SuggestedStartLocation = startLocation,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("Profiles and saves")
+                {
+                    Patterns = new[] { "*.xml", "*.rml", "*.json", "*.rws", "*.zip" }
+                }
+            }
+        });
+        if (files.Count == 0 || _windowClosed) return;
+        var file = files[0].TryGetLocalPath();
+        var language = _config.Language;
+        var operation = Localization.ImportInstance(language);
+        if (string.IsNullOrWhiteSpace(file) ||
+            !await RunInstanceWorkAsync(operation, () => InstanceStore.IsSupportedImportFile(file)))
+            throw new UnsupportedInstanceImportException();
+
+        var isArchive = Path.GetExtension(file).Equals(".zip", StringComparison.OrdinalIgnoreCase);
+        var mode = target is null ? ImportMode.New : await new ImportModeWindow(
+            Localization.Overwrite(language), Localization.NewInstance(language),
+            !target.IsOfficial || Directory.Exists(target.ConfigDirectoryPath), language)
+            .ShowDialog<ImportMode?>(this);
+        if (mode is null || _windowClosed) return;
+        if (mode == ImportMode.New)
+        {
+            var imported = await RunInstanceWorkAsync(operation, () => isArchive
+                ? InstanceStore.ImportArchiveNew(_packRoot, file)
+                : InstanceStore.ImportFileNew(_packRoot, file, _gameVersion));
+            if (imported is null) throw new UnsupportedInstanceImportException();
+            ReloadInstances(imported.FolderName, column);
+            ClearUndoHistory();
             return;
         }
+        if (target is null || !CanModifyInstanceFiles()) return;
 
-        try
-        {
-            var storage = TopLevel.GetTopLevel(this)?.StorageProvider;
-            if (storage is null)
-            {
-                return;
-            }
+        var prompt = isArchive
+            ? Localization.OverwriteArchiveConfirmMessage(language, target.DisplayName)
+            : Localization.OverwriteConfirmMessage(language, target.DisplayName);
+        if (InstanceStore.PendingConfigDirectories.Contains(Path.GetFullPath(target.ConfigDirectoryPath),
+                StringComparer.OrdinalIgnoreCase))
+            prompt += "\n\n" + OperationText.Choose(language,
+                "Unsaved mod-list changes for this instance will also be replaced.",
+                "此实例尚未保存的模组列表修改也会被替换。",
+                "此執行個體尚未儲存的模組清單修改也會被取代。",
+                "このインスタンスの未保存の MOD リスト変更も置き換えられます。");
+        if (!await new ConfirmWindow(prompt, Localization.Overwrite(language),
+                Localization.CancelButton(language)).ShowDialog<bool>(this) ||
+            _windowClosed || !CanModifyInstanceFiles()) return;
 
-            var inputFolder = Path.Combine(_packRoot, "Input profile");
-            Directory.CreateDirectory(inputFolder);
-            var startLocation = await storage.TryGetFolderFromPathAsync(inputFolder);
-            var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
-            {
-                AllowMultiple = false,
-                SuggestedStartLocation = startLocation,
-                FileTypeFilter = new[]
-                {
-                    new FilePickerFileType("Profiles and saves")
-                    {
-                        Patterns = new[] { "*.xml", "*.rml", "*.json", "*.rws", "*.zip" }
-                    }
-                }
-            });
-            if (files.Count == 0)
-            {
-                return;
-            }
-
-            var file = files[0].TryGetLocalPath();
-            if (string.IsNullOrWhiteSpace(file) ||
-                !InstanceStore.IsSupportedImportFile(file))
-            {
-                return;
-            }
-
-            var isArchive = Path.GetExtension(file).Equals(
-                ".zip",
-                StringComparison.OrdinalIgnoreCase
-            );
-            var target = GetSelectedInstance(column);
-            if (target?.IsScratch == true)
-            {
-                target = null;
-            }
-            if (target is null)
-            {
-                var imported = isArchive
-                    ? await Task.Run(() => InstanceStore.ImportArchiveNew(_packRoot, file))
-                    : await Task.Run(() =>
-                        InstanceStore.ImportFileNew(_packRoot, file, _gameVersion)
-                    );
-                if (imported is null)
-                {
-                    return;
-                }
-
-                ReloadInstances(imported.FolderName, column);
-                ClearUndoHistory();
-                return;
-            }
-
-            var language = _config.Language;
-            var canOverwrite = !target.IsOfficial ||
-                Directory.Exists(target.ConfigDirectoryPath);
-            var modeWindow = new ImportModeWindow(
-                Localization.Overwrite(language),
-                Localization.NewInstance(language),
-                canOverwrite
-            );
-            var mode = await modeWindow.ShowDialog<ImportMode?>(this);
-            if (mode is null)
-            {
-                return;
-            }
-
-            if (mode == ImportMode.New)
-            {
-                var imported = isArchive
-                    ? await Task.Run(() => InstanceStore.ImportArchiveNew(_packRoot, file))
-                    : await Task.Run(() =>
-                        InstanceStore.ImportFileNew(_packRoot, file, _gameVersion)
-                    );
-                if (imported is null)
-                {
-                    return;
-                }
-
-                ReloadInstances(imported.FolderName, column);
-                ClearUndoHistory();
-                return;
-            }
-
-            if (target is null)
-            {
-                return;
-            }
-
-            var confirm = new ConfirmWindow(
-                isArchive
-                    ? Localization.OverwriteArchiveConfirmMessage(language, target.DisplayName)
-                    : Localization.OverwriteConfirmMessage(language, target.DisplayName),
-                Localization.Overwrite(language),
-                Localization.CancelButton(language)
-            );
-            var confirmed = await confirm.ShowDialog<bool>(this);
-            if (!confirmed)
-            {
-                return;
-            }
-
-            var overwritten = target.IsOfficial
-                ? await Task.Run(() =>
-                    InstanceStore.ImportOfficialOverwrite(target, file, _gameVersion)
-                )
-                : isArchive
-                    ? await Task.Run(() => InstanceStore.ImportArchiveOverwrite(target, file))
-                    : await Task.Run(() =>
-                        InstanceStore.ImportFileOverwrite(target, file, _gameVersion)
-                    );
-            if (overwritten)
-            {
-                ReloadInstances(target.FolderName, column);
-                ClearUndoHistory();
-            }
-        }
-        catch
-        {
-        }
+        var overwritten = await RunInstanceWorkAsync(operation, () => target.IsOfficial
+            ? InstanceStore.ImportOfficialOverwrite(target, file, _gameVersion)
+            : isArchive
+                ? InstanceStore.ImportArchiveOverwrite(target, file)
+                : InstanceStore.ImportFileOverwrite(target, file, _gameVersion));
+        if (!overwritten) throw new UnsupportedInstanceImportException();
+        ReloadInstances(target.FolderName, column);
+        ClearUndoHistory();
     }
 
     private void OpenInstance(int column)
@@ -6754,6 +6665,11 @@ public partial class MainWindow : Window
 
     private async void OnClosing(object? sender, WindowClosingEventArgs e)
     {
+        if (_instanceWriteInProgress)
+        {
+            e.Cancel = true;
+            return;
+        }
         if (!_closeApproved && InstanceStore.HasPendingMods)
         {
             e.Cancel = true;

@@ -2,28 +2,31 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="PackFrame.ConfirmWindow"
         Title="Rimworld PackFrame"
-        Width="480"
-        Height="180"
+        Width="520"
+        SizeToContent="Height"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource AppBackgroundBrush}"
         RequestedThemeVariant="Dark">
-    <Grid Margin="16" RowDefinitions="*,Auto">
+    <Grid Margin="20" RowDefinitions="Auto,Auto">
+        <ScrollViewer MaxHeight="420" HorizontalScrollBarVisibility="Disabled">
         <TextBlock x:Name="MessageText"
                    Foreground="{DynamicResource PrimaryTextBrush}"
                    TextWrapping="Wrap" />
-        <StackPanel Grid.Row="1"
+        </ScrollViewer>
+        <WrapPanel Grid.Row="1" Margin="0,20,0,0"
                     Orientation="Horizontal"
-                    HorizontalAlignment="Right"
-                    Spacing="8">
+                    HorizontalAlignment="Right">
             <Button x:Name="CancelButton"
+                    IsCancel="True" Margin="0,4,8,0"
                     Theme="{StaticResource FlatButton}"
                     MinHeight="32"
                     Click="OnCancelClick" />
             <Button x:Name="ConfirmButton"
+                    Margin="0,4,0,0"
                     Theme="{StaticResource FlatButton}"
                     MinHeight="32"
                     Click="OnConfirmClick" />
-        </StackPanel>
+        </WrapPanel>
     </Grid>
 </Window>
