@@ -836,43 +836,41 @@ public partial class MainWindow : Window
             }
         }
 
-        if (!control && (e.Key == Key.Up || e.Key == Key.Down))
+        // Unmodified navigation belongs to the control with focus, not the last
+        // interacted pane. Buttons, splitters, text selection and menus keep theirs.
+        for (var column = 0; column < 3; column++)
         {
-            var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
-            if (focused is TextBox || focused is ComboBox)
+            var pane = PaneWorkflow(column);
+            if (!pane.List.IsEffectivelyVisible) continue;
+            var action = ModPaneKeyboard.Resolve(e.Key, e.KeyModifiers,
+                pane.List.IsKeyboardFocusWithin, pane.Search.IsKeyboardFocusWithin);
+            if (action == ModPaneKeyAction.None) continue;
+            if (_loadingMods || _painting || _customDragActive) { e.Handled = true; return; }
+            if (action == ModPaneKeyAction.FocusResults)
             {
-                return;
+                if (_searchTimers.TryGetValue(pane.List, out var timer)) timer.Stop();
+                RefreshSearch(pane.List);
+                if (pane.List.ItemCount > 0)
+                {
+                    if (pane.List.SelectedItems!.Count == 0) MoveModSelection(pane.List, 1, false);
+                    else pane.List.Focus();
+                    if (pane.List.SelectedItem is { } selected) pane.List.ScrollIntoView(selected);
+                }
             }
-
-            var list = GetCommandList();
-            if (list is not null)
+            else if (action == ModPaneKeyAction.ContextMenu)
             {
-                MoveModSelection(
-                    list,
-                    e.Key == Key.Up ? -1 : 1,
-                    e.KeyModifiers.HasFlag(KeyModifiers.Shift)
-                );
-                e.Handled = true;
+                var selected = PaneSelectionSnapshot.ResolveDetails(pane.List, _packageValue.Text);
+                if (selected is not null)
+                {
+                    pane.List.ScrollIntoView(selected);
+                    ShowModContextMenu(pane.List, selected, atPointer: false);
+                }
             }
-
-            return;
-        }
-
-        if (!control && e.Key == Key.Enter)
-        {
-            var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
-            if (focused is TextBox || focused is ComboBox || focused is Button)
-            {
-                return;
-            }
-
-            var list = GetCommandList();
-            if (list is not null)
-            {
-                MoveModsOnDoubleClick(list);
-                e.Handled = true;
-            }
-
+            else if (action == ModPaneKeyAction.Toggle) MoveModsOnDoubleClick(pane.List);
+            else MoveModSelection(pane.List,
+                action is ModPaneKeyAction.Previous or ModPaneKeyAction.ExtendPrevious ? -1 : 1,
+                action is ModPaneKeyAction.ExtendPrevious or ModPaneKeyAction.ExtendNext);
+            e.Handled = true;
             return;
         }
 
@@ -4573,7 +4571,7 @@ public partial class MainWindow : Window
         ShowDetails(mod);
     }
 
-    private void ShowModContextMenu(ListBox list, ModInfo mod)
+    private void ShowModContextMenu(ListBox list, ModInfo mod, bool atPointer = true)
     {
         var language = _config.Language;
         var flyout = new MenuFlyout();
@@ -4633,7 +4631,8 @@ public partial class MainWindow : Window
             _packRoot is not null && selectedMods.Count > 0,
             () => _ = ShowModColorAsync(selectedMods, column)
         ));
-        flyout.ShowAt(list, true);
+        if (!atPointer) flyout.Closed += (_, _) => list.Focus();
+        flyout.ShowAt(atPointer ? list : list.ContainerFromItem(mod) as Control ?? list, atPointer);
     }
 
     private static string? GetSteamUrl(ModInfo mod)

@@ -55,10 +55,27 @@ public partial class MainWindow
             ToolTip.SetTip(button, actions);
             AutomationProperties.SetName(button, actions);
         }
-        foreach (var search in new[] { _inactiveSearchBox, _activeSearchBox1, _activeSearchBox2 })
-            AutomationProperties.SetName(search, Localization.SearchMods(language));
+        var searchHelp = OperationText.Choose(language,
+            "Down or Enter moves to matching mods without enabling or disabling them. Esc clears search and filters. In the list, Shift+F10 opens mod actions.",
+            "按向下键或 Enter 移至匹配的模组，不会启用或禁用模组。Esc 清除搜索和筛选。在列表中按 Shift+F10 打开模组操作。",
+            "按向下鍵或 Enter 移至符合的模組，不會啟用或停用模組。Esc 清除搜尋和篩選。在清單中按 Shift+F10 開啟模組操作。",
+            "下矢印または Enter で一致する MOD に移動します。有効・無効は変更しません。Esc で検索とフィルターを解除。リスト内で Shift+F10 を押すと MOD 操作を開きます。");
+        var listHelp = OperationText.Choose(language,
+            "Arrow keys select mods; Shift+Up/Down extends the selection. Enter enables or disables the selection. Shift+F10 opens mod actions; Esc closes them. Ctrl+F / ⌘F searches this pane.",
+            "方向键选择模组；Shift+上/下扩展选择。Enter 启用或禁用所选模组。Shift+F10 打开模组操作；Esc 关闭菜单。Ctrl+F / ⌘F 搜索此栏。",
+            "方向鍵選擇模組；Shift+上/下擴展選取。Enter 啟用或停用所選模組。Shift+F10 開啟模組操作；Esc 關閉選單。Ctrl+F / ⌘F 搜尋此欄。",
+            "矢印キーで選択し、Shift+上/下で選択範囲を拡張します。Enter で選択 MOD を有効・無効にします。Shift+F10 で MOD 操作を開き、Esc で閉じます。Ctrl+F / ⌘F でこのペインを検索。");
         for (var column = 0; column < 3; column++)
-            Find<TextBlock>($"SearchShortcutHint{column}").Text = System.OperatingSystem.IsMacOS() ? "⌘F" : "Ctrl+F";
+        {
+            var pane = PaneWorkflow(column);
+            AutomationProperties.SetName(pane.Search, Localization.SearchMods(language));
+            AutomationProperties.SetHelpText(pane.Search, searchHelp);
+            AutomationProperties.SetHelpText(pane.List, listHelp);
+            var hint = Find<TextBlock>($"SearchShortcutHint{column}");
+            hint.Text = System.OperatingSystem.IsMacOS() ? "⌘F · ↓" : "Ctrl+F · ↓";
+            hint.IsHitTestVisible = true;
+            ToolTip.SetTip(hint, searchHelp);
+        }
     }
 
     private string SummaryCaption(TextBlock label)

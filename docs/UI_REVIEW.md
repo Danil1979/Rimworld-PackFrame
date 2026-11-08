@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 852 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 873 regression
 checks. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -354,3 +354,26 @@ relying on a font being installed on the computer.
   an 840×560 palette. Other languages have localized recovery strings but were
   not visually rechecked here. Cross-process write races, platform screen readers,
   Windows/macOS and disk failures after validation remain separate coverage gaps.
+
+## Focused keyboard workflows checkpoint
+
+- Native baseline testing reproduced Down on a source-filter button unexpectedly
+  selecting the next mod and pulling focus into the list. Mod navigation now
+  requires list focus; other controls retain their own arrow and Enter behavior.
+  Modified arrows are not mistaken for plain list navigation.
+- Down or Enter in a mod search flushes its pending query and focuses a matching
+  result without enabling/disabling anything. Empty results keep search focused.
+  Only a separate plain Enter within the list performs the existing toggle action.
+  Search fields show a down-arrow affordance and localized keyboard help.
+- Shift+F10 and the Menu key open the existing mod actions beside the selected row,
+  preserving multi-selection. Escape returns focus to the list. Keyboard opening
+  does not depend on the desktop pointer's position or invoke an action itself.
+- Native Linux verification retained two selected mods through keyboard menu
+  navigation, Color, and palette cancellation. Search-to-result Enter caused no
+  dirty state; a second Enter enabled the intended mod and Undo restored the saved
+  list. No-result Enter/Down stayed in search; Escape restored results. The original
+  filter-button arrow-focus issue did not recur. No external menu action was run.
+- Clean Linux Release build: zero warnings/errors; 873 regression checks passed.
+  Native checks used English and synthetic files. Other-language help is localized,
+  but macOS modifier conventions, platform screen readers, touch and platform
+  native context menus remain unverified by this checkpoint.
