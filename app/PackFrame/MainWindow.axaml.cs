@@ -93,12 +93,15 @@ public partial class MainWindow : Window
     private readonly TextBlock _activeHeader2;
     private readonly TextBlock _inactiveProblemV;
     private readonly TextBlock _inactiveProblemR;
+    private readonly TextBlock _inactiveLocalCount;
     private readonly TextBlock _activeProblemS1;
     private readonly TextBlock _activeProblemV1;
     private readonly TextBlock _activeProblemR1;
+    private readonly TextBlock _activeLocalCount1;
     private readonly TextBlock _activeProblemS2;
     private readonly TextBlock _activeProblemV2;
     private readonly TextBlock _activeProblemR2;
+    private readonly TextBlock _activeLocalCount2;
     private readonly Button _activeMissing1;
     private readonly Button _activeMissing2;
     private readonly ComboBox _instanceCombo1;
@@ -267,12 +270,15 @@ public partial class MainWindow : Window
         _activeHeader2 = Find<TextBlock>("ActiveHeader2");
         _inactiveProblemV = Find<TextBlock>("InactiveProblemV");
         _inactiveProblemR = Find<TextBlock>("InactiveProblemR");
+        _inactiveLocalCount = Find<TextBlock>("InactiveLocalCount");
         _activeProblemS1 = Find<TextBlock>("ActiveProblemS1");
         _activeProblemV1 = Find<TextBlock>("ActiveProblemV1");
         _activeProblemR1 = Find<TextBlock>("ActiveProblemR1");
+        _activeLocalCount1 = Find<TextBlock>("ActiveLocalCount1");
         _activeProblemS2 = Find<TextBlock>("ActiveProblemS2");
         _activeProblemV2 = Find<TextBlock>("ActiveProblemV2");
         _activeProblemR2 = Find<TextBlock>("ActiveProblemR2");
+        _activeLocalCount2 = Find<TextBlock>("ActiveLocalCount2");
         _activeMissing1 = Find<Button>("ActiveMissing1");
         _activeMissing2 = Find<Button>("ActiveMissing2");
         _instanceCombo1 = Find<ComboBox>("InstanceCombo1");
@@ -1177,6 +1183,7 @@ public partial class MainWindow : Window
         TextBlock? sortText,
         TextBlock versionText,
         TextBlock duplicateText,
+        TextBlock localText,
         IReadOnlyList<ModInfo> mods
     )
     {
@@ -1198,6 +1205,7 @@ public partial class MainWindow : Window
         }
         versionText.Text = $"V: {versionMods.Count}";
         duplicateText.Text = $"R: {duplicateMods.Count}";
+        localText.Text = $"L: {mods.Count(mod => mod.IsLocal)}";
         SetProblemTooltip(
             versionText,
             Localization.ProblemVersionTitle(language),
@@ -2494,9 +2502,9 @@ public partial class MainWindow : Window
         UpdateLaunchButton();
         UpdateSaveState();
         var empty = new List<ModInfo>();
-        UpdateProblemSummary(null, _inactiveProblemV, _inactiveProblemR, empty);
-        UpdateProblemSummary(_activeProblemS1, _activeProblemV1, _activeProblemR1, empty);
-        UpdateProblemSummary(_activeProblemS2, _activeProblemV2, _activeProblemR2, empty);
+        UpdateProblemSummary(null, _inactiveProblemV, _inactiveProblemR, _inactiveLocalCount, empty);
+        UpdateProblemSummary(_activeProblemS1, _activeProblemV1, _activeProblemR1, _activeLocalCount1, empty);
+        UpdateProblemSummary(_activeProblemS2, _activeProblemV2, _activeProblemR2, _activeLocalCount2, empty);
     }
 
     private readonly Dictionary<ListBox, List<ModInfo>> _searchSources = new();
@@ -2593,18 +2601,21 @@ public partial class MainWindow : Window
             null,
             _inactiveProblemV,
             _inactiveProblemR,
+            _inactiveLocalCount,
             inactiveForSummary
         );
         UpdateProblemSummary(
             _activeProblemS1,
             _activeProblemV1,
             _activeProblemR1,
+            _activeLocalCount1,
             active1ForSummary
         );
         UpdateProblemSummary(
             _activeProblemS2,
             _activeProblemV2,
             _activeProblemR2,
+            _activeLocalCount2,
             active2ForSummary
         );
         UpdateMissingButton(
@@ -2724,7 +2735,8 @@ public partial class MainWindow : Window
         UpdateProblemSummary(
             inactive ? null : firstColumn ? _activeProblemS1 : _activeProblemS2,
             inactive ? _inactiveProblemV : firstColumn ? _activeProblemV1 : _activeProblemV2,
-            inactive ? _inactiveProblemR : firstColumn ? _activeProblemR1 : _activeProblemR2, matches);
+            inactive ? _inactiveProblemR : firstColumn ? _activeProblemR1 : _activeProblemR2,
+            inactive ? _inactiveLocalCount : firstColumn ? _activeLocalCount1 : _activeLocalCount2, matches);
         if (ownsContext) ShowDetails(first);
     }
 
@@ -3517,6 +3529,7 @@ public partial class MainWindow : Window
             null,
             _inactiveProblemV,
             _inactiveProblemR,
+            _inactiveLocalCount,
             inactiveForSummary
         );
     }
