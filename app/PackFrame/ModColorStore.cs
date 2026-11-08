@@ -56,47 +56,39 @@ public static class ModColorStore
         };
         if (string.IsNullOrWhiteSpace(packRoot))
         {
-            return result;
-        }
-
-        var path = GetPath(packRoot);
-        if (!File.Exists(path))
-        {
             return _cachedData = result;
         }
 
+        try { result = ReadForWrite(packRoot); }
+        catch (IOException exception) { AppLog.Error("Read mod colors: " + GetPath(packRoot), exception); }
+        return _cachedData = result;
+    }
+
+    // Display reads may fall back, but mutations must read the current complete
+    // document. A stale cache or unreadable file must never become an empty save.
+    private static ModColorData ReadForWrite(string packRoot)
+    {
+        var path = GetPath(packRoot);
+        var result = new ModColorData
+        {
+            ModColors = new(StringComparer.OrdinalIgnoreCase),
+            ColorLabels = new(StringComparer.OrdinalIgnoreCase)
+        };
+        if (!File.Exists(path) && !Directory.Exists(path)) return result;
         try
         {
-            var loaded = JsonSerializer.Deserialize(
-                File.ReadAllText(path),
-                PackFrameJsonContext.Default.ModColorData
-            );
-            if (loaded is null)
-            {
-                return result;
-            }
-
+            var loaded = JsonSerializer.Deserialize(File.ReadAllText(path), PackFrameJsonContext.Default.ModColorData)
+                ?? throw new InvalidDataException("Color settings are null.");
             foreach (var pair in loaded.ModColors ?? new Dictionary<string, string>())
-            {
-                if (!string.IsNullOrWhiteSpace(pair.Key))
-                {
-                    result.ModColors[pair.Key] = pair.Value ?? string.Empty;
-                }
-            }
+                if (!string.IsNullOrWhiteSpace(pair.Key)) result.ModColors[pair.Key] = pair.Value ?? string.Empty;
             foreach (var pair in loaded.ColorLabels ?? new Dictionary<string, string>())
-            {
-                if (!string.IsNullOrWhiteSpace(pair.Key))
-                {
-                    result.ColorLabels[pair.Key] = pair.Value ?? string.Empty;
-                }
-            }
+                if (!string.IsNullOrWhiteSpace(pair.Key)) result.ColorLabels[pair.Key] = pair.Value ?? string.Empty;
+            return result;
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
         {
-            AppLog.Error("Read mod colors: " + path, exception);
+            throw new IOException("Could not read color settings: " + path, exception);
         }
-
-        return _cachedData = result;
     }
 
     public static void SetModColors(
@@ -109,7 +101,7 @@ public static class ModColorStore
             return;
         }
 
-        var data = Load(packRoot);
+        var data = ReadForWrite(packRoot);
         var changed = false;
         foreach (var pair in colors)
         {
@@ -145,12 +137,32 @@ public static class ModColorStore
             return;
         }
 
-        var data = Load(packRoot);
+        var data = ReadForWrite(packRoot);
         data.ColorLabels = new Dictionary<string, string>(
             labels,
             StringComparer.OrdinalIgnoreCase
         );
         Write(packRoot, data);
+    }
+
+    internal static Dictionary<string, string?> ApplyChoice(string packRoot, ModColorChoice choice,
+        IReadOnlyList<string> packageIds)
+    {
+        if (choice.Cancelled || (!choice.Clear && string.IsNullOrWhiteSpace(choice.Hex)))
+            throw new ArgumentException("A color or clear choice is required.", nameof(choice));
+        var data = ReadForWrite(packRoot);
+        var before = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var packageId in packageIds)
+        {
+            if (string.IsNullOrWhiteSpace(packageId) || before.ContainsKey(packageId)) continue;
+            before[packageId] = data.ModColors.TryGetValue(packageId, out var prior) ? prior : null;
+            if (choice.Clear) data.ModColors.Remove(packageId);
+            else data.ModColors[packageId] = choice.Hex!;
+        }
+        data.ColorLabels = new Dictionary<string, string>(choice.Labels, StringComparer.OrdinalIgnoreCase);
+        // Labels and selected colors are one atomic commit, not two partial saves.
+        Write(packRoot, data);
+        return before;
     }
 
     public static string? GetColor(string? packRoot, string packageId)

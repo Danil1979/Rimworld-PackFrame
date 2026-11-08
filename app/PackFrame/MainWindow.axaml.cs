@@ -1012,35 +1012,6 @@ public partial class MainWindow : Window
         return false;
     }
 
-    private Dictionary<string, string?> CaptureColorStates(
-        IEnumerable<string> packageIds
-    )
-    {
-        var result = new Dictionary<string, string?>(
-            StringComparer.OrdinalIgnoreCase
-        );
-        if (_packRoot is null)
-        {
-            return result;
-        }
-
-        var data = ModColorStore.Load(_packRoot);
-        foreach (var packageId in packageIds)
-        {
-            if (string.IsNullOrWhiteSpace(packageId) ||
-                result.ContainsKey(packageId))
-            {
-                continue;
-            }
-
-            result[packageId] = data.ModColors.TryGetValue(packageId, out var color)
-                ? color
-                : null;
-        }
-
-        return result;
-    }
-
     private void UndoLastChange()
     {
         if (_undoHistory.Count == 0 || _packRoot is null)
@@ -4979,29 +4950,18 @@ public partial class MainWindow : Window
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
         var currentColor = currentColors.Count == 1 ? currentColors[0] : null;
-        var picker = new ColorPaletteWindow(
-            currentColor,
-            data.ColorLabels,
-            _config.Language
-        );
-        var choice = await picker.ShowDialog<ModColorChoice?>(this);
-        if (choice is null || !ModColorChoiceCommit.SaveLabels(_packRoot, choice))
+        var packageIds = mods.Select(mod => mod.PackageId).Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var root = _packRoot;
+        Dictionary<string, string?>? before = null;
+        var picker = new ColorPaletteWindow(currentColor, data.ColorLabels, _config.Language)
         {
-            return;
-        }
-        var packageIds = mods
-            .Select(mod => mod.PackageId)
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        var before = CaptureColorStates(packageIds);
+            CommitChoice = choice => before = ModColorStore.ApplyChoice(root, choice, packageIds)
+        };
+        var choice = await picker.ShowDialog<ModColorChoice?>(this);
+        if (choice is null || before is null) return;
         var color = choice.Clear ? null : choice.Hex;
-        var after = packageIds.ToDictionary(
-            id => id,
-            _ => color,
-            StringComparer.OrdinalIgnoreCase
-        );
-        ModColorStore.SetModColors(_packRoot, after);
+        var after = packageIds.ToDictionary(id => id, _ => color, StringComparer.OrdinalIgnoreCase);
         PushColorUndo(before, after, packageIds, column);
         RefreshManager(false);
     }

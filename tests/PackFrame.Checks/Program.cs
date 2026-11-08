@@ -399,6 +399,7 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
     PaneLayoutChecks.Run();
     ProblemFilterChecks.Run();
     DialogStateChecks.Run(root);
+    ModColorRecoveryChecks.Run(root);
     UiActionWiringChecks.Run();
     UpdateChoiceStateChecks.Run();
     MissingHistoryChecks.Run(root);

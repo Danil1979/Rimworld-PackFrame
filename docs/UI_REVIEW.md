@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 835 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 852 regression
 checks. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -23,7 +23,7 @@ relying on a font being installed on the computer.
 | Config folder | Invalid path error and focus, compact layout, named field | Native folder pickers on each OS |
 | Language | Choices inspected, Escape support reviewed | Complete four-language walkthrough |
 | Pending changes | Safe initial focus, wrapped message/actions inspected | Update-and-restart integration on each OS |
-| Color palette | Layout inspected; cancel/discard semantics and field names covered in code/tests | Native edit/cancel persistence matrix |
+| Color palette | Native edit/cancel persistence, corrupt-file retention, repair/retry, selected-color + label commit, brush rollback, Undo/Redo and persistent error/Log | Four-language recovery layouts; Windows/macOS permissions and races |
 | Collection target | Long names/identity readable; empty selection and disabled update reviewed | Live Steam-owned collection retrieval |
 | Update choices | Separate file/order views, searchable virtualized files, retained decisions, bulk scope, 1,000-file native review, keyboard confirmation/cancel, all four languages and compact Japanese layout | Actual mixed keep/replace installation; no-conflict native confirmation remains unverified |
 | Completion | Long action labels fit; Close/Escape | All installer completion variants |
@@ -323,3 +323,34 @@ relying on a font being installed on the computer.
 - Clean Linux Release build: zero warnings/errors; 835 regression checks passed,
   including a 10,000-file state test. Actual installation after confirmation,
   platform screen readers, Windows/macOS and live update failures remain separate.
+
+## Color settings and brush recovery checkpoint
+
+- A failing regression reproduced stale cached color data replacing a newly
+  malformed settings file. Display reads still tolerate unreadable data, but
+  label, brush, Undo/Redo and selected-color mutations reread the current file
+  strictly and refuse malformed, null or directory targets. Repair followed by
+  retry is supported; unrelated current mod colors are preserved.
+- Palette choices commit before closing. A failed save keeps the dialog open,
+  retains edited labels and shows a persistent, wrapping error with the settings
+  path. Cancel starts focused and saves nothing. The hint explains when labels
+  are saved. Selected colors and labels use one atomic file replacement instead
+  of separate writes; prior selected colors are captured for Undo in that commit.
+- A failed brush stroke rolls back its visible preview, stops the brush and adds
+  no Undo entry. A persistent Close/Log dialog explains what failed and how to
+  retry, rather than relying on the existing one-second toast. Log opens the
+  recorded failure details without launching an external application.
+- Native Linux checks used only synthetic instance files. Palette failure kept
+  an edited label and unreadable bytes intact; repair and retry saved it while
+  preserving another mod's color. Cancel left the settings file byte-identical
+  and reopening restored the saved label. The selected-mod context-menu palette
+  also passed failure, repair/retry, combined label/color save and color Undo.
+- Brush failure restored the old appearance and left Undo disabled. A successful
+  stroke, Undo and Redo wrote the expected selected color without disturbing
+  another mod. The final persistent error, Close-focused state and Log navigation
+  were checked visually. No real game, installer or online service was invoked.
+- Clean Linux Release build: zero warnings/errors; 852 regression checks passed.
+  This checkpoint's native color recovery checks used English at 1180×812 with
+  an 840×560 palette. Other languages have localized recovery strings but were
+  not visually rechecked here. Cross-process write races, platform screen readers,
+  Windows/macOS and disk failures after validation remain separate coverage gaps.

@@ -51,6 +51,9 @@ public partial class ColorPaletteWindow : Window
         "#5A6A7A"
     };
 
+    internal Action<ModColorChoice>? CommitChoice { get; set; }
+    private string? _language;
+
     private readonly Dictionary<string, TextBox> _labelBoxes =
         new(StringComparer.OrdinalIgnoreCase);
 
@@ -66,11 +69,16 @@ public partial class ColorPaletteWindow : Window
     )
         : this()
     {
+        _language = language;
         var title = Localization.ColorPaletteTitle(language);
         Title = $"Rimworld PackFrame - {title}";
         this.FindControl<TextBlock>("TitleText")!.Text = title;
         this.FindControl<TextBlock>("HintText")!.Text =
-            Localization.ColorPaletteHint(language);
+            Localization.ColorPaletteHint(language) + "\n" + OperationText.Choose(language,
+                "Choose a color or Clear color to save labels. Cancel keeps your current settings.",
+                "选择颜色或清除颜色时保存标签。取消将保留当前设置。",
+                "選擇顏色或清除顏色時儲存標籤。取消將保留目前設定。",
+                "色の選択または色の解除でラベルを保存します。キャンセルすると現在の設定を保持します。");
         this.FindControl<Button>("ClearButton")!.Content =
             Localization.ClearColor(language);
         this.FindControl<Button>("CancelButton")!.Content =
@@ -143,6 +151,7 @@ public partial class ColorPaletteWindow : Window
         }
 
         KeyDown += OnWindowKeyDown;
+        Opened += (_, _) => this.FindControl<Button>("CancelButton")!.Focus();
     }
 
     private Dictionary<string, string> ReadLabels()
@@ -160,7 +169,26 @@ public partial class ColorPaletteWindow : Window
 
     private void Choose(string hex)
     {
-        Close(new ModColorChoice(false, false, hex, ReadLabels()));
+        TryChoose(new ModColorChoice(false, false, hex, ReadLabels()));
+    }
+
+    private void TryChoose(ModColorChoice choice)
+    {
+        try
+        {
+            CommitChoice?.Invoke(choice);
+            Close(choice);
+        }
+        catch (Exception exception)
+        {
+            AppLog.Error("Save color choices", exception);
+            this.FindControl<SelectableTextBlock>("ErrorText")!.Text = OperationText.Choose(_language,
+                "Could not save colors. Your choices are kept here. Fix the problem, then choose again.",
+                "无法保存颜色。此处保留了您的选择。修复问题后请重试。",
+                "無法儲存顏色。此處保留了您的選擇。修復問題後請重試。",
+                "色を保存できませんでした。入力内容は保持されています。問題を修正して再度選択してください。") + "\n" + exception.Message;
+            this.FindControl<Border>("ErrorBorder")!.IsVisible = true;
+        }
     }
 
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)
@@ -174,7 +202,7 @@ public partial class ColorPaletteWindow : Window
 
     private void OnClearClick(object? sender, RoutedEventArgs e)
     {
-        Close(new ModColorChoice(false, true, null, ReadLabels()));
+        TryChoose(new ModColorChoice(false, true, null, ReadLabels()));
     }
 
     private void OnCancelClick(object? sender, RoutedEventArgs e)

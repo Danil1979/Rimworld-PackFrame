@@ -9,7 +9,7 @@
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource AppBackgroundBrush}"
         RequestedThemeVariant="Dark">
-    <Grid Margin="16" RowDefinitions="Auto,Auto,*,Auto">
+    <Grid Margin="16" RowDefinitions="Auto,Auto,*,Auto,Auto">
         <TextBlock x:Name="TitleText"
                    FontSize="20"
                    FontWeight="SemiBold"
@@ -26,7 +26,14 @@
                        ItemWidth="142"
                        ItemHeight="72" />
         </ScrollViewer>
-        <StackPanel Grid.Row="3"
+        <Border x:Name="ErrorBorder" Grid.Row="3" Margin="0,8,0,0" Padding="8"
+                BorderBrush="{DynamicResource SecondaryBrush}" BorderThickness="1" IsVisible="False">
+            <ScrollViewer MaxHeight="90" HorizontalScrollBarVisibility="Disabled">
+                <SelectableTextBlock x:Name="ErrorText" TextWrapping="Wrap"
+                                     Foreground="{DynamicResource PrimaryTextBrush}" />
+            </ScrollViewer>
+        </Border>
+        <StackPanel Grid.Row="4"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Spacing="8"
@@ -38,7 +45,7 @@
             <Button x:Name="CancelButton"
                     Theme="{StaticResource FlatButton}"
                     MinHeight="32"
-                    Click="OnCancelClick" />
+                    IsCancel="True" Click="OnCancelClick" />
         </StackPanel>
     </Grid>
 </Window>
