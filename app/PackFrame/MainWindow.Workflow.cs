@@ -93,8 +93,11 @@ public partial class MainWindow
         for (var column = 1; column <= 2; column++)
         {
             var instance = GetInstanceForColumn(column);
-            var target = instance?.DisplayName ?? WorkflowText("Choose an instance", "选择实例", "選擇實例", "インスタンスを選択");
-            Find<TextBlock>($"PaneActionTarget{column}").Text = target;
+            var target = instance?.IsScratch == true ? InstanceCreationHistory.ScratchName(_config.Language)
+                : instance?.DisplayName ?? WorkflowText("Choose an instance", "选择实例", "選擇實例", "インスタンスを選択");
+            var targetLabel = Find<TextBlock>($"PaneActionTarget{column}");
+            targetLabel.Text = target;
+            ToolTip.SetTip(targetLabel, instance?.IsScratch == true ? InstanceCreationHistory.ScratchHint(_config.Language) : null);
             foreach (var enabling in new[] { true, false })
             {
                 var list = enabling ? _inactiveList : PaneWorkflow(column).List;

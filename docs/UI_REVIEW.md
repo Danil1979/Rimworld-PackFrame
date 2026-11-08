@@ -585,3 +585,48 @@ relying on a font being installed on the computer.
 - Final Release build: zero warnings/errors; full console suite 1,200 PASS lines.
 - No real game files, downloads, publishing UI or installer were used. Platform
   permissions and screen-reader announcement behavior remain unverified.
+
+
+## New/Copy publication and scratch workflow
+
+- New, managed Copy and Default/official Copy now prepare a hidden GUID sibling,
+  validate required XML and typed metadata, prepare the final-path model, and
+  publish the complete directory once. No final disk read can turn a committed
+  creation into a reported failure. Existing source drafts, bindings, unknown
+  XML/JSON, saves and unrelated files retain the prior copy behavior.
+- Publication refuses an existing destination, including an empty directory.
+  Linux uses renameat2 with RENAME_NOREPLACE; macOS uses renamex_np with RENAME_EXCL;
+  Windows uses the runtime's non-replacing move. Unsupported exclusive rename
+  fails safely. Platform APIs were source-reviewed; only Linux was executed here.
+- Allocation reserves profile-shaped files and missing paths that still own
+  pending/blocked edits, and guards integer overflow. Failure cleans only owned
+  staging. A cleanup failure logs its retained path without replacing the original
+  error or deleting a competing destination. Missing copy source folders fail.
+- Ordinary New/Copy no longer clear Undo/Redo. Converting a nonempty scratch list
+  records its clear as one list-undo step, preserving earlier Undo. Undo selects
+  the restored scratch list; Redo returns to the saved profile. Neither deletes
+  nor rewrites that independently saved profile. Empty scratch creation preserves
+  both history stacks. Unresolved scratch IDs do not prevent Undo.
+- Native pointer testing found that clicking inside an explicitly selected scratch
+  pane silently selected Default, including before opening its Instance menu.
+  Pointer focus now only selects a pane. Default configuration setup remains an
+  explicit Default selection through the validated chooser; implicit pointer-time
+  auto-detection and its error helper have been removed.
+- Scratch has a localized visible selector/action-target name, explanatory tooltip
+  and a consistent “Create instance from this list” menu action. All selector
+  rebuilds, including managed-instance reordering, share the same label helper.
+  Drag feedback also names scratch. The model's name/export semantics are unchanged.
+- Linux native baseline reproduced New erasing Undo despite existing unsaved
+  edits, and a late-invalid-XML Copy leaving a corrupt partial profile. Revised
+  New preserved usable Undo/Redo; managed Copy retained both stacks at once.
+  Failed Copy left neither a new profile nor hidden staging, and repair/retry
+  created exactly one complete profile. Default Copy retained source configuration.
+- Native scratch conversion verified the saved list, Undo/Redo selection, earlier
+  history, and empty-scratch creation preserving Redo. Saved output bytes remained
+  identical through these operations. Tests additionally cover partial writes and
+  copies, late corruption/missing files, typed metadata, destination races, pending
+  path reservation, cleanup failure and cross-profile history with missing IDs.
+- Final Linux Release build: zero warnings/errors; full suite 1,572 PASS lines.
+  Real user files, game launch, network publishing and installers were not used.
+  Windows/macOS execution, recursive-copy link policy, and the separate import,
+  seed, CreateFromProfile and installer publication paths remain outside this pass.

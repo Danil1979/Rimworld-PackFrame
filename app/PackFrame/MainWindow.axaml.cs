@@ -937,7 +937,8 @@ public partial class MainWindow : Window
         List<InstanceSnapshot> snapshots,
         List<string> modIds,
         int sourceColumn,
-        int targetColumn
+        int targetColumn,
+        string? createdInstanceFolder = null
     )
     {
         if (snapshots.Count == 0)
@@ -946,7 +947,8 @@ public partial class MainWindow : Window
         }
 
         _redoHistory.Clear();
-        _undoHistory.Add(new UndoEntry(snapshots, modIds, sourceColumn, targetColumn));
+        _undoHistory.Add(new UndoEntry(snapshots, modIds, sourceColumn, targetColumn,
+            CreatedInstanceFolder: createdInstanceFolder));
         while (_undoHistory.Count > 10)
         {
             _undoHistory.RemoveAt(0);
@@ -1071,7 +1073,8 @@ public partial class MainWindow : Window
                 redoSnapshots,
                 entry.ModIds,
                 entry.SourceColumn,
-                entry.TargetColumn
+                entry.TargetColumn,
+                CreatedInstanceFolder: entry.CreatedInstanceFolder
             ));
             while (_redoHistory.Count > 10)
             {
@@ -1079,7 +1082,8 @@ public partial class MainWindow : Window
             }
 
             UpdateUndoButton();
-            ReloadInstances(null, -1);
+            ReloadInstances(entry.CreatedInstanceFolder is null ? null : ScratchFolderName,
+                entry.CreatedInstanceFolder is null ? -1 : entry.SourceColumn - 1);
             Dispatcher.UIThread.Post(() =>
                 SelectMovedMods(entry.SourceColumn, entry.ModIds)
             );
@@ -1148,7 +1152,8 @@ public partial class MainWindow : Window
                 undoSnapshots,
                 entry.ModIds,
                 entry.SourceColumn,
-                entry.TargetColumn
+                entry.TargetColumn,
+                CreatedInstanceFolder: entry.CreatedInstanceFolder
             ));
             while (_undoHistory.Count > 10)
             {
@@ -1156,7 +1161,8 @@ public partial class MainWindow : Window
             }
 
             UpdateUndoButton();
-            ReloadInstances(null, -1);
+            ReloadInstances(entry.CreatedInstanceFolder,
+                entry.CreatedInstanceFolder is null ? -1 : entry.TargetColumn - 1);
             Dispatcher.UIThread.Post(() =>
                 SelectMovedMods(entry.TargetColumn, entry.ModIds)
             );
@@ -1197,7 +1203,8 @@ public partial class MainWindow : Window
         int SourceColumn,
         int TargetColumn,
         Dictionary<string, string?>? ColorBefore = null,
-        Dictionary<string, string?>? ColorAfter = null
+        Dictionary<string, string?>? ColorAfter = null,
+        string? CreatedInstanceFolder = null
     );
     private void UpdateProblemSummary(
         TextBlock? sortText,
@@ -2364,7 +2371,7 @@ public partial class MainWindow : Window
 
     private void InitializeInstanceSelectors()
     {
-        var names = _instances.Select(instance => instance.DisplayName).ToList();
+        var names = _instances.Select(instance => InstanceCreationHistory.SelectorName(instance, _config.Language)).ToList();
         var folders = _instances
             .Select(instance => instance.FolderName)
             .ToList();
@@ -3273,9 +3280,7 @@ public partial class MainWindow : Window
         var folders = _instances
             .Select(instance => instance.FolderName)
             .ToList();
-        var names = _instances
-            .Select(instance => instance.DisplayName)
-            .ToList();
+        var names = _instances.Select(instance => InstanceCreationHistory.SelectorName(instance, _config.Language)).ToList();
         var index1 = FindInstanceFolderIndex(folders, folder1);
         var index2 = FindInstanceFolderIndex(folders, folder2);
         _updatingInstances = true;
@@ -3802,19 +3807,6 @@ public partial class MainWindow : Window
         };
     }
 
-    private bool _officialConfigErrorOpen;
-    private async Task ShowOfficialConfigErrorAsync(string message)
-    {
-        if (_windowClosed || _officialConfigErrorOpen) return;
-        _officialConfigErrorOpen = true;
-        try
-        {
-            if (await new ConfirmWindow(message, Localization.LogButton(_config.Language),
-                    Localization.CloseButton(_config.Language)).ShowDialog<bool>(this) && !_windowClosed)
-                await new LogWindow(_config.Language).ShowDialog(this);
-        }
-        finally { _officialConfigErrorOpen = false; }
-    }
 
     private void OnListSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
@@ -3991,49 +3983,8 @@ public partial class MainWindow : Window
 
         var column = ReferenceEquals(border, _activeColumn1) ? 1 : 2;
         SetPaneInteractionContext(column == 1 ? _activeList1 : _activeList2);
-        if (column == 1 && GetSelectedInstance(0)?.IsScratch == true)
-        {
-            var officialIndex = _instances.FindIndex(instance =>
-                instance.IsOfficial &&
-                Directory.Exists(instance.ConfigDirectoryPath));
-            if (officialIndex < 0)
-            {
-                var detected = RimWorldLocator.FindConfigDirectory();
-                if (!string.IsNullOrWhiteSpace(detected))
-                {
-                    var error = TryAcceptOfficialConfigPath(detected);
-                    if (error is not null)
-                    {
-                        _ = ShowOfficialConfigErrorAsync(error);
-                        return;
-                    }
-                    _instances = BuildInstances(_instances.Where(instance =>
-                        !instance.IsOfficial && !instance.IsScratch));
-                    InitializeInstanceSelectors();
-                    officialIndex = _instances.FindIndex(instance =>
-                        instance.IsOfficial &&
-                        Directory.Exists(instance.ConfigDirectoryPath));
-                }
-            }
-
-            _lastEnableColumn = column;
-            UpdateEnableTargetBorders();
-            if (officialIndex >= 0)
-            {
-                _instanceCombo1.SelectedIndex = officialIndex;
-            }
-            else
-            {
-                var scratchIndex = _instances.FindIndex(instance => instance.IsScratch);
-                if (scratchIndex >= 0)
-                {
-                    _instanceCombo1.SelectedIndex = scratchIndex;
-                }
-            }
-
-            return;
-        }
-
+        // Pointer focus selects a pane, never a different instance. In particular,
+        // an explicitly selected scratch list must not silently become Default.
         if (_lastEnableColumn == column)
         {
             return;
@@ -5912,7 +5863,8 @@ public partial class MainWindow : Window
         if (selected is null || selected.IsScratch)
         {
             flyout.Items.Add(CreateMenuItem(
-                Localization.NewInstance(language),
+                selected?.IsScratch == true
+                    ? InstanceCreationHistory.CreateFromScratch(language) : Localization.NewInstance(language),
                 hasPackRoot,
                 () => _ = CreateInstanceAsync(column)
             ));
@@ -6097,7 +6049,7 @@ public partial class MainWindow : Window
             .Where(instance => !instance.IsOfficial && !instance.IsScratch)
             .Select(instance => instance.FolderName)
             .ToList();
-        var names = _instances.Select(instance => instance.DisplayName).ToList();
+        var names = _instances.Select(instance => InstanceCreationHistory.SelectorName(instance, _config.Language)).ToList();
 
         var target1 = current1;
         var target2 = current2;
@@ -6155,13 +6107,17 @@ public partial class MainWindow : Window
             : null;
         var created = await RunInstanceWorkAsync(Localization.NewInstance(_config.Language), () =>
             InstanceStore.CreateNew(_packRoot, source, _gameVersion, initialMods));
-        if (source?.IsScratch == true)
+        var scratchUndo = InstanceCreationHistory.ClearScratchAfterCreate(source);
+        if (scratchUndo.Count > 0)
         {
-            _scratchActiveIds.Clear();
+            // Clearing scratch is a list edit. Keep earlier history, and don't
+            // require unresolved scratch IDs to have local mod files for Undo.
+            PushUndo(scratchUndo, new List<string>(), column + 1, column + 1, created.FolderName);
         }
 
         ReloadInstances(created.FolderName, column);
-        ClearUndoHistory();
+        if (scratchUndo.Count > 0)
+            ShowToast(InstanceCreationHistory.ScratchCreated(_config.Language, created.DisplayName));
     }
 
     private async Task CopyInstanceCoreAsync(int column)
@@ -6181,8 +6137,8 @@ public partial class MainWindow : Window
         var copied = await RunInstanceWorkAsync(Localization.CopyInstance(_config.Language), () => source.IsOfficial
             ? InstanceStore.CopyOfficial(_packRoot, source)
             : InstanceStore.CopyInstance(_packRoot, source, _gameVersion));
+        // Existing list identities have not changed. Preserve both history stacks.
         ReloadInstances(copied.FolderName, column);
-        ClearUndoHistory();
     }
 
     private async Task RenameInstanceCoreAsync(int column)
@@ -6318,7 +6274,7 @@ public partial class MainWindow : Window
 
         _instances = BuildInstances(InstanceStore.Discover(_packRoot));
         var folders = _instances.Select(instance => instance.FolderName).ToList();
-        var names = _instances.Select(instance => instance.DisplayName).ToList();
+        var names = _instances.Select(instance => InstanceCreationHistory.SelectorName(instance, _config.Language)).ToList();
 
         if (current1 is not null && !folders.Contains(current1))
         {

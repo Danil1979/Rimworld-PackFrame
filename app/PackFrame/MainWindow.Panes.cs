@@ -142,7 +142,8 @@ public partial class MainWindow
         UpdateSplitViewButton();
     }
 
-    private static string? InstanceHeaderHint(ManagedInstance? instance) => instance is null ? null
+    private string? InstanceHeaderHint(ManagedInstance? instance) => instance is null ? null
+        : instance.IsScratch ? InstanceCreationHistory.ScratchHint(_config.Language)
         : string.IsNullOrWhiteSpace(instance.LoadError) ? instance.DisplayName
         : $"{instance.DisplayName}\n{instance.LoadError}";
 
@@ -179,9 +180,11 @@ public partial class MainWindow
             return false;
         }
 
+        var sourceName = source is null ? string.Empty : InstanceCreationHistory.SelectorName(source, _config.Language);
+        var destinationName = destination is null ? string.Empty : InstanceCreationHistory.SelectorName(destination, _config.Language);
         if (column == 0)
         {
-            _dragGhostAction.Text = Localization.DragDisableFrom(_config.Language, source!.DisplayName);
+            _dragGhostAction.Text = Localization.DragDisableFrom(_config.Language, sourceName);
         }
         else
         {
@@ -195,13 +198,13 @@ public partial class MainWindow
                         : preview.AfterId is { } after
                             ? Localization.DragMoveAfter(_config.Language, DropAnchorName(target, after))
                             : Localization.DragMoveHere(_config.Language)
-                    : string.IsNullOrWhiteSpace(destination.DisplayName)
+                    : string.IsNullOrWhiteSpace(destinationName)
                         ? Localization.DragAddHere(_config.Language)
                         : preview.AddedCount == 0
-                            ? Localization.DragReorderIn(_config.Language, destination.DisplayName)
+                            ? Localization.DragReorderIn(_config.Language, destinationName)
                             : preview.ExistingCount > 0
-                                ? Localization.DragAddAndReorderIn(_config.Language, destination.DisplayName)
-                                : Localization.DragAddTo(_config.Language, destination.DisplayName);
+                                ? Localization.DragAddAndReorderIn(_config.Language, destinationName)
+                                : Localization.DragAddTo(_config.Language, destinationName);
         }
         _dragGhostAction.IsVisible = true;
         _dropTargetOutline.Width = target.Bounds.Width;

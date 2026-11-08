@@ -188,10 +188,16 @@ public static class InstanceStore
         ManagedInstance? source,
         string? gameVersion,
         IReadOnlyList<string>? activePackageIds = null
-    )
+    ) => CreateNew(packRoot, source, gameVersion, activePackageIds, new InstanceCreationOperations());
+
+    internal static ManagedInstance CreateNew(
+        string packRoot,
+        ManagedInstance? source,
+        string? gameVersion,
+        IReadOnlyList<string>? activePackageIds,
+        InstanceCreationOperations operations
+    ) => CreateStagedInstance(packRoot, operations, (directory, folderName) =>
     {
-        var folderName = $"profile{GetNextIndex(packRoot)}";
-        var directory = Path.Combine(packRoot, InstancesFolderName, folderName);
         var configDirectory = Path.Combine(directory, "Config");
         Directory.CreateDirectory(configDirectory);
         Directory.CreateDirectory(Path.Combine(directory, "Saves"));
@@ -204,65 +210,164 @@ public static class InstanceStore
             Path.Combine(configDirectory, "ModsConfig.xml"),
             activePackageIds ?? Array.Empty<string>(),
             version,
-            knownExpansions
+            knownExpansions,
+            operations.WriteAtomic
         );
-        WriteMetadata(directory, folderName, source?.FolderName ?? "new");
-
-        return LoadInstance(directory);
-    }
+        WriteMetadata(directory, folderName, source?.FolderName ?? "new", operations.WriteAtomic);
+    });
 
     public static ManagedInstance CopyInstance(
         string packRoot,
         ManagedInstance source,
         string? gameVersion = null
+    ) => CopyInstance(packRoot, source, gameVersion, new InstanceCreationOperations());
+
+    internal static ManagedInstance CopyInstance(
+        string packRoot,
+        ManagedInstance source,
+        string? gameVersion,
+        InstanceCreationOperations operations
     )
     {
         source.EnsureHealthy();
-        var folderName = $"profile{GetNextIndex(packRoot)}";
-        var directory = Path.Combine(packRoot, InstancesFolderName, folderName);
-        if (Directory.Exists(directory))
+        EnsureCopySourceDirectory(source.DirectoryPath);
+        EnsureCopySourceDirectory(source.ConfigDirectoryPath);
+        return CreateStagedInstance(packRoot, operations, (directory, folderName) =>
         {
-            throw new IOException($"Instance folder already exists: {directory}");
-        }
-
-        CopyDirectory(source.DirectoryPath, directory, overwrite: true);
-        File.Delete(Path.Combine(directory, "mod-links.txt"));
-        WriteCopiedModsConfig(Path.Combine(directory, "Config", "ModsConfig.xml"), source, gameVersion);
-        WriteCopiedMetadata(directory, folderName, source.FolderName);
-        return LoadInstance(directory);
+            CopyCreationDirectory(source.DirectoryPath, directory, operations);
+            File.Delete(Path.Combine(directory, "mod-links.txt"));
+            WriteCopiedModsConfig(Path.Combine(directory, "Config", "ModsConfig.xml"), source, gameVersion,
+                operations.WriteAtomic);
+            WriteCopiedMetadata(directory, folderName, source.FolderName, operations.WriteAtomic);
+        });
     }
 
-    public static ManagedInstance CopyOfficial(string packRoot, ManagedInstance source)
+    public static ManagedInstance CopyOfficial(string packRoot, ManagedInstance source) =>
+        CopyOfficial(packRoot, source, new InstanceCreationOperations());
+
+    internal static ManagedInstance CopyOfficial(
+        string packRoot, ManagedInstance source, InstanceCreationOperations operations
+    )
     {
         source.EnsureHealthy();
-        var folderName = $"profile{GetNextIndex(packRoot)}";
-        var directory = Path.Combine(packRoot, InstancesFolderName, folderName);
-        if (Directory.Exists(directory))
+        EnsureCopySourceDirectory(source.ConfigDirectoryPath);
+        return CreateStagedInstance(packRoot, operations, (directory, folderName) =>
         {
-            throw new IOException($"Instance folder already exists: {directory}");
+            var configDirectory = Path.Combine(directory, "Config");
+            Directory.CreateDirectory(Path.Combine(directory, "Saves"));
+            CopyCreationDirectory(source.ConfigDirectoryPath, configDirectory, operations);
+            WriteCopiedModsConfig(Path.Combine(configDirectory, "ModsConfig.xml"), source, null, operations.WriteAtomic);
+            WriteMetadata(directory, folderName, "official", operations.WriteAtomic);
+        });
+    }
+
+    private static ManagedInstance CreateStagedInstance(
+        string packRoot, InstanceCreationOperations operations, Action<string, string> populate
+    )
+    {
+        var instancesRoot = Path.GetFullPath(Path.Combine(packRoot, InstancesFolderName));
+        var folderName = $"profile{GetNextCreationIndex(instancesRoot)}";
+        var destination = Path.Combine(instancesRoot, folderName);
+        Directory.CreateDirectory(instancesRoot);
+        var staging = Path.Combine(instancesRoot, ".create-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(staging);
+        try
+        {
+            // Discovery cannot see a partly copied profile. Pending edits belong
+            // to their existing paths and must never be applied or cleared here.
+            populate(staging, folderName);
+            operations.BeforeValidation?.Invoke(staging);
+            var (active, version, known) = ReadModsConfig(
+                Path.Combine(staging, "Config", "ModsConfig.xml"), requireExists: true);
+            var metadata = ReadMetadata(staging)
+                ?? throw new IOException("Created instance is missing metadata: " + staging);
+            var created = new ManagedInstance
+            {
+                FolderName = folderName,
+                DirectoryPath = destination,
+                ActivePackageIds = active,
+                GameVersion = version,
+                KnownExpansions = known,
+                Metadata = metadata
+            };
+
+            // This is the commit point. The native move must refuse every
+            // existing target, including an empty directory created concurrently.
+            // Everything that can fail while building the returned model is done.
+            operations.PublishDirectory(staging, destination);
+            return created;
+        }
+        finally
+        {
+            // Never delete destination: it may belong to a competing operation.
+            try
+            {
+                if (Directory.Exists(staging)) operations.DeleteStagingDirectory(staging);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                AppLog.Error("Could not clean instance creation staging; retained path: " + staging, exception);
+            }
+        }
+    }
+
+    private static int GetNextCreationIndex(string instancesRoot)
+    {
+        var maximum = 0;
+        void ReserveName(string name)
+        {
+            var match = ProfileFolderPattern.Match(name);
+            if (match.Success && int.TryParse(match.Groups[1].Value, out var index))
+                maximum = Math.Max(maximum, index);
         }
 
-        var configDirectory = Path.Combine(directory, "Config");
-        Directory.CreateDirectory(configDirectory);
-        Directory.CreateDirectory(Path.Combine(directory, "Saves"));
+        if (Directory.Exists(instancesRoot))
+            foreach (var entry in Directory.EnumerateFileSystemEntries(instancesRoot))
+                ReserveName(Path.GetFileName(entry));
 
-        if (Directory.Exists(source.ConfigDirectoryPath))
+        // A missing profile can still own unsaved edits. Reusing its path would
+        // attach those edits to an unrelated instance or unblock damaged data.
+        var prefix = Path.TrimEndingDirectorySeparator(instancesRoot) + Path.DirectorySeparatorChar;
+        foreach (var key in Pending.Keys.Concat(BlockedPending))
         {
-            CopyDirectory(source.ConfigDirectoryPath, configDirectory, overwrite: true);
+            var full = Path.GetFullPath(key);
+            // Match Pending's path comparer, including on case-sensitive systems.
+            if (!full.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
+            var relative = full[prefix.Length..];
+            var separator = relative.IndexOfAny(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar });
+            ReserveName(separator < 0 ? relative : relative[..separator]);
         }
 
-        WriteCopiedModsConfig(Path.Combine(configDirectory, "ModsConfig.xml"), source, null);
-        WriteMetadata(directory, folderName, "official");
-        return LoadInstance(directory);
+        if (maximum == int.MaxValue)
+            throw new IOException("No additional profile number is available in: " + instancesRoot);
+        return maximum + 1;
+    }
+
+    private static void EnsureCopySourceDirectory(string source)
+    {
+        if (!Directory.Exists(source))
+            throw new DirectoryNotFoundException("Copy source folder does not exist: " + source);
+    }
+
+    private static void CopyCreationDirectory(string source, string destination, InstanceCreationOperations operations)
+    {
+        EnsureCopySourceDirectory(source);
+        Directory.CreateDirectory(destination);
+        foreach (var file in Directory.EnumerateFiles(source))
+            operations.CopyFile(file, Path.Combine(destination, Path.GetFileName(file)), true);
+        foreach (var directory in Directory.EnumerateDirectories(source))
+            CopyCreationDirectory(directory, Path.Combine(destination, Path.GetFileName(directory)), operations);
     }
 
     // Copy the list being edited, without committing or clearing the source's pending changes.
     // Update only managed fields in the copied document so other tools' settings survive.
-    private static void WriteCopiedModsConfig(string path, ManagedInstance source, string? gameVersion)
+    private static void WriteCopiedModsConfig(
+        string path, ManagedInstance source, string? gameVersion, Action<string, Action<string>> writeAtomic
+    )
     {
         if (!File.Exists(path))
         {
-            WriteModsConfig(path, source.ActivePackageIds, gameVersion ?? source.GameVersion, source.KnownExpansions);
+            WriteModsConfig(path, source.ActivePackageIds, gameVersion ?? source.GameVersion, source.KnownExpansions, writeAtomic);
             return;
         }
 
@@ -283,15 +388,17 @@ public static class InstanceStore
             if (version is null) root.Add(new XElement(root.Name.Namespace + "version", gameVersion));
             else version.Value = gameVersion;
         }
-        FileTransactions.WriteAtomic(path, temporary => document.Save(temporary, SaveOptions.DisableFormatting));
+        writeAtomic(path, temporary => document.Save(temporary, SaveOptions.DisableFormatting));
     }
 
-    private static void WriteCopiedMetadata(string directory, string name, string source)
+    private static void WriteCopiedMetadata(
+        string directory, string name, string source, Action<string, Action<string>> writeAtomic
+    )
     {
         var path = Path.Combine(directory, MetadataFileName);
         if (!File.Exists(path))
         {
-            WriteMetadata(directory, name, source);
+            WriteMetadata(directory, name, source, writeAtomic);
             return;
         }
         var metadata = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(path))
@@ -299,7 +406,7 @@ public static class InstanceStore
             ?? throw new IOException($"Invalid instance metadata: {path}");
         metadata["name"] = name;
         metadata["source"] = source;
-        FileTransactions.WriteAtomic(path, temporary => File.WriteAllText(temporary, metadata.ToJsonString()));
+        writeAtomic(path, temporary => File.WriteAllText(temporary, metadata.ToJsonString()));
     }
 
     public static void DeleteInstance(ManagedInstance instance) =>
@@ -1728,7 +1835,8 @@ public static class InstanceStore
         string path,
         IReadOnlyList<string> activeIds,
         string? version,
-        IReadOnlyList<string> knownExpansions
+        IReadOnlyList<string> knownExpansions,
+        Action<string, Action<string>>? writeAtomic = null
     )
     {
         var activeElements = activeIds
@@ -1760,7 +1868,7 @@ public static class InstanceStore
             )
         );
 
-        FileTransactions.WriteAtomic(path, temporary => document.Save(temporary));
+        (writeAtomic ?? FileTransactions.WriteAtomic)(path, temporary => document.Save(temporary));
     }
 
     private static InstanceMetadata? ReadMetadata(string directory)
@@ -1785,12 +1893,14 @@ public static class InstanceStore
         }
     }
 
-    private static void WriteMetadata(string directory, string name, string source)
+    private static void WriteMetadata(
+        string directory, string name, string source, Action<string, Action<string>>? writeAtomic = null
+    )
     {
         var metadata = ReadMetadata(directory) ?? new InstanceMetadata();
         metadata.Name = name;
         metadata.Source = source;
-        FileTransactions.WriteAtomic(
+        (writeAtomic ?? FileTransactions.WriteAtomic)(
             Path.Combine(directory, MetadataFileName), temporary => File.WriteAllText(temporary,
             JsonSerializer.Serialize(
                 metadata,
