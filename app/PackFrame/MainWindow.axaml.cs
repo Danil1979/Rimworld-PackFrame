@@ -582,6 +582,9 @@ public partial class MainWindow : Window
     private void ApplyLocalization()
     {
         var language = _config.Language;
+        var languageLabel = LanguageChoice.Title(language);
+        AutomationProperties.SetName(_languageButton, languageLabel);
+        ToolTip.SetTip(_languageButton, languageLabel);
         _gamePathLabel.Text = Localization.GamePathLabel(language);
         _autoDetectGameButton.Content = Localization.AutoDetectButton(language);
         _browseButton.Content = Localization.BrowseButton(language);
@@ -2064,7 +2067,7 @@ public partial class MainWindow : Window
 
     private async void OnLanguageClick(object? sender, RoutedEventArgs e)
     {
-        var languageWindow = new LanguageWindow();
+        var languageWindow = new LanguageWindow(_config.Language);
         languageWindow.LanguageSelected += (_, language) =>
         {
             ApplyLanguage(language);

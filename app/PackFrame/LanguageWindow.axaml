@@ -3,43 +3,57 @@
         x:Class="PackFrame.LanguageWindow"
         Title="Rimworld PackFrame"
         Width="420"
-        Height="220"
-        CanResize="False"
-        WindowStartupLocation="CenterScreen"
+        Height="340"
+        MinWidth="380"
+        MinHeight="320"
+        WindowStartupLocation="CenterOwner"
         Background="{DynamicResource AppBackgroundBrush}"
         RequestedThemeVariant="Dark">
-    <Grid Margin="12" RowDefinitions="*,*" ColumnDefinitions="*,*">
-        <Button Grid.Row="0"
+    <Grid Margin="16" RowDefinitions="Auto,*,Auto">
+        <StackPanel Spacing="6" Margin="4,0,4,10">
+            <TextBlock x:Name="HeadingText" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <TextBlock x:Name="HintText" TextWrapping="Wrap" Foreground="{DynamicResource SecondaryTextBrush}" />
+        </StackPanel>
+        <Grid Grid.Row="1" RowDefinitions="*,*" ColumnDefinitions="*,*">
+        <Button x:Name="EnglishButton" Grid.Row="0"
                 Grid.Column="0"
                 Content="English"
                 Tag="en"
                 Theme="{StaticResource FlatButton}"
-                Margin="6"
+                Margin="4"
+                HorizontalContentAlignment="Center"
                 MinHeight="64"
                 Click="OnLanguageClick" />
-        <Button Grid.Row="0"
+        <Button x:Name="HansButton" Grid.Row="0"
                 Grid.Column="1"
                 Content="简体中文"
                 Tag="zh-Hans"
                 Theme="{StaticResource FlatButton}"
-                Margin="6"
+                Margin="4"
+                HorizontalContentAlignment="Center"
                 MinHeight="64"
                 Click="OnLanguageClick" />
-        <Button Grid.Row="1"
+        <Button x:Name="HantButton" Grid.Row="1"
                 Grid.Column="0"
                 Content="繁體中文"
                 Tag="zh-Hant"
                 Theme="{StaticResource FlatButton}"
-                Margin="6"
+                Margin="4"
+                HorizontalContentAlignment="Center"
                 MinHeight="64"
                 Click="OnLanguageClick" />
-        <Button Grid.Row="1"
+        <Button x:Name="JapaneseButton" Grid.Row="1"
                 Grid.Column="1"
                 Content="日本語"
                 Tag="ja"
                 Theme="{StaticResource FlatButton}"
-                Margin="6"
+                Margin="4"
+                HorizontalContentAlignment="Center"
                 MinHeight="64"
                 Click="OnLanguageClick" />
+        </Grid>
+        <Button x:Name="CancelButton" Grid.Row="2" Theme="{StaticResource FlatButton}" IsCancel="True"
+                HorizontalAlignment="Right" MinHeight="36" MinWidth="90" Margin="4,12,4,0"
+                Click="OnCancelClick" />
     </Grid>
 </Window>

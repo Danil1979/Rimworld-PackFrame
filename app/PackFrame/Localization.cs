@@ -1504,7 +1504,7 @@ public static class Localization
         {
             SimplifiedChinese => $"启动 {name}",
             TraditionalChinese => $"啟動 {name}",
-            Japanese => $"{name} を起動",
+            Japanese => $"起動: {name}",
             _ => $"Launch {name}"
         };
     }

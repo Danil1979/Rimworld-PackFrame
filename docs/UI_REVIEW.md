@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 893 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 912 regression
 checks. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -16,12 +16,12 @@ relying on a font being installed on the computer.
 
 | Surface | Checked in this pass | Remaining checks |
 | --- | --- | --- |
-| Main mod lists | Explicit per-pane enable target, matching-instance views, X/Escape filter recovery, visible shortcuts, pending header badges, Ctrl+S disk save, typing undo, 1100×700 English layout; copy unsaved lists while source disk remains unchanged; native hidden-ID reorder, filtered insertion, 10-step Undo/Redo and redo invalidation | Long real lists, populated four-language main-window pass, Windows/macOS |
+| Main mod lists | Explicit per-pane enable target, matching-instance views, X/Escape filter recovery, visible shortcuts, pending header badges, Ctrl+S disk save, typing undo; populated 1100×700 layout with long names in four languages; copy unsaved lists while source disk remains unchanged; native hidden-ID reorder, filtered insertion, 10-step Undo/Redo and redo invalidation | Long real lists, Windows/macOS |
 | Confirmation | Long message fits, action buttons remain visible, safe initial focus and Escape | Extreme translated strings |
 | Rename | Empty input stays open with an error; Escape from button focus cancels | Filesystem rename failures on each OS |
 | Import mode | Full labels, unavailable-overwrite explanation, safe Cancel/Escape | Full native import matrix |
 | Config folder | Invalid path error and focus, compact layout, named field | Native folder pickers on each OS |
-| Language | Choices inspected, Escape support reviewed | Complete four-language walkthrough |
+| Language | Named main action, current-language indicator, visible Cancel, four-language picker review, minimum Japanese and first-run layouts, selection/cancel results, pending edits and Undo across language switches | Platform screen readers and OS-specific startup behavior |
 | Pending changes | Safe initial focus, wrapped message/actions inspected | Update-and-restart integration on each OS |
 | Color palette | Native edit/cancel persistence, corrupt-file retention, repair/retry, selected-color + label commit, brush rollback, Undo/Redo and persistent error/Log | Four-language recovery layouts; Windows/macOS permissions and races |
 | Collection target | Explicit selection, duplicate-title IDs, mod addition/removal preview, name/ID search, hidden-selection recovery, 1,000-row keyboard navigation, compact four-language layouts, empty/cancel/result checks | Live Steam-owned collection retrieval and publishing |
@@ -432,3 +432,26 @@ relying on a font being installed on the computer.
 - Clean Linux Release build: zero warnings/errors; 893 regression checks passed.
   Live Steam retrieval/publishing, OS screen readers and Windows/macOS remain
   unverified for this checkpoint.
+
+## Populated language workflow checkpoint
+
+- The populated main window was checked at its 1100×700 minimum in English,
+  simplified/traditional Chinese and Japanese, with long instance and mod names.
+  Pending counts, per-instance actions, status filters, details and footer actions
+  remained reachable. The Japanese launch label now puts its action before the
+  instance name, so ellipsis cannot hide what the button does.
+- The language action has a localized accessible name and tooltip. Its dialog
+  names the current language visibly and accessibly, keeps each option in its
+  native script, and provides a visible Cancel with safe initial focus. The
+  first-run variant uses a multilingual heading and Close label without claiming
+  any language is already selected.
+- Native checks covered all four picker languages, Japanese at 380×320, and the
+  first-run picker at 380×320. Escape and the focused Cancel returned without a
+  language change. The isolated first-run host received the selected language
+  once and received none on cancellation; it wrote no configuration files.
+- A staged mod edit survived repeated language changes with the comparison
+  instance untouched. Undo restored the original list after those changes, and
+  both sample ModsConfig files remained byte-identical to their baselines.
+- Clean Linux Release build: zero warnings/errors; 912 regression checks passed.
+  OS screen readers, Windows/macOS startup, and configuration-save failure
+  recovery remain separate checks. No game or external service was launched.
