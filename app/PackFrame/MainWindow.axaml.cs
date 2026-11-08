@@ -6547,8 +6547,12 @@ public partial class MainWindow : Window
                 ? InstanceStore.ImportArchiveOverwrite(target, file)
                 : InstanceStore.ImportFileOverwrite(target, file, _gameVersion));
         if (!overwritten) throw new UnsupportedInstanceImportException();
+        // Replacement is not undoable. Preserve independent edits, but discard
+        // snapshots that could restore the replaced list or cross a removed move.
+        ModListEditHistory.InvalidateInstance(_undoHistory, target.FolderName, entry => entry.Instances);
+        ModListEditHistory.InvalidateInstance(_redoHistory, target.FolderName, entry => entry.Instances);
+        UpdateUndoButton();
         ReloadInstances(target.FolderName, column);
-        ClearUndoHistory();
     }
 
     private void OpenInstance(int column)

@@ -708,3 +708,33 @@ Design references: NN/g, [Closeness of Actions and Objects]
   tests; native import-overwrite/official ZIP failure-retry acceptance remains open.
 - Overwrite, seed and modpack-installer publication behavior was not changed in
   this pass. The known installer allocation/history concerns need isolated review.
+
+## Import recovery and independent edit history
+
+**Problem and principle.** Replacing one instance cleared the entire Undo/Redo
+history even when another instance still had pending changes. The confirmation
+named only the replacement target. Keeping unrelated work reversible follows
+user control and freedom, and keeps the operation's effect within its stated scope.
+
+- Successful replacement now invalidates only affected history. Multi-instance
+  moves remain atomic, and older dependent snapshots are removed transitively so
+  retained history cannot resurrect the replaced list. Independent edits and
+  pack-wide color edits remain available. Import replacement itself is not undoable.
+- Failure changes neither draft nor history. Native Linux acceptance changed a
+  synthetic source after review, verified the persistent error and intact target
+  draft/Undo/files, repaired the source, and successfully repeated the import.
+- A second native test reproduced the unrelated-history loss, then verified the
+  fix: after replacing profile 1, Undo/Redo/Undo changed only profile 2 from five
+  visible mods to four, five, then four. Profile 1 retained its two installed mods
+  and unresolved imported ID. The unrelated saved list, other configuration files
+  and save sentinel stayed byte-for-byte unchanged. No Save action was used.
+- The matched native screenshots `171-import-clears-unrelated-undo-before.jpg` and
+  `172-import-preserves-unrelated-undo-after.jpg` show the same pending second list
+  after the same import, with Undo unavailable before and available after.
+- Final Linux Release build: zero warnings/errors; full suite: 1,959 PASS lines.
+  Tests cover both stacks, replay ordering, atomic cross-list moves, transitive
+  dependencies, case-insensitive identity, unresolved IDs, failure preservation,
+  and retained history not writing or reverting the replacement.
+- Official/Default ZIP failure and repair/retry still needs native acceptance.
+  The installer allocation/history concerns and Windows/macOS/screen-reader
+  acceptance remain open. Only isolated synthetic fixtures were modified.
