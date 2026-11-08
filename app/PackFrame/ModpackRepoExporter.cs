@@ -536,19 +536,12 @@ public static class ModpackRepoExporter
         string? version = null, string? changelog = null)
     {
         var path = Path.Combine(repoPath, "pack.json");
-        if (!File.Exists(path))
-        {
-            return;
-        }
-
         var manifest = JsonSerializer.Deserialize(
             File.ReadAllText(path),
             PackFrameJsonContext.Default.ModpackRepoManifest
         );
         if (manifest is null)
-        {
-            return;
-        }
+            throw new InvalidDataException("The modpack manifest is empty or invalid: " + path);
 
         if (!string.IsNullOrWhiteSpace(name))
         {

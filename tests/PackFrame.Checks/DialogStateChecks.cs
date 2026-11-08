@@ -8,6 +8,8 @@ internal static class DialogStateChecks
         CheckUpdateChoices();
         CheckExportDrafts();
         CheckExportOperationGate();
+        CheckExportNavigation();
+        CheckExportSaveFailures(Path.Combine(root, "export-save-failures"));
     }
 
     private static void CheckColorCancellation(string root)
@@ -92,6 +94,83 @@ internal static class DialogStateChecks
         Require(indexUrl.RefreshDefault(string.Empty, "https://gitee.com/owner/pack") == string.Empty &&
             indexUrl.RefreshDefault(string.Empty, "https://gitee.com/owner/pack") == string.Empty,
             "clearing an index destination remains a deliberate skip across repeated Back/Next navigation");
+    }
+
+    private static void CheckExportNavigation()
+    {
+        foreach (var language in new[] { "en", "zh-Hans", "zh-Hant", "ja" })
+        {
+            var steps = Enumerable.Range(1, ExportWizardNavigation.PageCount)
+                .Select(page => ExportWizardNavigation.Describe(page, language)).ToArray();
+            Require(steps.All(step => !string.IsNullOrWhiteSpace(step.Step) &&
+                !string.IsNullOrWhiteSpace(step.Hint) && !string.IsNullOrWhiteSpace(step.ExitHint)) &&
+                steps.Select(step => step.Step).Distinct().Count() == 5,
+                $"all export stages have distinct localized progress and purpose guidance ({language})");
+            Require(steps.Take(4).All(step => step.ShowExit) && !steps[4].ShowExit &&
+                steps[4].Next == Localization.CloseButton(language),
+                $"export permits early exit and final Close never implies submission ({language})");
+            Require(steps[1].Next.Contains("Gitee") && steps[2].Next.Contains("GitHub") &&
+                steps[0].Exit != steps[0].Next && steps[0].Exit != Localization.CloseButton(language),
+                $"export navigation names publishing destinations and distinguishes local save routes ({language})");
+        }
+        Require(ExportWizardNavigation.Describe(1, "unsupported") == ExportWizardNavigation.Describe(1, "en"),
+            "export navigation falls back consistently to English");
+        foreach (var invalid in new[] { 0, 6 })
+        {
+            var rejected = false;
+            try { ExportWizardNavigation.Describe(invalid, "en"); }
+            catch (ArgumentOutOfRangeException) { rejected = true; }
+            Require(rejected, $"export navigation rejects invalid stage {invalid}");
+        }
+        // These are inert fixture values, not credentials. No service is contacted.
+        foreach (var field in new[] { "GitHub index token", "Gitee index token", "Workshop link" })
+        {
+            var draft = new ExportCollectionDraft();
+            Require(draft.RefreshDefault(null, "fixture-first") == "fixture-first" &&
+                draft.RefreshDefault("fixture-first", "fixture-updated") == "fixture-updated",
+                $"untouched {field} follows its source before editing");
+            Require(draft.RefreshDefault(string.Empty, "fixture-updated") == string.Empty &&
+                draft.RefreshDefault(string.Empty, "fixture-later") == string.Empty,
+                $"intentionally cleared {field} stays empty across repeated navigation");
+            Require(draft.RefreshDefault("fixture-custom", "fixture-new-default") == "fixture-custom",
+                $"custom {field} survives a changed source default");
+        }
+    }
+
+    private static void CheckExportSaveFailures(string root)
+    {
+        Directory.CreateDirectory(root);
+        var path = Path.Combine(root, "pack.json");
+        var missingRejected = false;
+        try { ModpackRepoExporter.SetPackInfo(root, "Name", "Description"); }
+        catch (FileNotFoundException) { missingRejected = true; }
+        Require(missingRejected && !File.Exists(path),
+            "export save rejects a missing manifest instead of reporting success");
+        foreach (var original in new[] { "null", "{broken", "[]" })
+        {
+            File.WriteAllText(path, original);
+            var rejected = false;
+            try { ModpackRepoExporter.SetPackInfo(root, "Name", "Description"); }
+            catch (Exception error) when (error is InvalidDataException or System.Text.Json.JsonException)
+                { rejected = true; }
+            Require(rejected && File.ReadAllText(path) == original,
+                $"export save rejects and preserves invalid manifest {original}");
+        }
+        File.Delete(path);
+        Directory.CreateDirectory(path);
+        var unreadableRejected = false;
+        try { ModpackRepoExporter.SetPackInfo(root, "Name", "Description"); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            { unreadableRejected = true; }
+        Require(unreadableRejected && Directory.Exists(path),
+            "export save does not silently skip an unreadable manifest path");
+        Directory.Delete(path);
+        File.WriteAllText(path, "{\"id\":\"fixture.stable\",\"name\":\"Before\"}");
+        ModpackRepoExporter.SetPackInfo(root, "After", "Recovered", "1.0", "Saved after repair");
+        using var saved = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+        Require(saved.RootElement.GetProperty("name").GetString() == "After" &&
+            saved.RootElement.GetProperty("id").GetString() == "fixture.stable",
+            "export save retries successfully after the manifest is repaired without changing identity");
     }
 
     private static void CheckExportOperationGate()

@@ -105,6 +105,9 @@ public partial class ExportCollectionWindow : Window
     private readonly ExportCollectionDraft _collectionDescriptionDraft = new();
     private readonly ExportCollectionDraft _indexGithubUrlDraft = new();
     private readonly ExportCollectionDraft _indexGiteeUrlDraft = new();
+    private readonly ExportCollectionDraft _indexGithubTokenDraft = new();
+    private readonly ExportCollectionDraft _indexGiteeTokenDraft = new();
+    private readonly ExportCollectionDraft _collectionUrlDraft = new();
     private Bitmap? _coverBitmap;
     private string? _githubUrl;
     private string? _giteeUrl;
@@ -249,6 +252,9 @@ public partial class ExportCollectionWindow : Window
             .ToList();
         WorkshopList1.ItemsSource = workshopNames;
         WorkshopList2.ItemsSource = workshopNames;
+        WorkshopHeader1.IsVisible = _result.WorkshopIds.Count > 0;
+        WorkshopList1.IsVisible = _result.WorkshopIds.Count > 0;
+        WorkshopList2.IsVisible = _result.WorkshopIds.Count > 0;
         CreateCollectionButton.Content =
             OperationText.Choose(_language, "Create / update collection", "创建 / 更新合集", "建立 / 更新合集", "コレクションを作成 / 更新");
         OpenCollectionButton.Content =
@@ -344,7 +350,7 @@ public partial class ExportCollectionWindow : Window
             Localization.ExportCollectionUploadGithub(_language);
         OpenGithubRepoButton.Content =
             Localization.ExportCollectionOpenGithubRepo(_language);
-        GithubCollectionUrlBox.Text = _collectionUrl ?? string.Empty;
+        GithubCollectionUrlBox.Text = _collectionUrlDraft.RefreshDefault(null, _collectionUrl ?? string.Empty);
         GithubRepoDescriptionBox.Text = _packDescription;
 
         GiteeIntro.Text = OperationText.Choose(
@@ -410,6 +416,7 @@ public partial class ExportCollectionWindow : Window
         LoadExistingCover();
         IndexRepoUrlBox.TextChanged += (_, _) => RefreshIndexSubmissionState();
         IndexGiteeRepoUrlBox.TextChanged += (_, _) => RefreshIndexSubmissionState();
+        PackNameBox.TextChanged += (_, _) => NavigationStatusPanel.IsVisible = false;
         ShowPage(1);
         RefreshOperationControls();
     }
@@ -446,9 +453,15 @@ public partial class ExportCollectionWindow : Window
         BackButton.Content = page == 1
             ? Localization.CancelButton(_language)
             : Localization.ExportCollectionPrevious(_language);
-        NextButton.Content = page >= 5
-            ? Localization.ExportCollectionFinish(_language)
-            : Localization.ExportCollectionNext(_language);
+        var navigation = ExportWizardNavigation.Describe(page, _language);
+        StepText.Text = navigation.Step;
+        NavigationHint.Text = navigation.Hint;
+        NextButton.Content = navigation.Next;
+        ExitButton.Content = navigation.Exit;
+        ExitButton.IsVisible = navigation.ShowExit;
+        ToolTip.SetTip(ExitButton, navigation.ExitHint);
+        AutomationProperties.SetHelpText(ExitButton, navigation.ExitHint);
+        NavigationStatusPanel.IsVisible = false;
         if (page == 2)
         {
             CollectionNameBox.Text = _collectionNameDraft.RefreshDefault(CollectionNameBox.Text, _packName);
@@ -457,15 +470,9 @@ public partial class ExportCollectionWindow : Window
         if (page == 5)
         {
             IndexRepoUrlBox.Text = _indexGithubUrlDraft.RefreshDefault(IndexRepoUrlBox.Text, _githubUrl ?? string.Empty);
-            if (string.IsNullOrWhiteSpace(IndexTokenBox.Text))
-            {
-                IndexTokenBox.Text = GithubTokenBox.Text;
-            }
+            IndexTokenBox.Text = _indexGithubTokenDraft.RefreshDefault(IndexTokenBox.Text, GithubTokenBox.Text ?? string.Empty);
             IndexGiteeRepoUrlBox.Text = _indexGiteeUrlDraft.RefreshDefault(IndexGiteeRepoUrlBox.Text, _giteeUrl ?? string.Empty);
-            if (string.IsNullOrWhiteSpace(IndexGiteeTokenBox.Text))
-            {
-                IndexGiteeTokenBox.Text = GiteeTokenBox.Text;
-            }
+            IndexGiteeTokenBox.Text = _indexGiteeTokenDraft.RefreshDefault(IndexGiteeTokenBox.Text, GiteeTokenBox.Text ?? string.Empty);
         }
         if (page == 3)
         {
@@ -477,10 +484,7 @@ public partial class ExportCollectionWindow : Window
             }
             _lastGiteeRepoNameDefault = originalName;
             UpdateGiteeRepoNamePreview();
-            if (!string.IsNullOrWhiteSpace(_collectionUrl))
-            {
-                GithubCollectionUrlBox.Text = _collectionUrl;
-            }
+            GithubCollectionUrlBox.Text = _collectionUrlDraft.RefreshDefault(GithubCollectionUrlBox.Text, _collectionUrl ?? string.Empty);
         }
         RefreshGithubStatus();
         RefreshIndexSubmissionState();
@@ -601,6 +605,7 @@ public partial class ExportCollectionWindow : Window
         var enabled = !_operation.IsActive;
         BackButton.IsEnabled = enabled;
         NextButton.IsEnabled = enabled;
+        ExitButton.IsEnabled = enabled;
         CoverPicker.IsEnabled = enabled;
         OssSettingsButton.IsEnabled = enabled;
         InsertFrameworkLinkButton.IsEnabled = enabled;
@@ -630,8 +635,7 @@ public partial class ExportCollectionWindow : Window
             ? OperationText.Choose(_language, "Submit remaining destination", "提交剩余平台", "提交剩餘平台", "未送信の宛先へ送信")
             : Localization.ExportCollectionSubmitIndex(_language);
         if (_page == 5)
-            NextButton.Content = _indexSubmissions.AllSubmitted
-                ? Localization.CloseButton(_language) : Localization.ExportCollectionFinish(_language);
+            NextButton.Content = Localization.CloseButton(_language);
     }
 
     private string? GetCoverPath()
@@ -749,7 +753,7 @@ public partial class ExportCollectionWindow : Window
                     createResult.Failed.Count
                 ) + "\n" + _collectionUrl + "\n" + details;
             }
-            GithubCollectionUrlBox.Text = _collectionUrl;
+            GithubCollectionUrlBox.Text = _collectionUrlDraft.RefreshDefault(GithubCollectionUrlBox.Text, _collectionUrl);
             OpenCollectionButton.IsVisible = true;
         }
         catch (OperationCanceledException)
@@ -795,17 +799,7 @@ public partial class ExportCollectionWindow : Window
     private void OnNextClick(object? sender, RoutedEventArgs e)
     {
         if (_operation.IsActive) return;
-        if (_page == 1)
-        {
-            try { SavePackInfo(); }
-            catch (Exception exception)
-            {
-                AppLog.Error("Save export details", exception);
-                CoverStatus.Text = OperationText.Choose(_language,
-                    "Could not save export details: ", "无法保存导出信息：", "無法儲存匯出資訊：", "出力情報を保存できませんでした: ") + exception.Message;
-                return;
-            }
-        }
+        if (_page == 1 && !TrySaveLocalDetails()) return;
 
         if (_page < 5)
         {
@@ -814,6 +808,40 @@ public partial class ExportCollectionWindow : Window
         else
         {
             Close();
+        }
+    }
+
+    private void OnExitClick(object? sender, RoutedEventArgs e)
+    {
+        if (_operation.IsActive || (_page == 1 && !TrySaveLocalDetails())) return;
+        Close();
+    }
+
+    private bool TrySaveLocalDetails()
+    {
+        NavigationStatusPanel.IsVisible = false;
+        if (string.IsNullOrWhiteSpace(PackNameBox.Text))
+        {
+            NavigationStatus.Text = OperationText.Choose(_language,
+                "Enter a modpack name before saving.", "请填写合集名称后再保存。",
+                "請填寫合集名稱後再儲存。", "保存する前に MOD パック名を入力してください。");
+            NavigationStatusPanel.IsVisible = true;
+            PackNameBox.Focus();
+            PackNameBox.BringIntoView();
+            return false;
+        }
+        try
+        {
+            SavePackInfo();
+            return true;
+        }
+        catch (Exception exception)
+        {
+            AppLog.Error("Save export details", exception);
+            NavigationStatus.Text = OperationText.Choose(_language,
+                "Could not save export details: ", "无法保存导出信息：", "無法儲存匯出資訊：", "出力情報を保存できませんでした: ") + exception.Message;
+            NavigationStatusPanel.IsVisible = true;
+            return false;
         }
     }
 

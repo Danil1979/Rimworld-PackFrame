@@ -260,3 +260,11 @@ folders, empty catalogs and filtered installed rows.
   the existing dialog behavior. Do not confuse duplicate display names with identity.
 - While installing/updating, catalog search/clear remain disabled. Cancel/reopen and
   background catalog updates must not change an active operation's target.
+
+
+The export navigation checks cover all five stages in all four languages, explicit
+local-save versus Close labels, invalid-stage rejection, retained/cleared token
+and Workshop-link drafts, and strict local-save failure/retry for missing, null,
+malformed and unreadable manifests. Native Linux checks additionally exercised the
+production dialogs at 640×560, with isolated local-only save/validation/recovery.
+These tests do not perform authenticated publication or grant token permissions.

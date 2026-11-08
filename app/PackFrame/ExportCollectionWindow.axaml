@@ -10,10 +10,13 @@
         Background="{DynamicResource AppBackgroundBrush}"
         RequestedThemeVariant="Dark">
     <Grid Margin="16" RowDefinitions="Auto,*,Auto">
-        <TextBlock x:Name="TitleText"
-                   FontSize="21"
-                   FontWeight="SemiBold"
-                   Foreground="{DynamicResource PrimaryTextBrush}" />
+        <StackPanel Spacing="4">
+            <TextBlock x:Name="StepText" Foreground="{DynamicResource SecondaryTextBrush}" />
+            <TextBlock x:Name="TitleText" FontSize="21" FontWeight="SemiBold"
+                       TextWrapping="Wrap" Foreground="{DynamicResource PrimaryTextBrush}" />
+            <TextBlock x:Name="NavigationHint" TextWrapping="Wrap"
+                       Foreground="{DynamicResource SecondaryTextBrush}" />
+        </StackPanel>
 
         <Grid Grid.Row="1" Margin="0,12,0,0">
             <ScrollViewer x:Name="RepoPage"
@@ -191,19 +194,19 @@
                     </Border>
                 </StackPanel>
                 <StackPanel Grid.Row="3" Spacing="8" Margin="0,8,0,0">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button x:Name="CreateCollectionButton"
+                    <WrapPanel>
+                        <Button x:Name="CreateCollectionButton" Margin="0,0,8,8"
                                 Theme="{StaticResource FlatButton}"
                                 MinHeight="38"
                                 Padding="24,8"
                                 Click="OnCreateCollectionClick" />
-                        <Button x:Name="OpenCollectionButton"
+                        <Button x:Name="OpenCollectionButton" Margin="0,0,8,8"
                                 Theme="{StaticResource FlatButton}"
                                 MinHeight="38"
                                 Padding="18,8"
                                 IsVisible="False"
                                 Click="OnOpenCollectionClick" />
-                    </StackPanel>
+                    </WrapPanel>
                     <TextBlock x:Name="PrivateNote"
                                Foreground="{DynamicResource MutedTextBrush}"
                                TextWrapping="Wrap" />
@@ -258,19 +261,19 @@
                                Foreground="{DynamicResource PrimaryTextBrush}"
                                TextWrapping="Wrap"
                                Margin="0,8,0,0" />
-                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-                        <Button x:Name="UploadGithubButton"
+                    <WrapPanel Margin="0,8,0,0">
+                        <Button x:Name="UploadGithubButton" Margin="0,0,8,8"
                                 Theme="{StaticResource FlatButton}"
                                 MinHeight="38"
                                 Padding="24,8"
                                 Click="OnUploadGithubClick" />
-                        <Button x:Name="OpenGithubRepoButton"
+                        <Button x:Name="OpenGithubRepoButton" Margin="0,0,8,8"
                                 Theme="{StaticResource FlatButton}"
                                 MinHeight="38"
                                 Padding="18,8"
                                 IsVisible="False"
                                 Click="OnOpenGithubRepoClick" />
-                    </StackPanel>
+                    </WrapPanel>
                     <TextBlock x:Name="GithubStatus"
                                Foreground="{DynamicResource SecondaryTextBrush}"
                                TextWrapping="Wrap" />
@@ -385,19 +388,19 @@
                                Foreground="{DynamicResource PrimaryTextBrush}"
                                TextWrapping="Wrap"
                                Margin="0,8,0,0" />
-                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-                        <Button x:Name="UploadGiteeButton"
+                    <WrapPanel Margin="0,8,0,0">
+                        <Button x:Name="UploadGiteeButton" Margin="0,0,8,8"
                                 Theme="{StaticResource FlatButton}"
                                 MinHeight="38"
                                 Padding="24,8"
                                 Click="OnUploadGiteeClick" />
-                        <Button x:Name="OpenGiteeRepoButton"
+                        <Button x:Name="OpenGiteeRepoButton" Margin="0,0,8,8"
                                 Theme="{StaticResource FlatButton}"
                                 MinHeight="38"
                                 Padding="18,8"
                                 IsVisible="False"
                                 Click="OnOpenGiteeRepoClick" />
-                    </StackPanel>
+                    </WrapPanel>
                     <TextBlock x:Name="GiteeStatus"
                                Foreground="{DynamicResource SecondaryTextBrush}"
                                TextWrapping="Wrap" />
@@ -469,25 +472,25 @@
                     <TextBlock x:Name="IndexHint"
                                Foreground="{DynamicResource MutedTextBrush}"
                                TextWrapping="Wrap" />
-                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-                        <Button x:Name="SubmitIndexButton"
+                    <WrapPanel Margin="0,8,0,0">
+                        <Button x:Name="SubmitIndexButton" Margin="0,0,8,8"
                                 Theme="{StaticResource FlatButton}"
                                 MinHeight="38"
                                 Padding="24,8"
                                 Click="OnSubmitIndexClick" />
-                        <Button x:Name="OpenIndexPrButton"
+                        <Button x:Name="OpenIndexPrButton" Margin="0,0,8,8"
                                 Theme="{StaticResource FlatButton}"
                                 MinHeight="38"
                                 Padding="18,8"
                                 IsVisible="False"
                                 Click="OnOpenIndexPrClick" />
-                        <Button x:Name="OpenGiteeIndexPrButton"
+                        <Button x:Name="OpenGiteeIndexPrButton" Margin="0,0,8,8"
                                 Theme="{StaticResource FlatButton}"
                                 MinHeight="38"
                                 Padding="18,8"
                                 IsVisible="False"
                                 Click="OnOpenGiteeIndexPrClick" />
-                    </StackPanel>
+                    </WrapPanel>
                     <TextBlock x:Name="IndexStatus"
                                Foreground="{DynamicResource SecondaryTextBrush}"
                                TextWrapping="Wrap" />
@@ -503,7 +506,7 @@
         </Grid>
 
         <Grid Grid.Row="2"
-              RowDefinitions="Auto,Auto"
+              RowDefinitions="Auto,Auto,Auto"
               ColumnDefinitions="Auto,*,Auto"
               Margin="0,12,0,0">
             <TextBlock x:Name="OperationNotice"
@@ -512,19 +515,25 @@
                        Foreground="{DynamicResource SecondaryTextBrush}"
                        TextWrapping="Wrap"
                        Margin="0,0,0,8" />
+            <ScrollViewer x:Name="NavigationStatusPanel" Grid.Row="1" Grid.ColumnSpan="3"
+                          IsVisible="False" MaxHeight="96" Margin="0,0,0,8"
+                          HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <SelectableTextBlock x:Name="NavigationStatus" TextWrapping="Wrap"
+                                     Foreground="{DynamicResource PrimaryTextBrush}" />
+            </ScrollViewer>
             <Button x:Name="BackButton"
-                    Grid.Row="1"
+                    Grid.Row="2"
                     Theme="{StaticResource FlatButton}"
                     MinHeight="38"
                     Padding="24,8"
                     Click="OnBackClick" />
-            <Button x:Name="NextButton"
-                    Grid.Row="1"
-                    Grid.Column="2"
-                    Theme="{StaticResource FlatButton}"
-                    MinHeight="38"
-                    Padding="24,8"
-                    Click="OnNextClick" />
+            <WrapPanel Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right">
+                <Button x:Name="ExitButton" Theme="{StaticResource FlatButton}"
+                        MinHeight="38" Margin="0,0,8,0" Padding="16,8"
+                        Click="OnExitClick" />
+                <Button x:Name="NextButton" Theme="{StaticResource FlatButton}"
+                        MinHeight="38" Padding="16,8" Click="OnNextClick" />
+            </WrapPanel>
         </Grid>
     </Grid>
 </Window>

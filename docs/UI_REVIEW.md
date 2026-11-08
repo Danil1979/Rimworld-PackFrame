@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The November 2026 checkpoint builds cleanly in Release and passes 683 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 757 regression
 checks. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -31,7 +31,7 @@ relying on a font being installed on the computer.
 | Missing mods/history | Long identifiers, empty history, corrupt-file errors, repair/refresh recovery, retained rows after another failure, repeated safe confirmation cancellation | Native external-browser failure, platform permission recovery; larger-than-1,000 native list stress |
 | OSS settings | Required/invalid field errors and focus, custom-port preview, disabling/cancel, scrolling; atomic failed-save preservation in checks | Four-language layout; live upload failure matrix |
 | Diagnostic log | Missing-file state, disabled Open, Refresh/Close inspected; read errors retain prior content in checks | Native permission-denied log and external opener failures |
-| Export wizard | All five pages inspected; custom title and repository URL survive Back/Next; intentional clearing survives navigation | Real Steam/Gitee/GitHub publishing, partial network failure, all languages |
+| Export wizard | Five stages at 640×560 in all four languages; local-only Save and close, required-name focus/recovery, missing-manifest failure and retry, explicit optional stages, scoped Close; draft/clear preservation in checks | Real Steam/Gitee/GitHub publishing, live partial network failure, native populated Workshop lists and successful-PR link rows |
 | Modpack catalog | Offline bundled entries, unavailable details, named disabled install actions, proportional split and pinned actions; minimum 1000×650 in all four languages; loaded/no-cover switching, scroll reset and selected-pack footer | Online install/cancellation matrix; very large selected-pack mod detail lists |
 | Application update | Unavailable-asset state and release notes inspected | Long errors, small screen, real isolated replacement/recovery |
 
@@ -128,8 +128,8 @@ relying on a font being installed on the computer.
    moving out of an active status filter and platform-specific keyboard behavior.
 2. Continue populated main-list workflows beyond the four-language minimum-size
    and many-pending-instance pass, including reorder/undo and interrupted writes.
-3. Complete native publishing-page credential guidance and error-recovery checks
-   in all languages, without using real credentials or submitting fixtures.
+3. Continue export recovery beyond local-save failures, including native populated
+   Workshop lists and successful-PR link rows without real submissions.
 4. Exercise isolated online install/update/cancel/recovery and external openers only
    in explicitly authorized destinations. Windows/macOS-specific behavior remains
    unverified on the Linux review desktop.
@@ -185,3 +185,31 @@ relying on a font being installed on the computer.
 - Clean Linux Release build: zero warnings/errors; 727 regression checks passed.
   The new pure search/identity checks include 10,000 rows. Cross-platform native
   behavior, active-download GUI filtering and real online operations remain pending.
+
+
+## Export navigation and local-save checkpoint
+
+- Each export page now identifies its stage and purpose. Publishing/catalog stages
+  are explicitly optional, Next names its destination, and the final action is
+  Close rather than a misleading Finish beside the separate Submit button.
+- The first page offers Save and close for local-only work. Both local-save routes
+  require a name and keep the dialog open with visible, copyable error feedback if
+  saving fails. Early Close on later pages keeps completed work but does not save
+  unsent form fields; its accessible help and tooltip explain that scope.
+- Missing, null, malformed or unreadable manifests now fail instead of silently
+  returning success. Valid metadata retains the existing atomic-write path.
+- Intentional clears and edits in index-token and Workshop-link drafts survive
+  Back/Next; untouched drafts can still follow their source. Empty Workshop lists
+  no longer reserve a large blank box. Publishing action groups wrap rather than
+  requiring one wide horizontal row.
+- Native checks covered all five stages at 640×560 in English, Japanese, simplified
+  and traditional Chinese. Token guidance and lower actions remained reachable by
+  scrolling; footer navigation stayed visible. English empty-name validation
+  returned focus to the name, correction removed the message, and Save and close
+  wrote the isolated manifest. Temporarily moving only that synthetic manifest
+  made saving fail visibly; restoring it allowed retry without losing the form.
+- The before/after comparison uses the same 760×720 English GitHub stage. No
+  credential was entered, real service called, or fixture uploaded/submitted.
+  Successful remote-operation rows, real service failure/cancellation and
+  Windows/macOS remain unverified.
+- Clean Linux Release build: zero warnings/errors; 757 regression checks passed.
