@@ -220,14 +220,8 @@ public static class InstanceStore
 
         CopyDirectory(source.DirectoryPath, directory, overwrite: true);
         File.Delete(Path.Combine(directory, "mod-links.txt"));
-        var configPath = Path.Combine(directory, "Config", "ModsConfig.xml");
-        if (!string.IsNullOrWhiteSpace(gameVersion) && File.Exists(configPath))
-        {
-            var (active, _, known) = ReadModsConfig(configPath);
-            WriteModsConfig(configPath, active, gameVersion, known);
-        }
-
-        WriteMetadata(directory, folderName, source.FolderName);
+        WriteCopiedModsConfig(Path.Combine(directory, "Config", "ModsConfig.xml"), source, gameVersion);
+        WriteCopiedMetadata(directory, folderName, source.FolderName);
         return LoadInstance(directory);
     }
 
@@ -250,18 +244,55 @@ public static class InstanceStore
             CopyDirectory(source.ConfigDirectoryPath, configDirectory, overwrite: true);
         }
 
-        if (!File.Exists(Path.Combine(configDirectory, "ModsConfig.xml")))
-        {
-            WriteModsConfig(
-                Path.Combine(configDirectory, "ModsConfig.xml"),
-                source.ActivePackageIds,
-                source.GameVersion,
-                source.KnownExpansions
-            );
-        }
-
+        WriteCopiedModsConfig(Path.Combine(configDirectory, "ModsConfig.xml"), source, null);
         WriteMetadata(directory, folderName, "official");
         return LoadInstance(directory);
+    }
+
+    // Copy the list being edited, without committing or clearing the source's pending changes.
+    // Update only managed fields in the copied document so other tools' settings survive.
+    private static void WriteCopiedModsConfig(string path, ManagedInstance source, string? gameVersion)
+    {
+        if (!File.Exists(path))
+        {
+            WriteModsConfig(path, source.ActivePackageIds, gameVersion ?? source.GameVersion, source.KnownExpansions);
+            return;
+        }
+
+        ReadModsConfig(path);
+        var document = XDocument.Load(path, LoadOptions.PreserveWhitespace);
+        var root = document.Root ?? throw new IOException($"Missing config root: {path}");
+        var active = root.Elements().FirstOrDefault(element => element.Name.LocalName == "activeMods");
+        if (active is null)
+        {
+            active = new XElement(root.Name.Namespace + "activeMods");
+            root.Add(active);
+        }
+        active.ReplaceNodes(source.ActivePackageIds.Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => new XElement(active.Name.Namespace + "li", NormalizePackageId(id))));
+        if (!string.IsNullOrWhiteSpace(gameVersion))
+        {
+            var version = root.Elements().FirstOrDefault(element => element.Name.LocalName == "version");
+            if (version is null) root.Add(new XElement(root.Name.Namespace + "version", gameVersion));
+            else version.Value = gameVersion;
+        }
+        FileTransactions.WriteAtomic(path, temporary => document.Save(temporary, SaveOptions.DisableFormatting));
+    }
+
+    private static void WriteCopiedMetadata(string directory, string name, string source)
+    {
+        var path = Path.Combine(directory, MetadataFileName);
+        if (!File.Exists(path))
+        {
+            WriteMetadata(directory, name, source);
+            return;
+        }
+        var metadata = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(path))
+            as System.Text.Json.Nodes.JsonObject
+            ?? throw new IOException($"Invalid instance metadata: {path}");
+        metadata["name"] = name;
+        metadata["source"] = source;
+        FileTransactions.WriteAtomic(path, temporary => File.WriteAllText(temporary, metadata.ToJsonString()));
     }
 
     public static void DeleteInstance(ManagedInstance instance)
@@ -360,6 +391,7 @@ public static class InstanceStore
         new(StringComparer.OrdinalIgnoreCase);
 
     public static bool HasPendingMods => Pending.Count > 0;
+    internal static IReadOnlyList<string> PendingConfigDirectories => Pending.Keys.ToArray();
 
     public static void StageActiveMods(
         ManagedInstance instance,

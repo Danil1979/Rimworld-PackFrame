@@ -855,6 +855,24 @@ public partial class MainWindow : Window
             return;
         }
 
+        var focusedControl = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
+        if (e.Key == Key.S)
+        {
+            if (_saveButton.IsEnabled) SaveChanges();
+            e.Handled = true;
+            return;
+        }
+        if (e.Key == Key.F)
+        {
+            var list = GetCommandList() ?? _inactiveList;
+            var search = PaneWorkflow(GetListColumn(list)).Search;
+            search.Focus();
+            search.SelectAll();
+            e.Handled = true;
+            return;
+        }
+        if (focusedControl is TextBox or SelectableTextBlock) return;
+
         if (e.Key == Key.Z)
         {
             if (e.KeyModifiers.HasFlag(KeyModifiers.Shift))
@@ -1870,11 +1888,12 @@ public partial class MainWindow : Window
     private void UpdateHeaders()
     {
         var language = _config.Language;
-        _inactiveHeader.Text = $"{Localization.Inactive(language)} [{_inactiveCount}]";
-        _activeHeader1.Text = $"{Localization.Active(language)} [{_active1Count}]";
-        _activeHeader2.Text = $"{Localization.Active(language)} [{_active2Count}]";
+        _inactiveHeader.Text = $"{Localization.Inactive(language)} [{PaneCount(0, _inactiveCount)}]";
+        _activeHeader1.Text = $"{Localization.Active(language)} [{PaneCount(1, _active1Count)}]";
+        _activeHeader2.Text = $"{Localization.Active(language)} [{PaneCount(2, _active2Count)}]";
         UpdatePaneHeaders();
         UpdateProblemFilterVisuals();
+        UpdatePaneWorkflow();
     }
 
     private void UpdateProblemFilterVisuals()
@@ -2232,6 +2251,7 @@ public partial class MainWindow : Window
             if (version == _loadVersion)
             {
                 _loadingMods = false;
+                UpdatePaneWorkflow();
                 WakeWorkshopMonitoring();
                 _refreshButton.Content = Localization.Refresh(_config.Language);
                 _refreshButton.IsEnabled = true;
@@ -2589,6 +2609,7 @@ public partial class MainWindow : Window
     {
         SetPaneInteractionContext(list);
         state.Query = text ?? string.Empty;
+        UpdatePaneWorkflow();
         if (_allMods.Count == 0)
         {
             return;
@@ -4026,6 +4047,7 @@ public partial class MainWindow : Window
         _saveButton.Content = hasPending
             ? Localization.Save(_config.Language) + " *"
             : Localization.Save(_config.Language);
+        UpdateEditStatus();
     }
     private void SaveModFullNameLists()
     {
@@ -5413,7 +5435,7 @@ public partial class MainWindow : Window
             MoveMods(
                 new DragPayload(0, mods),
                 _lastEnableColumn,
-                targetList.ItemCount
+                MapDropIndexToActive(targetList, targetList.ItemCount)
             );
             return;
         }
@@ -6653,6 +6675,7 @@ public partial class MainWindow : Window
 
     private async void ShowDetails(ModInfo? mod)
     {
+        UpdateSelectionAction();
         Find<ScrollViewer>("DetailsEmptyState").IsVisible = mod is null;
         Find<Grid>("DetailsContent").IsVisible = mod is not null;
         if (mod is null)

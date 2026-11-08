@@ -25,10 +25,10 @@ public partial class MainWindow
                 "選擇模組，在此檢視作者、位置和簡介。",
                 "MOD を選択すると、作者、保存場所、説明がここに表示されます。");
         Find<TextBlock>("DetailsWorkflow").Text = OperationText.Choose(language,
-            "1  Choose an instance above the active list.\n\n2  Double-click mods to enable or disable them. Drag to change their order.\n\n3  Save your changes, then launch the game.",
-            "1  在启用列表上方选择实例。\n\n2  双击模组以启用或禁用，拖动调整顺序。\n\n3  保存修改后，再启动游戏。",
-            "1  在啟用清單上方選擇實例。\n\n2  按兩下模組以啟用或停用，拖曳調整順序。\n\n3  儲存修改後，再啟動遊戲。",
-            "1  有効なリストの上でインスタンスを選択。\n\n2  ダブルクリックで有効・無効を切り替え、ドラッグで順序を変更。\n\n3  変更を保存してからゲームを起動。");
+            "1  Choose an instance above the active list.\n\n2  Select mods, then use Enable / Disable selected above. Drag to change their order.\n\n3  Save your changes, then launch the game.",
+            "1  在启用列表上方选择实例。\n\n2  选择模组，使用上方的启用或禁用所选按钮。拖动调整顺序。\n\n3  保存修改后，再启动游戏。",
+            "1  在啟用清單上方選擇實例。\n\n2  選擇模組，使用上方的啟用或停用所選按鈕。拖曳調整順序。\n\n3  儲存修改後，再啟動遊戲。",
+            "1  有効なリストの上でインスタンスを選択。\n\n2  MOD を選び、上部の有効化・無効化ボタンを使用。ドラッグで順序を変更。\n\n3  変更を保存してからゲームを起動。");
         Find<TextBlock>("DetailsSelectionHint").Text = OperationText.Choose(language,
             "Open on right adds another view for comparing or copying between instances.",
             "“在右侧打开”可添加另一视图，用于比较或在实例间复制模组。",
@@ -46,6 +46,7 @@ public partial class MainWindow
         foreach (var button in new[] { _instanceActionButton1, _instanceActionButton2 })
         {
             var actions = OperationText.Choose(language, "Manage instance", "管理实例", "管理實例", "インスタンスの管理");
+            button.Content = WorkflowText("Instance ▾", "实例 ▾", "實例 ▾", "管理 ▾");
             ToolTip.SetTip(button, actions);
             AutomationProperties.SetName(button, actions);
         }

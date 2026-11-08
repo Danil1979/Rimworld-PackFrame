@@ -116,11 +116,19 @@
                     MinHeight="36" />
         </Grid>
 
-        <StackPanel Grid.Row="1"
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+            <Grid ColumnDefinitions="Auto,*" Margin="0,0,16,0">
+                <Button x:Name="SelectionActionButton" Theme="{StaticResource FlatButton}"
+                        MinHeight="32" Padding="12,6" IsEnabled="False"
+                        Click="OnSelectionActionClick" />
+                <TextBlock x:Name="SelectionSummary" Grid.Column="1" Margin="12,0,0,0"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource SecondaryTextBrush}" />
+            </Grid>
+        <StackPanel Grid.Column="1"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
-                    Spacing="8"
-                    Margin="0,8,0,0">
+                    Spacing="8">
             <Button x:Name="PaintModeButton"
                     Theme="{StaticResource FlatButton}"
                     MinHeight="32"
@@ -148,6 +156,7 @@
                     Padding="18,6"
                     Click="OnRefreshClick" />
         </StackPanel>
+        </Grid>
 
         <Grid x:Name="WorkspaceGrid" Grid.Row="2" Margin="0,8,0,0">
             <Grid.ColumnDefinitions>
@@ -256,8 +265,8 @@
                         BorderBrush="{StaticResource SecondaryBrush}"
                         BorderThickness="1"
                         Padding="8">
-                    <Grid RowDefinitions="Auto,30,*,Auto">
-                        <Grid RowDefinitions="64" Margin="2,0,2,4">
+                    <Grid RowDefinitions="Auto,Auto,*,Auto">
+                        <Grid RowDefinitions="88" Margin="2,0,2,4">
                             <Grid>
                             <Button x:Name="InactiveSortButton"
                                 Grid.Row="0"
@@ -276,52 +285,43 @@
                                    Margin="2,0,2,0" />
                             </Grid>
                         </Grid>
-                        <Grid Grid.Row="1"
-                              ColumnDefinitions="*,Auto,Auto,Auto"
-                              Margin="0,2,0,2">
-                            <Border Classes="field"
-                                    Height="26"
-                                    CornerRadius="0">
-                                <TextBox x:Name="InactiveSearchBox"
-                                         Background="#01000000"
-                                         BorderThickness="0"
-                                         CornerRadius="0"
-                                         Padding="8,3"
-                                         VerticalContentAlignment="Center" />
+                        <Grid Grid.Row="1" RowDefinitions="32,30" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,2,0,4">
+                            <Border Grid.ColumnSpan="4" Classes="field" Height="30" CornerRadius="0">
+                                <TextBox x:Name="InactiveSearchBox" Background="#01000000" BorderThickness="0"
+                                         CornerRadius="0" Padding="8,4" VerticalContentAlignment="Center" />
                             </Border>
-                            <ComboBox x:Name="InactiveSearchField"
-                                      Grid.Column="1"
-                                      MinWidth="64"
-                                      MinHeight="26"
-                                      Height="26"
-                                      Padding="6,3"
-                                      Margin="4,0,0,0" />
-                            <Button x:Name="InactiveSourceButton"
-                                    Grid.Column="2"
-                                    Theme="{StaticResource FlatButton}"
-                                    MinWidth="48"
-                                    MinHeight="26"
-                                    Height="26"
-                                    Padding="4,2"
-                                    Margin="4,0,0,0"
-                                    Click="OnInactiveSourceClick" />                            <Button x:Name="InactiveViewModeButton"
-                                    Grid.Column="3"
-                                    Theme="{StaticResource FlatButton}"
-                                    Width="26"
-                                    MinWidth="26"
-                                    MinHeight="26"
-                                    Height="26"
-                                    Padding="0"
-                                    Margin="4,0,0,0"
-                                    Click="OnInactiveViewModeClick" />
+                            <ComboBox x:Name="InactiveSearchField" Grid.Row="1" MinWidth="0"
+                                      HorizontalAlignment="Stretch" MinHeight="26" Height="26" Padding="6,3" />
+                            <Button x:Name="InactiveSourceButton" Grid.Row="1" Grid.Column="1"
+                                    Theme="{StaticResource FlatButton}" MinWidth="48" MinHeight="26"
+                                    Height="26" Padding="6,2" Margin="4,0,0,0" Click="OnInactiveSourceClick" />
+                            <Button x:Name="InactiveViewModeButton" Grid.Row="1" Grid.Column="2"
+                                    Theme="{StaticResource FlatButton}" Width="26" MinWidth="26" MinHeight="26"
+                                    Height="26" Padding="0" Margin="4,0,0,0" Click="OnInactiveViewModeClick" />
+                            <Button x:Name="ResetFilters0" Grid.Row="1" Grid.Column="3" Tag="0"
+                                    Theme="{StaticResource FlatButton}" MinHeight="26" Height="26" Padding="6,2"
+                                    Margin="4,0,0,0" Click="OnResetPaneFiltersClick" />
                         </Grid>
+                        <Grid Grid.Row="2">
                         <ListBox x:Name="InactiveList"
                                  Classes="modpane"
                                  ItemTemplate="{StaticResource ModTemplate}"
-                                 Grid.Row="2"
+
                                  ItemContainerTheme="{StaticResource ModListItem}"
                                  SelectionChanged="OnListSelectionChanged">
-                        </ListBox>                        <Border Grid.Row="3" BorderBrush="{DynamicResource SecondaryBrush}"
+                        </ListBox>
+                        <Border x:Name="PaneEmpty0" IsVisible="False" Margin="10,26" VerticalAlignment="Top">
+                            <StackPanel Spacing="10">
+                                <TextBlock x:Name="PaneEmptyTitle0" FontSize="17" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
+                                <TextBlock x:Name="PaneEmptyBody0" Foreground="{DynamicResource SecondaryTextBrush}"
+                                           TextWrapping="Wrap" />
+                                <Button x:Name="PaneEmptyReset0" Tag="0" HorizontalAlignment="Left"
+                                        Theme="{StaticResource FlatButton}" Padding="10,6" Click="OnResetPaneFiltersClick" />
+                            </StackPanel>
+                        </Border>
+                        </Grid>
+                        <Border Grid.Row="3" BorderBrush="{DynamicResource SecondaryBrush}"
                                 BorderThickness="0,1,0,0" Padding="0,6,0,0" MinHeight="64">
                             <StackPanel>
                             <WrapPanel>
@@ -336,7 +336,8 @@
                                 </Button>
                             </WrapPanel>
                             </StackPanel>
-                        </Border>                    </Grid>
+                        </Border>
+                    </Grid>
                 </Border>
 
                 <Border x:Name="ActiveColumn1"
@@ -345,14 +346,14 @@
                         BorderBrush="{StaticResource SecondaryBrush}"
                         BorderThickness="1"
                         Padding="8">
-                    <Grid RowDefinitions="Auto,30,*,Auto">
+                    <Grid RowDefinitions="Auto,Auto,*,Auto">
                         <Border x:Name="ActivePaneHeader1" Classes="pane-header"
                                 Grid.Row="0" Margin="0,0,0,4">
                           <Grid>
                             <Border Classes="header-tint"
                                     Background="{DynamicResource PrimaryTextBrush}"
                                     IsHitTestVisible="False" />
-                            <Grid RowDefinitions="34,30" Margin="2,0,2,0">
+                            <Grid RowDefinitions="34,30,24" Margin="2,0,2,0">
                             <Grid ColumnDefinitions="*,Auto,Auto">
                                 <ComboBox x:Name="InstanceCombo1"
                                           MinWidth="0"
@@ -405,61 +406,52 @@
                                         Margin="0,0,10,0"
                                         VerticalAlignment="Center"
                                         Click="OnModpack1Click" />
-                                <TextBlock x:Name="ActiveHeader1"
-                                           Grid.Column="2"
-                                           Foreground="{DynamicResource PrimaryTextBrush}"
-                                           HorizontalAlignment="Right"
-                                           VerticalAlignment="Center" />
                             </Grid>
+                            <TextBlock x:Name="ActiveHeader1"
+                                       Grid.Row="2" Margin="2,0"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
+                                       HorizontalAlignment="Right"
+                                       VerticalAlignment="Center" />
                             </Grid>
                           </Grid>
                         </Border>
-                        <Grid Grid.Row="1"
-                              ColumnDefinitions="*,Auto,Auto,Auto"
-                              Margin="0,2,0,2">
-                            <Border Classes="field"
-                                    Height="26"
-                                    CornerRadius="0">
-                                <TextBox x:Name="ActiveSearchBox1"
-                                         Background="#01000000"
-                                         BorderThickness="0"
-                                         CornerRadius="0"
-                                         Padding="8,3"
-                                         VerticalContentAlignment="Center" />
+                        <Grid Grid.Row="1" RowDefinitions="32,30" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,2,0,4">
+                            <Border Grid.ColumnSpan="4" Classes="field" Height="30" CornerRadius="0">
+                                <TextBox x:Name="ActiveSearchBox1" Background="#01000000" BorderThickness="0"
+                                         CornerRadius="0" Padding="8,4" VerticalContentAlignment="Center" />
                             </Border>
-                            <ComboBox x:Name="ActiveSearchField1"
-                                      Grid.Column="1"
-                                      MinWidth="64"
-                                      MinHeight="26"
-                                      Height="26"
-                                      Padding="6,3"
-                                      Margin="4,0,0,0" />
-                            <Button x:Name="ActiveSourceButton1"
-                                    Grid.Column="2"
-                                    Theme="{StaticResource FlatButton}"
-                                    MinWidth="48"
-                                    MinHeight="26"
-                                    Height="26"
-                                    Padding="4,2"
-                                    Margin="4,0,0,0"
-                                    Click="OnActiveSource1Click" />                            <Button x:Name="ActiveViewModeButton1"
-                                    Grid.Column="3"
-                                    Theme="{StaticResource FlatButton}"
-                                    Width="26"
-                                    MinWidth="26"
-                                    MinHeight="26"
-                                    Height="26"
-                                    Padding="0"
-                                    Margin="4,0,0,0"
-                                    Click="OnActiveViewMode1Click" />
+                            <ComboBox x:Name="ActiveSearchField1" Grid.Row="1" MinWidth="0"
+                                      HorizontalAlignment="Stretch" MinHeight="26" Height="26" Padding="6,3" />
+                            <Button x:Name="ActiveSourceButton1" Grid.Row="1" Grid.Column="1"
+                                    Theme="{StaticResource FlatButton}" MinWidth="48" MinHeight="26"
+                                    Height="26" Padding="6,2" Margin="4,0,0,0" Click="OnActiveSource1Click" />
+                            <Button x:Name="ActiveViewModeButton1" Grid.Row="1" Grid.Column="2"
+                                    Theme="{StaticResource FlatButton}" Width="26" MinWidth="26" MinHeight="26"
+                                    Height="26" Padding="0" Margin="4,0,0,0" Click="OnActiveViewMode1Click" />
+                            <Button x:Name="ResetFilters1" Grid.Row="1" Grid.Column="3" Tag="1"
+                                    Theme="{StaticResource FlatButton}" MinHeight="26" Height="26" Padding="6,2"
+                                    Margin="4,0,0,0" Click="OnResetPaneFiltersClick" />
                         </Grid>
+                        <Grid Grid.Row="2">
                         <ListBox x:Name="ActiveList1"
                                  Classes="modpane"
                                  ItemTemplate="{StaticResource ModTemplate}"
-                                 Grid.Row="2"
+
                                  ItemContainerTheme="{StaticResource ModListItem}"
                                  SelectionChanged="OnListSelectionChanged">
-                        </ListBox>                        <Border Grid.Row="3" BorderBrush="{DynamicResource SecondaryBrush}"
+                        </ListBox>
+                        <Border x:Name="PaneEmpty1" IsVisible="False" Margin="10,26" VerticalAlignment="Top">
+                            <StackPanel Spacing="10">
+                                <TextBlock x:Name="PaneEmptyTitle1" FontSize="17" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
+                                <TextBlock x:Name="PaneEmptyBody1" Foreground="{DynamicResource SecondaryTextBrush}"
+                                           TextWrapping="Wrap" />
+                                <Button x:Name="PaneEmptyReset1" Tag="1" HorizontalAlignment="Left"
+                                        Theme="{StaticResource FlatButton}" Padding="10,6" Click="OnResetPaneFiltersClick" />
+                            </StackPanel>
+                        </Border>
+                        </Grid>
+                        <Border Grid.Row="3" BorderBrush="{DynamicResource SecondaryBrush}"
                                 BorderThickness="0,1,0,0" Padding="0,6,0,0" MinHeight="64">
                             <StackPanel>
                             <WrapPanel>
@@ -480,7 +472,8 @@
                                     HorizontalAlignment="Left" HorizontalContentAlignment="Left"
                                     Margin="2,3,0,0" Click="OnMissing1Click" />
                             </StackPanel>
-                        </Border>                    </Grid>
+                        </Border>
+                    </Grid>
                 </Border>
 
                 <Border x:Name="ActiveColumn2"
@@ -489,14 +482,14 @@
                         BorderBrush="{StaticResource SecondaryBrush}"
                         BorderThickness="1"
                         Padding="8">
-                    <Grid RowDefinitions="Auto,30,*,Auto">
+                    <Grid RowDefinitions="Auto,Auto,*,Auto">
                         <Border x:Name="ActivePaneHeader2" Classes="pane-header"
                                 Grid.Row="0" Margin="0,0,0,4">
                           <Grid>
                             <Border Classes="header-tint"
                                     Background="{DynamicResource PrimaryTextBrush}"
                                     IsHitTestVisible="False" />
-                            <Grid RowDefinitions="34,30" Margin="2,0,2,0">
+                            <Grid RowDefinitions="34,30,24" Margin="2,0,2,0">
                             <Grid ColumnDefinitions="*,Auto,Auto">
                                 <ComboBox x:Name="InstanceCombo2"
                                           MinWidth="0"
@@ -544,61 +537,52 @@
                                         Margin="0,0,10,0"
                                         VerticalAlignment="Center"
                                         Click="OnModpack2Click" />
-                                <TextBlock x:Name="ActiveHeader2"
-                                           Grid.Column="2"
-                                           Foreground="{DynamicResource PrimaryTextBrush}"
-                                           HorizontalAlignment="Right"
-                                           VerticalAlignment="Center" />
                             </Grid>
+                            <TextBlock x:Name="ActiveHeader2"
+                                       Grid.Row="2" Margin="2,0"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
+                                       HorizontalAlignment="Right"
+                                       VerticalAlignment="Center" />
                             </Grid>
                           </Grid>
                         </Border>
-                        <Grid Grid.Row="1"
-                              ColumnDefinitions="*,Auto,Auto,Auto"
-                              Margin="0,2,0,2">
-                            <Border Classes="field"
-                                    Height="26"
-                                    CornerRadius="0">
-                                <TextBox x:Name="ActiveSearchBox2"
-                                         Background="#01000000"
-                                         BorderThickness="0"
-                                         CornerRadius="0"
-                                         Padding="8,3"
-                                         VerticalContentAlignment="Center" />
+                        <Grid Grid.Row="1" RowDefinitions="32,30" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,2,0,4">
+                            <Border Grid.ColumnSpan="4" Classes="field" Height="30" CornerRadius="0">
+                                <TextBox x:Name="ActiveSearchBox2" Background="#01000000" BorderThickness="0"
+                                         CornerRadius="0" Padding="8,4" VerticalContentAlignment="Center" />
                             </Border>
-                            <ComboBox x:Name="ActiveSearchField2"
-                                      Grid.Column="1"
-                                      MinWidth="64"
-                                      MinHeight="26"
-                                      Height="26"
-                                      Padding="6,3"
-                                      Margin="4,0,0,0" />
-                            <Button x:Name="ActiveSourceButton2"
-                                    Grid.Column="2"
-                                    Theme="{StaticResource FlatButton}"
-                                    MinWidth="48"
-                                    MinHeight="26"
-                                    Height="26"
-                                    Padding="4,2"
-                                    Margin="4,0,0,0"
-                                    Click="OnActiveSource2Click" />                            <Button x:Name="ActiveViewModeButton2"
-                                    Grid.Column="3"
-                                    Theme="{StaticResource FlatButton}"
-                                    Width="26"
-                                    MinWidth="26"
-                                    MinHeight="26"
-                                    Height="26"
-                                    Padding="0"
-                                    Margin="4,0,0,0"
-                                    Click="OnActiveViewMode2Click" />
+                            <ComboBox x:Name="ActiveSearchField2" Grid.Row="1" MinWidth="0"
+                                      HorizontalAlignment="Stretch" MinHeight="26" Height="26" Padding="6,3" />
+                            <Button x:Name="ActiveSourceButton2" Grid.Row="1" Grid.Column="1"
+                                    Theme="{StaticResource FlatButton}" MinWidth="48" MinHeight="26"
+                                    Height="26" Padding="6,2" Margin="4,0,0,0" Click="OnActiveSource2Click" />
+                            <Button x:Name="ActiveViewModeButton2" Grid.Row="1" Grid.Column="2"
+                                    Theme="{StaticResource FlatButton}" Width="26" MinWidth="26" MinHeight="26"
+                                    Height="26" Padding="0" Margin="4,0,0,0" Click="OnActiveViewMode2Click" />
+                            <Button x:Name="ResetFilters2" Grid.Row="1" Grid.Column="3" Tag="2"
+                                    Theme="{StaticResource FlatButton}" MinHeight="26" Height="26" Padding="6,2"
+                                    Margin="4,0,0,0" Click="OnResetPaneFiltersClick" />
                         </Grid>
+                        <Grid Grid.Row="2">
                         <ListBox x:Name="ActiveList2"
                                  Classes="modpane"
                                  ItemTemplate="{StaticResource ModTemplate}"
-                                 Grid.Row="2"
+
                                  ItemContainerTheme="{StaticResource ModListItem}"
                                  SelectionChanged="OnListSelectionChanged">
-                        </ListBox>                        <Border Grid.Row="3" BorderBrush="{DynamicResource SecondaryBrush}"
+                        </ListBox>
+                        <Border x:Name="PaneEmpty2" IsVisible="False" Margin="10,26" VerticalAlignment="Top">
+                            <StackPanel Spacing="10">
+                                <TextBlock x:Name="PaneEmptyTitle2" FontSize="17" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
+                                <TextBlock x:Name="PaneEmptyBody2" Foreground="{DynamicResource SecondaryTextBrush}"
+                                           TextWrapping="Wrap" />
+                                <Button x:Name="PaneEmptyReset2" Tag="2" HorizontalAlignment="Left"
+                                        Theme="{StaticResource FlatButton}" Padding="10,6" Click="OnResetPaneFiltersClick" />
+                            </StackPanel>
+                        </Border>
+                        </Grid>
+                        <Border Grid.Row="3" BorderBrush="{DynamicResource SecondaryBrush}"
                                 BorderThickness="0,1,0,0" Padding="0,6,0,0" MinHeight="64">
                             <StackPanel>
                             <WrapPanel>
@@ -619,15 +603,21 @@
                                     HorizontalAlignment="Left" HorizontalContentAlignment="Left"
                                     Margin="2,3,0,0" Click="OnMissing2Click" />
                             </StackPanel>
-                        </Border>                    </Grid>
+                        </Border>
+                    </Grid>
                 </Border>
             </Grid>
         </Grid>
 
         <Grid Grid.Row="3"
-              ColumnDefinitions="*,Auto"
+              ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto"
               Margin="0,8,0,0">
-            <StackPanel Orientation="Horizontal"
+            <Border Grid.ColumnSpan="2" Margin="0,0,0,8" Padding="10,7"
+                    BorderBrush="{DynamicResource SecondaryBrush}" BorderThickness="1">
+                <TextBlock x:Name="EditStatusText" Foreground="{DynamicResource SecondaryTextBrush}"
+                           TextTrimming="CharacterEllipsis" />
+            </Border>
+            <StackPanel Grid.Row="1" Orientation="Horizontal"
                         VerticalAlignment="Center"
                         Spacing="14">
                 <Button x:Name="GithubLinkButton"
@@ -649,7 +639,7 @@
                         Classes="footerlink"
                         Click="OnLogClick" />
             </StackPanel>
-            <StackPanel Grid.Column="1"
+            <StackPanel Grid.Row="1" Grid.Column="1"
                         Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"
