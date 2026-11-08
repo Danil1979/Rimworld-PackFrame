@@ -919,10 +919,12 @@ public static class InstanceStore
         return ParseProfileFile(file) is not null;
     }
 
-    public static ManagedInstance? ImportArchiveNew(string packRoot, string file)
-    {
-        return ImportZip(packRoot, file);
-    }
+    public static ManagedInstance? ImportArchiveNew(string packRoot, string file) =>
+        ImportArchiveNew(packRoot, file, new InstanceCreationOperations());
+
+    internal static ManagedInstance? ImportArchiveNew(
+        string packRoot, string file, InstanceCreationOperations operations
+    ) => ImportZip(packRoot, file, operations);
 
     public static bool ImportArchiveOverwrite(ManagedInstance target, string file)
     {
@@ -936,7 +938,12 @@ public static class InstanceStore
         return true;
     }
 
-    public static ManagedInstance? ImportFileNew(string packRoot, string file, string? gameVersion)
+    public static ManagedInstance? ImportFileNew(string packRoot, string file, string? gameVersion) =>
+        ImportFileNew(packRoot, file, gameVersion, new InstanceCreationOperations());
+
+    internal static ManagedInstance? ImportFileNew(
+        string packRoot, string file, string? gameVersion, InstanceCreationOperations operations
+    )
     {
         var profile = ParseProfileFile(file);
         return profile is null
@@ -945,7 +952,8 @@ public static class InstanceStore
                 packRoot,
                 profile,
                 Path.GetFileNameWithoutExtension(file),
-                gameVersion
+                gameVersion,
+                operations
             );
     }
 
@@ -1362,7 +1370,7 @@ public static class InstanceStore
         }
     }
 
-    private static ManagedInstance? ImportZip(string packRoot, string file)
+    private static ManagedInstance? ImportZip(string packRoot, string file, InstanceCreationOperations? operations = null)
     {
         var temporary = Path.Combine(
             Path.GetTempPath(),
@@ -1376,7 +1384,7 @@ public static class InstanceStore
             var root = FindInstanceRoot(temporary);
             return root is null
                 ? null
-                : ImportDirectory(packRoot, root, Path.GetFileNameWithoutExtension(file));
+                : ImportDirectory(packRoot, root, Path.GetFileNameWithoutExtension(file), operations);
         }
         finally
         {
@@ -1393,63 +1401,64 @@ public static class InstanceStore
         }
     }
 
-    private static ManagedInstance ImportDirectory(string packRoot, string source, string sourceName)
+    internal static ManagedInstance ImportDirectory(
+        string packRoot, string source, string sourceName, InstanceCreationOperations? operations = null
+    )
     {
         ValidateImportedInstance(source);
-        var folderName = $"profile{GetNextIndex(packRoot)}";
-        var directory = Path.Combine(packRoot, InstancesFolderName, folderName);
-        if (Directory.Exists(directory))
+        operations ??= new InstanceCreationOperations();
+        return CreateStagedInstance(packRoot, operations, (directory, folderName) =>
         {
-            throw new IOException($"Instance folder already exists: {directory}");
-        }
+            CopyCreationDirectory(source, directory, operations);
+            // Validate the copied snapshot, not a second read of a changing source.
+            ValidateImportedInstance(directory);
+            Directory.CreateDirectory(Path.Combine(directory, "Saves"));
 
-        CopyDirectory(source, directory, overwrite: true);
-        Directory.CreateDirectory(Path.Combine(directory, "Config"));
-        Directory.CreateDirectory(Path.Combine(directory, "Saves"));
-
-        var sourceMetadata = ReadMetadata(source);
-        var sourceFolderName = Path.GetFileName(
-            source.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-        );
-        var displayName = !string.IsNullOrWhiteSpace(sourceMetadata?.Name) &&
-                          !sourceMetadata.Name.Trim().Equals(
-                              sourceFolderName,
-                              StringComparison.OrdinalIgnoreCase
-                          )
-            ? sourceMetadata.Name.Trim()
-            : folderName;
-        WriteMetadata(directory, displayName, sourceName);
-        return LoadInstance(directory);
+            var sourceMetadata = ReadMetadata(directory);
+            var sourceFolderName = Path.GetFileName(
+                source.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            );
+            var displayName = !string.IsNullOrWhiteSpace(sourceMetadata?.Name) &&
+                              !sourceMetadata.Name.Trim().Equals(
+                                  sourceFolderName,
+                                  StringComparison.OrdinalIgnoreCase
+                              )
+                ? sourceMetadata.Name.Trim()
+                : folderName;
+            WriteMetadata(directory, displayName, sourceName, operations.WriteAtomic);
+        });
     }
 
     private static ManagedInstance CreateFromProfile(
         string packRoot,
         ImportedProfile profile,
         string sourceName,
-        string? gameVersion
+        string? gameVersion,
+        InstanceCreationOperations? operations = null
     )
     {
-        var folderName = $"profile{GetNextIndex(packRoot)}";
-        var directory = Path.Combine(packRoot, InstancesFolderName, folderName);
-        var configDirectory = Path.Combine(directory, "Config");
-        Directory.CreateDirectory(configDirectory);
-        Directory.CreateDirectory(Path.Combine(directory, "Saves"));
+        operations ??= new InstanceCreationOperations();
+        return CreateStagedInstance(packRoot, operations, (directory, folderName) =>
+        {
+            var configDirectory = Path.Combine(directory, "Config");
+            Directory.CreateDirectory(configDirectory);
+            Directory.CreateDirectory(Path.Combine(directory, "Saves"));
 
-        var knownExpansions = profile.KnownExpansions.Count > 0
-            ? profile.KnownExpansions
-            : DeriveKnownExpansions(profile.ActivePackageIds);
+            var knownExpansions = profile.KnownExpansions.Count > 0
+                ? profile.KnownExpansions
+                : DeriveKnownExpansions(profile.ActivePackageIds);
 
-        WriteModsConfig(
-            Path.Combine(configDirectory, "ModsConfig.xml"),
-            profile.ActivePackageIds,
-            !string.IsNullOrWhiteSpace(gameVersion)
-                ? gameVersion
-                : profile.GameVersion,
-            knownExpansions
-        );
-        WriteMetadata(directory, folderName, sourceName);
-
-        return LoadInstance(directory);
+            WriteModsConfig(
+                Path.Combine(configDirectory, "ModsConfig.xml"),
+                profile.ActivePackageIds,
+                !string.IsNullOrWhiteSpace(gameVersion)
+                    ? gameVersion
+                    : profile.GameVersion,
+                knownExpansions,
+                operations.WriteAtomic
+            );
+            WriteMetadata(directory, folderName, sourceName, operations.WriteAtomic);
+        });
     }
 
     private static ImportedProfile? ParseProfileFile(string path)

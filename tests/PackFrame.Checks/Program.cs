@@ -407,6 +407,7 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
     RenameWorkflowChecks.Run();
     InstanceCreationHistoryChecks.Run(root);
     InstanceCreationChecks.Run(root);
+    InstanceImportCreationChecks.Run(root);
     OfficialConfigWorkflowChecks.Run(root);
     WorkshopSelectionRefreshChecks.Run();
     PaneLayoutChecks.Run();
