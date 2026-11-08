@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 783 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 835 regression
 checks. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -25,7 +25,7 @@ relying on a font being installed on the computer.
 | Pending changes | Safe initial focus, wrapped message/actions inspected | Update-and-restart integration on each OS |
 | Color palette | Layout inspected; cancel/discard semantics and field names covered in code/tests | Native edit/cancel persistence matrix |
 | Collection target | Long names/identity readable; empty selection and disabled update reviewed | Live Steam-owned collection retrieval |
-| Update choices | Conflict semantics explicit; actions pinned outside scrolling area | Native mixed keep/replace update against isolated installation |
+| Update choices | Separate file/order views, searchable virtualized files, retained decisions, bulk scope, 1,000-file native review, keyboard confirmation/cancel, all four languages and compact Japanese layout | Actual mixed keep/replace installation; no-conflict native confirmation remains unverified |
 | Completion | Long action labels fit; Close/Escape | All installer completion variants |
 | Index summary | Validation and keyboard behavior reviewed | Four-language keyboard walkthrough |
 | Missing mods/history | Long identifiers, empty history, corrupt-file errors, repair/refresh recovery, retained rows after another failure, repeated safe confirmation cancellation | Native external-browser failure, platform permission recovery; larger-than-1,000 native list stress |
@@ -293,3 +293,33 @@ relying on a font being installed on the computer.
 - Clean Linux Release build: zero warnings/errors; 818 regression checks passed.
   Windows/macOS, crash recovery, live concurrent-file races and write failures
   after preflight remain unverified by this checkpoint.
+
+
+## Scalable update-review checkpoint
+
+- Local file decisions and mod/load-order changes have separate tabs. Added and
+  removed counts stay in the tab label; a pinned summary shows all file decisions
+  and the load-order choice before Apply. The default use-update behavior remains.
+- File choices use stable row objects and a virtualized list. Search is view-only:
+  hidden decisions remain in the confirmation. Keep all local and Use update for
+  all explicitly apply to all conflicts, including hidden results. Their help text
+  explains this scope. Reopening starts a fresh review rather than reusing a draft.
+- Ctrl+F/Command+F switches to file search, Down/Enter focuses a result, Space
+  toggles it, and Tab leaves the list instead of visiting every checkbox. Escape
+  clears a focused search first; with an empty search it cancels. Apply is not an
+  Enter default, and Enter on a no-result search does not confirm the update.
+- Native 1,000-file checks showed only visible row containers, filtered to the last
+  file, kept every file, then changed that one exception by keyboard. Confirmation
+  returned 999 retained paths. A separate 25-file flow retained a hidden file and
+  the current order across search clearing and tab changes, returning both choices.
+- Mouse checkbox changes, both bulk directions, no-result recovery, cancellation,
+  and no-conflict layout/cancellation were checked. The optional no-conflict Apply
+  click was not executed, so that exact native confirmation remains unverified;
+  its result semantics are covered by regression checks. No native review test
+  invoked the pack installer, wrote a real instance, or accessed a live service.
+- Matching before/after screenshots use the same 650×480 plan with 25 conflicts
+  and 13 mod changes. Native layouts cover English and both Chinese variants at
+  650×480, and Japanese at 480×420. Actions and summary remained visible.
+- Clean Linux Release build: zero warnings/errors; 835 regression checks passed,
+  including a 10,000-file state test. Actual installation after confirmation,
+  platform screen readers, Windows/macOS and live update failures remain separate.

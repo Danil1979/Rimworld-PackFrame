@@ -287,3 +287,10 @@ or unreadable metadata, save preflight across independent instances, stale objec
 rejection, strict repair/reload, retained missing IDs, official first-save behavior,
 and explicit remove/discard. Recovery notices and damaged-pane instructions cover
 all four languages. Native tests use only isolated synthetic instance files.
+
+Update-choice state checks exercise 10,000 file decisions, retained hidden choices,
+case-insensitive path identity, no-result/clear recovery, scoped global bulk actions,
+immutable confirmation snapshots, empty plans and localized accessible states.
+Native review tests use a host that only displays returned choices; they do not
+invoke installation. Check actual update application separately against an isolated
+installation, especially mixed keep/replace and load-order combinations.

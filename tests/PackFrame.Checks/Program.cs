@@ -400,6 +400,7 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
     ProblemFilterChecks.Run();
     DialogStateChecks.Run(root);
     UiActionWiringChecks.Run();
+    UpdateChoiceStateChecks.Run();
     MissingHistoryChecks.Run(root);
     DiagnosticLogChecks.Run();
     await IndexSubmissionChecks.Run();
