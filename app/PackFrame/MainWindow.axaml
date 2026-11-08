@@ -11,6 +11,14 @@
         Background="{DynamicResource AppBackgroundBrush}"
         RequestedThemeVariant="Dark">
     <Window.Resources>
+        <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="Transparent" />
+        <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#15FFFFFF" />
+        <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#20FFFFFF" />
+        <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="Transparent" />
+        <SolidColorBrush x:Key="ExpanderContentBackground" Color="Transparent" />
+        <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="Transparent" />
+        <Thickness x:Key="ExpanderHeaderPadding">0,8</Thickness>
+        <Thickness x:Key="ExpanderContentPadding">0,8</Thickness>
         <DataTemplate x:Key="InstanceNameTemplate">
             <TextBlock Text="{ReflectionBinding}" TextTrimming="CharacterEllipsis"
                        TextWrapping="NoWrap" MaxWidth="480" />
@@ -75,8 +83,20 @@
         <Style Selector="Button.summary-filter.filtered">
             <Setter Property="Background" Value="{DynamicResource SecondaryBrush}" />
         </Style>
-        <Style Selector="Button.primary-action">
-            <Setter Property="BorderBrush" Value="{DynamicResource SecondaryTextBrush}" />
+        <Style Selector="Button.quiet">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.save-action.primary-action">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Foreground" Value="#102523" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.save-action.primary-action:pointerover">
+            <Setter Property="Background" Value="#85D9C9" />
+        </Style>
+        <Style Selector="Button.secondary-action">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SecondaryBrush}" />
         </Style>
         <Style Selector="GridSplitter:pointerover, GridSplitter:focus-visible">
             <Setter Property="Background" Value="{DynamicResource ItemHoverBrush}" />
@@ -95,22 +115,62 @@
         </Style>
     </Window.Styles>
     <Grid Margin="12" RowDefinitions="Auto,Auto,*,Auto">
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto,Auto" VerticalAlignment="Top">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,12">
+            <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                <Border Width="5" Height="26" CornerRadius="2" Background="{DynamicResource AccentBrush}" />
+                <TextBlock Text="PackFrame" FontSize="23" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
+                <Button x:Name="GameFolderToggle" Theme="{StaticResource FlatButton}" Classes="quiet" MinHeight="34" Padding="10,6" Click="OnGameFolderToggleClick" />
+            </StackPanel>
+        <StackPanel Grid.Column="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="6">
+            <Button x:Name="ModDetailsToggle" Theme="{StaticResource FlatButton}" MinHeight="32" Padding="10,6" Click="OnModDetailsToggleClick" />
+            <Button x:Name="PaintModeButton"
+                    Theme="{StaticResource FlatButton}"
+                    MinHeight="32"
+                    Padding="10,6"
+                    Click="OnPaintModeClick" />
+            <Button x:Name="UndoButton"
+                    Theme="{StaticResource FlatButton}"
+                    MinHeight="32"
+                    Padding="10,6"
+                    Click="OnUndoClick" />
+            <Button x:Name="RedoButton"
+                    Theme="{StaticResource FlatButton}"
+                    MinHeight="32"
+                    Padding="10,6"
+                    Click="OnRedoClick" />
+            <Button x:Name="SyncConfigButton"
+                    Theme="{StaticResource FlatButton}"
+                    MinHeight="32"
+                    Padding="10,6"
+                    IsVisible="False"
+                    Click="OnSyncConfigClick" />
+            <Button x:Name="RefreshButton"
+                    Theme="{StaticResource FlatButton}"
+                    MinHeight="32"
+                    Padding="10,6"
+                    Click="OnRefreshClick" />
             <Button x:Name="LanguageButton"
-                    Grid.Column="0"
+
                     Theme="{StaticResource FlatButton}"
                     Content="文/A"
                     Padding="10,8"
                     MinWidth="50"
                     MinHeight="36"
-                    Margin="0,0,10,0" />
+                    Margin="8,0,0,0" />
+        </StackPanel>
+        </Grid>
+        <Border x:Name="GameFolderPanel" Grid.Row="1" IsVisible="False" Background="{DynamicResource PaneSurfaceBrush}" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Top">
             <TextBlock x:Name="GamePathLabel"
-                       Grid.Column="1"
+                       Grid.Column="0"
                        VerticalAlignment="Center"
                        Margin="0,0,12,0"
                        Foreground="{DynamicResource PrimaryTextBrush}" />
             <Border x:Name="PathField"
-                    Grid.Column="2"
+                    Grid.Column="1"
                     Classes="field"
                     CornerRadius="0"
                     MinHeight="36">
@@ -122,138 +182,65 @@
                          VerticalAlignment="Stretch" />
             </Border>
             <Button x:Name="AutoDetectGameButton"
-                    Grid.Column="3"
+                    Grid.Column="2"
                     Theme="{StaticResource FlatButton}"
                     Margin="12,0,0,0"
                     MinHeight="36"
                     Click="OnAutoDetectGameClick" />
             <Button x:Name="BrowseButton"
-                    Grid.Column="4"
+                    Grid.Column="3"
                     Theme="{StaticResource FlatButton}"
                     Margin="8,0,0,0"
                     MinHeight="36" />
         </Grid>
 
-        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,8,0,0">
-        <StackPanel Grid.Column="1"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Right"
-                    Spacing="8">
-            <Button x:Name="PaintModeButton"
-                    Theme="{StaticResource FlatButton}"
-                    MinHeight="32"
-                    Padding="18,6"
-                    Click="OnPaintModeClick" />
-            <Button x:Name="UndoButton"
-                    Theme="{StaticResource FlatButton}"
-                    MinHeight="32"
-                    Padding="18,6"
-                    Click="OnUndoClick" />
-            <Button x:Name="RedoButton"
-                    Theme="{StaticResource FlatButton}"
-                    MinHeight="32"
-                    Padding="18,6"
-                    Click="OnRedoClick" />
-            <Button x:Name="SyncConfigButton"
-                    Theme="{StaticResource FlatButton}"
-                    MinHeight="32"
-                    Padding="18,6"
-                    IsVisible="False"
-                    Click="OnSyncConfigClick" />
-            <Button x:Name="RefreshButton"
-                    Theme="{StaticResource FlatButton}"
-                    MinHeight="32"
-                    Padding="18,6"
-                    Click="OnRefreshClick" />
-        </StackPanel>
-        </Grid>
+        </Border>
 
-        <Grid x:Name="WorkspaceGrid" Grid.Row="2" Margin="0,8,0,0">
+        <Grid x:Name="WorkspaceGrid" Grid.Row="2" Margin="0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MinWidth="220" MaxWidth="380" />
+                <ColumnDefinition Width="300" MinWidth="240" MaxWidth="420" />
                 <ColumnDefinition Width="12" />
-                <ColumnDefinition Width="3*" MinWidth="630" />
+                <ColumnDefinition Width="*" MinWidth="630" />
             </Grid.ColumnDefinitions>
-            <Border Grid.Column="0"
-                    Background="Transparent"
+            <Border x:Name="DetailsPanel" Grid.Column="0"
+                    CornerRadius="6" Background="{DynamicResource PaneSurfaceBrush}"
                     BorderBrush="{StaticResource SecondaryBrush}"
                     BorderThickness="1"
                     Padding="12">
-                <Grid>
-                    <ScrollViewer x:Name="DetailsEmptyState" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Spacing="18" Margin="4,12">
-                        <TextBlock x:Name="DetailsEmptyTitle" FontSize="22" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
-                        <TextBlock x:Name="DetailsEmptyBody" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
-                        <Border Height="1" Background="{DynamicResource SecondaryBrush}" />
-                        <TextBlock x:Name="DetailsWorkflow" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" LineHeight="24" />
-                        <TextBlock x:Name="DetailsSelectionHint" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
-                    </StackPanel>
+                <Grid RowDefinitions="Auto,*">
+                    <TextBlock x:Name="DetailsHeading" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" Margin="4,2,4,16" />
+                    <ScrollViewer Grid.Row="1" x:Name="DetailsEmptyState" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Spacing="12" Margin="4,8">
+                            <TextBlock x:Name="DetailsEmptyTitle" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
+                            <TextBlock x:Name="DetailsEmptyBody" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" LineHeight="22" />
+                            <TextBlock x:Name="DetailsWorkflow" IsVisible="False" />
+                            <TextBlock x:Name="DetailsSelectionHint" IsVisible="False" />
+                        </StackPanel>
                     </ScrollViewer>
-                    <Grid x:Name="DetailsContent" IsVisible="False" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*">
-                    <Image x:Name="PreviewImage"
-                           Grid.Row="0"
-                           MaxHeight="210"
-                           IsVisible="False"
-                           Stretch="Uniform"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center" />
-
-                    <Grid Grid.Row="1" ColumnDefinitions="Auto,*" Margin="0,8,0,0">
-                        <SelectableTextBlock x:Name="NameLabel"
-                                   Foreground="{DynamicResource SecondaryTextBrush}"
-                                   VerticalAlignment="Top"
-                                   Margin="0,0,10,0" />
-                        <SelectableTextBlock x:Name="NameValue"
-                                   Grid.Column="1"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource PrimaryTextBrush}"
-                                   TextWrapping="Wrap" />
-                    </Grid>
-
-                    <Grid Grid.Row="2" ColumnDefinitions="Auto,*" Margin="0,6,0,0">
-                        <SelectableTextBlock x:Name="AuthorLabel"
-                                   Foreground="{DynamicResource SecondaryTextBrush}"
-                                   VerticalAlignment="Top"
-                                   Margin="0,0,10,0" />
-                        <SelectableTextBlock x:Name="AuthorValue"
-                                             Grid.Column="1"
-                                             Foreground="{DynamicResource PrimaryTextBrush}"
-                                             TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
-                    </Grid>
-
-                    <Grid Grid.Row="3" ColumnDefinitions="Auto,*" Margin="0,6,0,0">
-                        <SelectableTextBlock x:Name="PathLabel"
-                                   Foreground="{DynamicResource SecondaryTextBrush}"
-                                   VerticalAlignment="Top"
-                                   Margin="0,0,10,0" />
-                        <SelectableTextBlock x:Name="PathValue"
-                                             Grid.Column="1"
-                                             Foreground="{DynamicResource PrimaryTextBrush}"
-                                             TextWrapping="Wrap" />
-                    </Grid>
-
-                    <Grid Grid.Row="4" ColumnDefinitions="Auto,*" Margin="0,6,0,0">
-                        <SelectableTextBlock x:Name="PackageLabel"
-                                   Foreground="{DynamicResource SecondaryTextBrush}"
-                                   VerticalAlignment="Top"
-                                   Margin="0,0,10,0" />
-                        <SelectableTextBlock x:Name="PackageValue"
-                                             Grid.Column="1"
-                                             Foreground="{DynamicResource PrimaryTextBrush}"
-                                             TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
-                    </Grid>
-
-                    <SelectableTextBlock x:Name="DescriptionLabel"
-                               Grid.Row="5"
-                               Foreground="{DynamicResource SecondaryTextBrush}"
-                               Margin="0,10,0,2" />
-
-                    <ScrollViewer Grid.Row="6" VerticalScrollBarVisibility="Auto">
-                        <SelectableTextBlock x:Name="DescriptionValue"
-                                             Foreground="{DynamicResource PrimaryTextBrush}"
-                                             TextWrapping="Wrap" />
-                    </ScrollViewer>
+                    <Grid Grid.Row="1" x:Name="DetailsContent" IsVisible="False">
+                      <ScrollViewer x:Name="DetailsScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                       <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                        <Image x:Name="PreviewImage" MaxHeight="170" IsVisible="False" Stretch="Uniform" HorizontalAlignment="Center" />
+                        <StackPanel Grid.Row="1" Margin="0,14,0,0">
+                            <SelectableTextBlock x:Name="NameLabel" IsVisible="False" />
+                            <SelectableTextBlock x:Name="NameValue" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel Grid.Row="2" Margin="0,8,0,12">
+                            <SelectableTextBlock x:Name="AuthorLabel" IsVisible="False" />
+                            <SelectableTextBlock x:Name="AuthorValue" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Expander x:Name="TechnicalDetails" Foreground="{DynamicResource PrimaryTextBrush}" Grid.Row="3" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,12">
+                            <StackPanel Spacing="6">
+                                <SelectableTextBlock x:Name="PackageLabel" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" />
+                                <SelectableTextBlock x:Name="PackageValue" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                                <SelectableTextBlock x:Name="PathLabel" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" Margin="0,6,0,0" />
+                                <SelectableTextBlock x:Name="PathValue" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Expander>
+                        <SelectableTextBlock x:Name="DescriptionLabel" Grid.Row="4" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" Margin="0,0,0,8" />
+                        <SelectableTextBlock Grid.Row="5" x:Name="DescriptionValue" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" LineHeight="22" />
+                       </Grid>
+                      </ScrollViewer>
                     </Grid>
                 </Grid>
             </Border>
@@ -271,29 +258,18 @@
 
             <Grid x:Name="ManagerColumns" Grid.Column="2" ColumnDefinitions="*,8,*,8,*">
                 <Border Grid.Column="0"
-                        Background="Transparent"
-                        BorderBrush="{StaticResource SecondaryBrush}"
+                        Background="{DynamicResource PaneSurfaceBrush}"
+                        CornerRadius="6" BorderBrush="{StaticResource SecondaryBrush}"
                         BorderThickness="1"
                         Padding="8">
                     <Grid RowDefinitions="Auto,Auto,*,Auto">
-                        <Grid RowDefinitions="88" Margin="2,0,2,4">
-                            <Grid>
-                            <Button x:Name="InactiveSortButton"
-                                Grid.Row="0"
-                                Theme="{StaticResource FlatButton}"
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Center"
-                                MinHeight="26"
-                                Height="26"
-                                Padding="6,2"
-                                Margin="2,0,0,0"
-                                Click="OnInactiveSortClick" />
-                        <TextBlock x:Name="InactiveHeader"
-                                   Foreground="{DynamicResource PrimaryTextBrush}"
-                                   HorizontalAlignment="Right"
-                                   VerticalAlignment="Center"
-                                   Margin="2,0,2,0" />
+                        <Grid RowDefinitions="26,36,32,24" Margin="2,0,2,4">
+                            <TextBlock x:Name="AvailableHeading" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                            <TextBlock x:Name="AvailableSubtitle" Grid.Row="1" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" />
+                            <Grid Grid.Row="2" ColumnDefinitions="Auto,*">
+                                <Button x:Name="InactiveSortButton" Theme="{StaticResource FlatButton}" Classes="quiet" MinHeight="28" Padding="6,2" Click="OnInactiveSortClick" />
                             </Grid>
+                            <TextBlock x:Name="InactiveHeader" Grid.Row="3" Margin="2,0" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
                         </Grid>
                         <Grid Grid.Row="1" RowDefinitions="32,30" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,2,0,4">
                             <Border Grid.ColumnSpan="4" Classes="field" Height="30" CornerRadius="0">
@@ -320,8 +296,8 @@
                                     Theme="{StaticResource FlatButton}" Width="26" MinWidth="26" MinHeight="26"
                                     Height="26" Padding="0" Margin="4,0,0,0" Click="OnInactiveViewModeClick" />
                         </Grid>
-                        <Grid Grid.Row="2" RowDefinitions="56,*">
-                            <TextBlock x:Name="InactiveActionHint" Height="56" Margin="2,0" TextWrapping="Wrap"
+                        <Grid Grid.Row="2" RowDefinitions="38,*">
+                            <TextBlock x:Name="InactiveActionHint" Height="38" FontSize="12" Margin="2,0" TextWrapping="Wrap"
                                        Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
                         <ListBox Grid.Row="1" x:Name="InactiveList"
                                  Classes="modpane"
@@ -340,7 +316,7 @@
                         </Border>
                         </Grid>
                         <Border Grid.Row="3" BorderBrush="{DynamicResource SecondaryBrush}"
-                                BorderThickness="0,1,0,0" Padding="0,6,0,0" MinHeight="64">
+                                BorderThickness="0,1,0,0" Padding="0,6,0,0" MinHeight="38">
                             <StackPanel>
                             <WrapPanel>
                                 <Button Classes="summary-filter" Theme="{StaticResource FlatButton}" Click="OnSummaryFilterClick">
@@ -360,8 +336,8 @@
 
                 <Border x:Name="ActiveColumn1"
                         Grid.Column="2"
-                        Background="Transparent"
-                        BorderBrush="{StaticResource SecondaryBrush}"
+                        Background="{DynamicResource PaneSurfaceBrush}"
+                        CornerRadius="6" BorderBrush="{StaticResource SecondaryBrush}"
                         BorderThickness="1"
                         Padding="8">
                     <Grid RowDefinitions="Auto,Auto,*,Auto">
@@ -371,8 +347,9 @@
                             <Border Classes="header-tint"
                                     Background="{DynamicResource PrimaryTextBrush}"
                                     IsHitTestVisible="False" />
-                            <Grid RowDefinitions="34,30,24" Margin="2,0,2,0">
-                            <Grid ColumnDefinitions="*,Auto,Auto">
+                            <Grid RowDefinitions="26,36,32,24" Margin="2,0,2,0">
+                            <TextBlock x:Name="LoadOrderHeading1" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                            <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto">
                                 <ComboBox x:Name="InstanceCombo1"
                                           Classes="instance-selector"
                                           MinWidth="0"
@@ -409,7 +386,7 @@
                                     </StackPanel>
                                 </Button>
                             </Grid>
-                            <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*">
+                            <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*">
                                 <Button x:Name="InstanceActionButton1"
                                         Theme="{StaticResource FlatButton}"
                                         Content="…"
@@ -428,16 +405,17 @@
                                         VerticalAlignment="Center"
                                         Click="OnModpack1Click" />
                             </Grid>
-                            <Border x:Name="PendingBadge1" Grid.Row="2" HorizontalAlignment="Left"
-                                    Background="#553EA6B5" CornerRadius="3" Padding="5,1" IsVisible="False">
-                                <TextBlock x:Name="PendingLabel1" FontWeight="SemiBold" FontSize="12"
-                                           Foreground="{DynamicResource PrimaryTextBrush}" />
-                            </Border>
-                            <TextBlock x:Name="ActiveHeader1"
-                                       Grid.Row="2" Margin="2,0"
-                                       Foreground="{DynamicResource SecondaryTextBrush}"
-                                       HorizontalAlignment="Right"
-                                       VerticalAlignment="Center" />
+                            <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Margin="2,0">
+                                <TextBlock x:Name="ActiveHeader1" Grid.Column="0"
+                                           Foreground="{DynamicResource SecondaryTextBrush}"
+                                           VerticalAlignment="Center" FontSize="12" />
+                                <Border x:Name="PendingBadge1" Grid.Column="1" Margin="8,0,0,0"
+                                        Background="{DynamicResource PendingSurfaceBrush}" CornerRadius="3" Padding="5,1" IsVisible="False"
+                                        VerticalAlignment="Center">
+                                    <TextBlock x:Name="PendingLabel1" FontWeight="SemiBold" FontSize="12"
+                                               Foreground="{DynamicResource PrimaryTextBrush}" />
+                                </Border>
+                            </Grid>
                             </Grid>
                           </Grid>
                         </Border>
@@ -466,9 +444,9 @@
                                     Theme="{StaticResource FlatButton}" Width="26" MinWidth="26" MinHeight="26"
                                     Height="26" Padding="0" Margin="4,0,0,0" Click="OnActiveViewMode1Click" />
                         </Grid>
-                        <Grid Grid.Row="2" RowDefinitions="56,*">
-                            <Grid Height="56" RowDefinitions="24,32">
-                                <TextBlock x:Name="PaneActionTarget1" Margin="2,0" TextTrimming="CharacterEllipsis"
+                        <Grid Grid.Row="2" RowDefinitions="38,*">
+                            <Grid Height="38" RowDefinitions="0,38">
+                                <TextBlock x:Name="PaneActionTarget1" IsVisible="False" Margin="2,0" TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
                                 <Grid Grid.Row="1" ColumnDefinitions="*,*">
                                     <Button x:Name="EnableSelection1" Tag="0:1" Margin="0,0,3,4"
@@ -496,7 +474,7 @@
                         </Border>
                         </Grid>
                         <Border Grid.Row="3" BorderBrush="{DynamicResource SecondaryBrush}"
-                                BorderThickness="0,1,0,0" Padding="0,6,0,0" MinHeight="64">
+                                BorderThickness="0,1,0,0" Padding="0,6,0,0" MinHeight="38">
                             <StackPanel>
                             <WrapPanel>
                                 <Button Classes="summary-filter" Theme="{StaticResource FlatButton}" Click="OnSummaryFilterClick">
@@ -522,8 +500,8 @@
 
                 <Border x:Name="ActiveColumn2"
                         Grid.Column="4"
-                        Background="Transparent"
-                        BorderBrush="{StaticResource SecondaryBrush}"
+                        Background="{DynamicResource PaneSurfaceBrush}"
+                        CornerRadius="6" BorderBrush="{StaticResource SecondaryBrush}"
                         BorderThickness="1"
                         Padding="8">
                     <Grid RowDefinitions="Auto,Auto,*,Auto">
@@ -533,8 +511,9 @@
                             <Border Classes="header-tint"
                                     Background="{DynamicResource PrimaryTextBrush}"
                                     IsHitTestVisible="False" />
-                            <Grid RowDefinitions="34,30,24" Margin="2,0,2,0">
-                            <Grid ColumnDefinitions="*,Auto,Auto">
+                            <Grid RowDefinitions="26,36,32,24" Margin="2,0,2,0">
+                            <TextBlock x:Name="LoadOrderHeading2" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                            <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto">
                                 <ComboBox x:Name="InstanceCombo2"
                                           Classes="instance-selector"
                                           MinWidth="0"
@@ -566,7 +545,7 @@
                                           Data="M 1,1 L 11,11 M 11,1 L 1,11" />
                                 </Button>
                             </Grid>
-                            <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*">
+                            <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*">
                                 <Button x:Name="InstanceActionButton2"
                                         Theme="{StaticResource FlatButton}"
                                         Content="…"
@@ -585,16 +564,17 @@
                                         VerticalAlignment="Center"
                                         Click="OnModpack2Click" />
                             </Grid>
-                            <Border x:Name="PendingBadge2" Grid.Row="2" HorizontalAlignment="Left"
-                                    Background="#553EA6B5" CornerRadius="3" Padding="5,1" IsVisible="False">
-                                <TextBlock x:Name="PendingLabel2" FontWeight="SemiBold" FontSize="12"
-                                           Foreground="{DynamicResource PrimaryTextBrush}" />
-                            </Border>
-                            <TextBlock x:Name="ActiveHeader2"
-                                       Grid.Row="2" Margin="2,0"
-                                       Foreground="{DynamicResource SecondaryTextBrush}"
-                                       HorizontalAlignment="Right"
-                                       VerticalAlignment="Center" />
+                            <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Margin="2,0">
+                                <TextBlock x:Name="ActiveHeader2" Grid.Column="0"
+                                           Foreground="{DynamicResource SecondaryTextBrush}"
+                                           VerticalAlignment="Center" FontSize="12" />
+                                <Border x:Name="PendingBadge2" Grid.Column="1" Margin="8,0,0,0"
+                                        Background="{DynamicResource PendingSurfaceBrush}" CornerRadius="3" Padding="5,1" IsVisible="False"
+                                        VerticalAlignment="Center">
+                                    <TextBlock x:Name="PendingLabel2" FontWeight="SemiBold" FontSize="12"
+                                               Foreground="{DynamicResource PrimaryTextBrush}" />
+                                </Border>
+                            </Grid>
                             </Grid>
                           </Grid>
                         </Border>
@@ -623,9 +603,9 @@
                                     Theme="{StaticResource FlatButton}" Width="26" MinWidth="26" MinHeight="26"
                                     Height="26" Padding="0" Margin="4,0,0,0" Click="OnActiveViewMode2Click" />
                         </Grid>
-                        <Grid Grid.Row="2" RowDefinitions="56,*">
-                            <Grid Height="56" RowDefinitions="24,32">
-                                <TextBlock x:Name="PaneActionTarget2" Margin="2,0" TextTrimming="CharacterEllipsis"
+                        <Grid Grid.Row="2" RowDefinitions="38,*">
+                            <Grid Height="38" RowDefinitions="0,38">
+                                <TextBlock x:Name="PaneActionTarget2" IsVisible="False" Margin="2,0" TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
                                 <Grid Grid.Row="1" ColumnDefinitions="*,*">
                                     <Button x:Name="EnableSelection2" Tag="0:2" Margin="0,0,3,4"
@@ -653,7 +633,7 @@
                         </Border>
                         </Grid>
                         <Border Grid.Row="3" BorderBrush="{DynamicResource SecondaryBrush}"
-                                BorderThickness="0,1,0,0" Padding="0,6,0,0" MinHeight="64">
+                                BorderThickness="0,1,0,0" Padding="0,6,0,0" MinHeight="38">
                             <StackPanel>
                             <WrapPanel>
                                 <Button Classes="summary-filter" Theme="{StaticResource FlatButton}" Click="OnSummaryFilterClick">
@@ -682,7 +662,7 @@
         <Grid Grid.Row="3"
               ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto"
               Margin="0,8,0,0">
-            <Border x:Name="EditStatusBanner" Grid.ColumnSpan="2" Margin="0,0,0,8" Padding="10,5" Background="#553EA6B5"
+            <Border x:Name="EditStatusBanner" Grid.ColumnSpan="2" Margin="0,0,0,8" Padding="10,5" Background="{DynamicResource PendingSurfaceBrush}"
                     BorderBrush="{DynamicResource SecondaryBrush}" BorderThickness="1">
                 <Grid ColumnDefinitions="*,Auto">
                     <StackPanel VerticalAlignment="Center" Spacing="3">
@@ -698,7 +678,7 @@
             </Border>
             <StackPanel Grid.Row="1" Orientation="Horizontal"
                         VerticalAlignment="Center"
-                        Spacing="14">
+                        Spacing="10">
                 <Button x:Name="GithubLinkButton"
                         Classes="footerlink"
                         Click="OnGithubLinkClick" />
@@ -723,13 +703,13 @@
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"
                         Spacing="8">
-                <Button x:Name="SaveButton"
+                <Button x:Name="SaveButton" Classes="save-action"
                         Theme="{StaticResource FlatButton}"
                         MinHeight="36"
                         Padding="24,8"
                         Click="OnSaveClick" />
                 <Button x:Name="LaunchButton"
-                        Classes="primary-action"
+                        Classes="secondary-action"
                         Theme="{StaticResource FlatButton}"
                         MinHeight="36"
                         MaxWidth="300"

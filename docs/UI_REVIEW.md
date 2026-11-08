@@ -630,3 +630,81 @@ relying on a font being installed on the computer.
   Real user files, game launch, network publishing and installers were not used.
   Windows/macOS execution, recursive-copy link policy, and the separate import,
   seed, CreateFromProfile and installer publication paths remain outside this pass.
+
+## Workspace redesign: task hierarchy and contextual details
+
+### Why these changes
+
+- The original workspace gave permanent space to a long game path and a full
+  tutorial, before the actual mod-management task. Progressive disclosure now
+  places configuration behind Game folder and technical metadata behind Package
+  & location. Invalid/missing setup opens automatically, so recovery stays visible.
+- The familiar reading order remains Mod details → Available mods → Load order.
+  The initial right-inspector proposal was rejected before publication. Keeping
+  the description on the left follows the user's RimPy familiarity and preserves
+  learned navigation while improving hierarchy within each area.
+  Comparison keeps both named instances visible, with independent selections,
+  searches and scrolling. The left inspector stays visible when comparison opens.
+  Only the explicit Mod details control collapses it, without changing a save target.
+- Aligned pane headings, search rows and list-local Enable/Disable controls apply
+  proximity and consistent alignment. Counts and Unsaved have their own row, so
+  large lists cannot collide with instance actions. Available mods accurately names
+  mods not enabled in the selected target; it does not imply an all-mod library.
+- A neutral charcoal surface and quieter utilities establish visual hierarchy.
+  Teal emphasizes Save changes only while changes are pending; amber status names
+  the scope, including that Save applies to all edited instances. Launch remains
+  secondary. Zero issue counts disappear unless their filter is active, reducing
+  noise without stranding an active filter. Existing search X/Esc behavior remains.
+- The left inspector presents name, author and description first. Its entire
+  selected content scrolls, rather than trapping a long title/path above a tiny
+  description viewport. The width remains resizable; collapsing the inspector or
+  setup panel preserves a visible keyboard focus target. The responsive splitter
+  reserves room for list controls, retains a requested width through window resizing,
+  and never automatically hides the inspector. Stored custom backgrounds remain
+  intact; new surfaces and inspector text/chevrons adapt to those colors.
+
+### Verification and limits
+
+- Matched native Linux screenshots use the same 1180×812 window and synthetic data
+  for clean, one-change and two-instance comparison states. They show the prior
+  published UI and the redesign, not fabricated mockups.
+- Native checks covered search/Enter/Esc without accidental enablement, dirty/Undo
+  recovery, missing/cleared game path and successful recovery/focus, comparison,
+  long selected details with setup and pending bars at 1100×700, and scrolling to
+  the end of the inspector. A 1,236-mod fixture verified selecting/removing 1,001
+  entries and undoing that operation, with two named lists retained.
+- English, Japanese, Simplified Chinese and Traditional Chinese were rendered at
+  minimum width, including 1,001/900 counts and pending status. A configured light
+  background verified new inspector text and chevrons. That check also exposed
+  older low-contrast search placeholder, dropdown and idle Brush colors on custom
+  light backgrounds. A follow-up adapts those template resources only for light
+  backgrounds and restores original Fluent defaults when returning to dark. Native
+  checks verified idle/active Brush and dropdown glyphs plus dark restoration. The
+  Fluent placeholder opacity (0.5) required an additional light-only override;
+  effective-opacity regression tests verify contrast on the actual field surface,
+  and the final native render confirmed readable placeholders.
+- Final Linux Release build has zero warnings/errors. The full regression suite
+  reports 1,945 PASS lines, including translated heading and adaptive theme checks. Native
+  visual checks do not replace Windows/macOS or screen-reader acceptance. No real
+  user configuration, game launch, Workshop/install/update execution or publishing
+  flow was exercised.
+
+Design references: NN/g, [Closeness of Actions and Objects]
+(https://www.nngroup.com/articles/closeness-of-actions-and-objects-gui/) and
+[Visibility of System Status](https://www.nngroup.com/articles/visibility-system-status/);
+[RimSort basic workflow](https://rimsort.github.io/RimSort/user-guide/basic-usage);
+[Mod Organizer](https://stepmodifications.org/wiki/Guide:Mod_Organizer).
+
+## New-import publication follow-through
+
+- New folder, archive and file imports, and CreateFromProfile, now share the
+  validated hidden staging and exclusive publication path used by New/Copy. A late
+  failure cannot leave a discoverable partial profile or overwrite a competing
+  destination. Pending profile identities remain reserved. Returned models are
+  prepared before publication, avoiding a post-commit read failure.
+- The added 229 assertions cover successful imports, malformed/late-changing XML
+  and metadata, partial copy/write failure, destination collisions, pending paths,
+  source preservation, cleanup and repair/retry. These are deterministic storage
+  tests; native import-overwrite/official ZIP failure-retry acceptance remains open.
+- Overwrite, seed and modpack-installer publication behavior was not changed in
+  this pass. The known installer allocation/history concerns need isolated review.

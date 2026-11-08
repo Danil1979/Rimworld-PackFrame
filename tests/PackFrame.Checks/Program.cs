@@ -454,6 +454,7 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
     Check(collectionDelta.Add.SequenceEqual(new ulong[] { 30 }) && collectionDelta.Remove.SequenceEqual(new ulong[] { 10 }),
         "collection update computes additions and removals without duplicates");
     UpdateChecks.Run(root);
+    ThemeContrastChecks.Run();
     Console.WriteLine("Rule and publishing checks passed.");
 }
 finally

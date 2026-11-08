@@ -439,6 +439,7 @@ public partial class MainWindow : Window
         _packRoot = AppPaths.FindPackRoot();
         InitializePaneSelection();
         InitializePaneNavigation();
+        InitializeWorkspace();
         InitializeWorkshopMonitoring();
         ApplyLocalization();
         UpdateEnableTargetBorders();
@@ -1894,9 +1895,9 @@ public partial class MainWindow : Window
     private void UpdateHeaders()
     {
         var language = _config.Language;
-        _inactiveHeader.Text = $"{Localization.Inactive(language)} [{PaneCount(0, _inactiveCount)}]";
-        _activeHeader1.Text = $"{Localization.Active(language)} [{PaneCount(1, _active1Count)}]";
-        _activeHeader2.Text = $"{Localization.Active(language)} [{PaneCount(2, _active2Count)}]";
+        _inactiveHeader.Text = PaneCountCaption(0, _inactiveCount);
+        _activeHeader1.Text = PaneCountCaption(1, _active1Count);
+        _activeHeader2.Text = PaneCountCaption(2, _active2Count);
         UpdatePaneHeaders();
         UpdateProblemFilterVisuals();
         UpdatePaneWorkflow();
@@ -2065,7 +2066,8 @@ public partial class MainWindow : Window
     {
         if (string.IsNullOrWhiteSpace(_pathBox.Text))
         {
-            SetFieldValid(true);
+            _gameInstallation = null;
+            SetFieldValid(false);
             _lastLoadedGamePath = null;
             _loadVersion++;
             ResetCatalog();
@@ -6643,6 +6645,7 @@ public partial class MainWindow : Window
         else
         {
             _pathField.Classes.Add("invalid");
+            Find<Border>("GameFolderPanel").IsVisible = true;
         }
 
         _pathBox.Foreground = valid ? TextBrush : Brushes.White;

@@ -22,7 +22,7 @@ internal sealed record PaneEmptyGuidance(string Title, string Body)
         if (!hasCatalog) return new(T("No installed mods found", "未找到已安装模组", "找不到已安裝模組", "インストール済み MOD が見つかりません"),
             T("Check the game folder above. After installing or restoring mod files, choose Refresh.", "请检查上方的游戏文件夹。安装或恢复模组文件后，点击“刷新”。", "請檢查上方的遊戲資料夾。安裝或還原模組檔案後，點選「重新整理」。", "上部のゲームフォルダーを確認し、MOD ファイルのインストールや復元後に「更新」を選んでください。"));
         return new(T("No mods here yet", "此处暂无模组", "此處尚無模組", "まだ MOD がありません"), activePane
-            ? T("Select mods in Inactive, then choose Enable above this list.", "在未启用列表中选择模组，然后点击此列表上方的“启用”按钮。", "在未啟用清單中選擇模組，然後點選此清單上方的「啟用」按鈕。", "無効リストで MOD を選び、このリストの上の「有効化」で追加します。")
+            ? T("Select mods in Available mods, then choose Enable above this list.", "在“可用模组”中选择模组，然后点击此列表上方的“启用”按钮。", "在「可用模組」中選擇模組，然後點選此清單上方的「啟用」按鈕。", "「利用可能な MOD」で MOD を選び、このリストの上の「有効化」で追加します。")
             : T("Every available mod is already active in the selected instance.", "所选实例已启用所有可用模组。", "所選實例已啟用所有可用模組。", "選択中のインスタンスでは、利用できる MOD がすべて有効です。"));
     }
 }

@@ -8,11 +8,12 @@ public partial class MainWindow
 {
     private void UpdateWorkspaceGuidance()
     {
+        UpdateWorkspaceChrome();
         var language = _config.Language;
         var needsGame = _gameInstallation is null;
         Find<TextBlock>("DetailsEmptyTitle").Text = needsGame
             ? OperationText.Choose(language, "Set up your library", "设置模组库", "設定模組庫", "MOD ライブラリの設定")
-            : OperationText.Choose(language, "Build your mod list", "编辑模组列表", "編輯模組清單", "MOD リストの編集");
+            : OperationText.Choose(language, "Select a mod", "选择模组", "選擇模組", "MOD を選択");
         Find<TextBlock>("DetailsEmptyBody").Text = needsGame
             ? OperationText.Choose(language,
                 "Choose your RimWorld folder above. Use Auto Detect, or Browse to select it yourself.",
@@ -25,20 +26,20 @@ public partial class MainWindow
                 "選擇模組，在此檢視作者、位置和簡介。",
                 "MOD を選択すると、作者、保存場所、説明がここに表示されます。");
         Find<TextBlock>("DetailsWorkflow").Text = OperationText.Choose(language,
-            "1  Choose an instance above the active list.\n\n2  Select mods in Inactive, then use Enable above the destination list. Disable acts on its own list. Drag to reorder.\n\n3  Use Save changes at the bottom right (Ctrl+S / ⌘S), then launch.",
-            "1  在启用列表上方选择实例。\n\n2  在未启用列表中选择模组，点击目标列表上方的“启用”。“禁用”只作用于所在列表。拖动调整顺序。\n\n3  点击右下角“保存修改”（Ctrl+S / ⌘S），然后启动游戏。",
-            "1  在啟用清單上方選擇實例。\n\n2  在未啟用清單中選擇模組，點選目標清單上方的「啟用」。「停用」只作用於所在清單。拖曳調整順序。\n\n3  點選右下角「儲存修改」（Ctrl+S / ⌘S），然後啟動遊戲。",
-            "1  有効なリストの上でインスタンスを選択。\n\n2  無効リストで選択し、移動先の上の「有効化」を使用。「無効化」はそのリストに適用。ドラッグで順序を変更。\n\n3  右下の「変更を保存」（Ctrl+S / ⌘S）で保存後、ゲームを起動。");
+            "1  Choose an instance above the active list.\n\n2  Select mods in Available mods, then use Enable above the destination list. Disable acts on its own list. Drag to reorder.\n\n3  Use Save changes at the bottom right (Ctrl+S / ⌘S), then launch.",
+            "1  在启用列表上方选择实例。\n\n2  在“可用模组”中选择模组，点击目标列表上方的“启用”。“禁用”只作用于所在列表。拖动调整顺序。\n\n3  点击右下角“保存修改”（Ctrl+S / ⌘S），然后启动游戏。",
+            "1  在啟用清單上方選擇實例。\n\n2  在「可用模組」中選擇模組，點選目標清單上方的「啟用」。「停用」只作用於所在清單。拖曳調整順序。\n\n3  點選右下角「儲存修改」（Ctrl+S / ⌘S），然後啟動遊戲。",
+            "1  有効なリストの上でインスタンスを選択。\n\n2  「利用可能な MOD」で選択し、移動先の上の「有効化」を使用。「無効化」はそのリストに適用。ドラッグで順序を変更。\n\n3  右下の「変更を保存」（Ctrl+S / ⌘S）で保存後、ゲームを起動。");
         Find<TextBlock>("DetailsSelectionHint").Text = OperationText.Choose(language,
-            "Open on right adds another view for comparing or copying between instances.",
-            "“在右侧打开”可添加另一视图，用于比较或在实例间复制模组。",
-            "「在右側開啟」可新增另一個檢視，用於比較或在實例間複製模組。",
-            "「右側で開く」で別のビューを追加し、インスタンス間で比較やコピーができます。");
+            "Compare adds another view for comparing or copying between instances.",
+            "“对比”可添加另一视图，用于比较或在实例间复制模组。",
+            "「比較」可新增另一個檢視，用於比較或在實例間複製模組。",
+            "「比較」で別のビューを追加し、インスタンス間で比較やコピーができます。");
         Find<TextBlock>("InactiveActionHint").Text = WorkflowText(
-            "Select here; Enable above the target list.\nEsc clears search and filters.",
-            "在此选择，在目标列表上方启用。\nEsc 清除搜索和筛选。",
-            "在此選擇，在目標清單上方啟用。\nEsc 清除搜尋和篩選。",
-            "ここで選択し、移動先の上で有効化。\nEsc で検索とフィルターを解除。");
+            "Select mods, then Enable →",
+            "选择模组，然后在右侧启用 →",
+            "選擇模組，然後在右側啟用 →",
+            "MOD を選択して有効化 →");
         var resize = OperationText.Choose(language,
             "Resize mod details. Drag, or use the arrow keys when focused.",
             "调整详情宽度：拖动分隔线，或聚焦后使用方向键。",
@@ -94,6 +95,9 @@ public partial class MainWindow
     {
         if (label.Parent is not Button button) return;
         button.Classes.Set("filtered", mode != ProblemFilterMode.Off);
+        // Keep active filters reachable even when their result is empty.
+        var countText = label.Text?.Split(' ')[^1];
+        button.IsVisible = mode != ProblemFilterMode.Off || !int.TryParse(countText, out var count) || count != 0;
         var state = mode switch
         {
             ProblemFilterMode.Hide => OperationText.Choose(_config.Language, "Hidden", "已排除", "已排除", "非表示"),

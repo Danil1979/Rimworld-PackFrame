@@ -22,6 +22,13 @@ internal static class PaneEmptyGuidanceChecks
             "all-enabled inactive pane retains useful original guidance");
         Require(PaneEmptyGuidance.Create("en", true, true, false, true, 0, 0, true).Body.Contains("Enable above"),
             "genuinely empty active order points to its nearby enable action");
+        foreach (var (language, heading) in new[]
+        {
+            ("en", "Available mods"), ("zh-Hans", "可用模组"),
+            ("zh-Hant", "可用模組"), ("ja", "利用可能な MOD")
+        })
+            Require(PaneEmptyGuidance.Create(language, true, true, false, true, 0, 0, true).Body.Contains(heading),
+                "empty load order names the visible Available mods heading in " + language);
         var damaged = PaneEmptyGuidance.Create("en", true, true, true, true, 4, 2, true, isDamaged: true);
         Require(damaged.Title == "Instance unreadable" && damaged.Body.Contains("read-only") &&
             damaged.Body.Contains("Refresh") && !damaged.Body.Contains("Enable"),

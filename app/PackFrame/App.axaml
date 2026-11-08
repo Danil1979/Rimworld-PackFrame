@@ -3,7 +3,11 @@
              x:Class="PackFrame.App"
              RequestedThemeVariant="Dark">
     <Application.Resources>
-        <SolidColorBrush x:Key="AppBackgroundBrush" Color="#20354A" />
+        <SolidColorBrush x:Key="AppBackgroundBrush" Color="#171C22" />
+        <SolidColorBrush x:Key="PaneSurfaceBrush" Color="#20252D" />
+        <SolidColorBrush x:Key="FieldSurfaceBrush" Color="#2A3039" />
+        <SolidColorBrush x:Key="AccentBrush" Color="#62C6B4" />
+        <SolidColorBrush x:Key="PendingSurfaceBrush" Color="#554C3618" />
         <SolidColorBrush x:Key="SecondaryBrush" Color="#455364" />
         <SolidColorBrush x:Key="PrimaryTextBrush" Color="#EAF1F8" />
         <SolidColorBrush x:Key="SecondaryTextBrush" Color="#C3D4E4" />
@@ -15,7 +19,7 @@
             <Setter Property="AutomationProperties.HelpText" Value="{ReflectionBinding BadgeTooltip}" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
-            <Setter Property="Padding" Value="6,3" />
+            <Setter Property="Padding" Value="8,5" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="Template">
@@ -54,7 +58,7 @@
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             Padding="{TemplateBinding Padding}"
-                            CornerRadius="0">
+                            CornerRadius="4">
                         <ContentPresenter Content="{TemplateBinding Content}"
                                           ContentTemplate="{TemplateBinding ContentTemplate}"
                                           TextElement.Foreground="{TemplateBinding Foreground}"
@@ -179,7 +183,7 @@
             <Setter Property="FontWeight" Value="Normal" />
         </Style>
         <Style Selector="Border.field">
-            <Setter Property="Background" Value="{StaticResource SecondaryBrush}" />
+            <Setter Property="Background" Value="{DynamicResource FieldSurfaceBrush}" />
         </Style>
         <Style Selector="Border.field.invalid">
             <Setter Property="Background" Value="#8F3434" />

@@ -7,11 +7,11 @@ namespace PackFrame;
 
 internal static class ThemeService
 {
-    public const string DefaultBackground = "#20354A";
+    public const string DefaultBackground = "#171C22";
 
     public static readonly (string Key, string Hex, string? Light)[] BackgroundPresets =
     {
-        ("default", "#20354A", null),
+        ("default", "#171C22", null),
         ("dark", "#182938", null),
         ("black", "#15181D", null),
         ("rimworld", "#15191D", "#3C4A50"),
@@ -55,7 +55,8 @@ internal static class ThemeService
         }
         SecondaryBrush.Color = TryParseColor(lightHex) ??
             Mix(background, Colors.White, 0.16);
-        var textBase = Luminance(background) > 128 ? Colors.Black : Colors.White;
+        var isLight = Luminance(background) > 128;
+        var textBase = isLight ? Colors.Black : Colors.White;
         PrimaryTextBrush.Color = Mix(background, textBase, 0.90);
         SecondaryTextBrush.Color = Mix(background, textBase, 0.75);
         MutedTextBrush.Color = Mix(background, textBase, 0.55);
@@ -64,7 +65,44 @@ internal static class ThemeService
             Mix(background, textBase, 0.27);
         if (Application.Current is { } application)
         {
+            // Windows intentionally retain Fluent's dark control surfaces. Only adapt
+            // template parts that sit on our custom light surfaces; remove overrides
+            // on return to a dark palette so Fluent's original colors remain intact.
+            foreach (var (key, brush) in new (string, SolidColorBrush)[]
+            {
+                ("TextControlPlaceholderForeground", SecondaryTextBrush),
+                ("TextControlPlaceholderForegroundPointerOver", SecondaryTextBrush),
+                ("TextControlPlaceholderForegroundFocused", SecondaryTextBrush),
+                ("TextControlPlaceholderForegroundDisabled", MutedTextBrush),
+                ("ComboBoxDropDownGlyphForeground", PrimaryTextBrush),
+                ("ComboBoxDropDownGlyphForegroundDisabled", MutedTextBrush),
+                ("ComboBoxDropDownGlyphForegroundFocused", PrimaryTextBrush),
+                ("ComboBoxDropDownGlyphForegroundFocusedPressed", PrimaryTextBrush),
+                ("ComboBoxForeground", PrimaryTextBrush),
+                ("ComboBoxForegroundDisabled", MutedTextBrush),
+                ("ComboBoxForegroundFocused", PrimaryTextBrush),
+                ("ComboBoxForegroundFocusedPressed", PrimaryTextBrush),
+                ("ComboBoxBackground", SecondaryBrush),
+                ("ComboBoxBackgroundDisabled", SecondaryBrush),
+                ("ComboBoxBackgroundUnfocused", SecondaryBrush),
+                ("ComboBoxBackgroundPointerOver", HoverBrush),
+                ("ComboBoxBackgroundPressed", SelectedBrush)
+            })
+            {
+                if (isLight)
+                    application.Resources[key] = brush;
+                else
+                    application.Resources.Remove(key);
+            }
+            // Fluent also halves placeholder opacity. Our adaptive text is already
+            // subdued; halving it again fails contrast against light search fields.
+            if (isLight)
+                application.Resources["TextControlPlaceholderOpacity"] = 1.0;
+            else
+                application.Resources.Remove("TextControlPlaceholderOpacity");
             application.Resources["AppBackgroundBrush"] = BackgroundBrush;
+            application.Resources["PaneSurfaceBrush"] = new SolidColorBrush(Mix(background, textBase, 0.035));
+            application.Resources["FieldSurfaceBrush"] = new SolidColorBrush(Mix(background, textBase, 0.075));
             UpdateResource(application, "SecondaryBrush", SecondaryBrush);
             UpdateResource(application, "PrimaryTextBrush", PrimaryTextBrush);
             UpdateResource(application, "SecondaryTextBrush", SecondaryTextBrush);

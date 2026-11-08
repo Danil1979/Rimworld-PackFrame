@@ -38,11 +38,12 @@ public partial class MainWindow
         _managerColumns.ColumnDefinitions[4].Width = show
             ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
         UpdateSplitViewButton();
+        ApplyWorkspaceLayout();
     }
 
     private void UpdateSplitViewButton()
     {
-        var open = Localization.OpenOnRight(_config.Language);
+        var open = WorkflowText("Compare", "对比", "比較", "比較");
         _splitViewLabel.Text = open;
         _splitViewButton.IsEnabled = GetSelectedInstance(0) is not null;
         ToolTip.SetTip(_splitViewButton, Localization.OpenOnRightHint(_config.Language));
