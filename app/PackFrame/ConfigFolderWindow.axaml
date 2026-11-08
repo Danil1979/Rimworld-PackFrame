@@ -2,66 +2,34 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="PackFrame.ConfigFolderWindow"
         Title="Rimworld PackFrame"
-        Width="600"
-        SizeToContent="Height"
-        CanResize="False"
+        Width="600" Height="420" MinWidth="480" MinHeight="380" CanResize="True"
         WindowStartupLocation="CenterOwner"
-        Background="{DynamicResource AppBackgroundBrush}"
-        RequestedThemeVariant="Dark">
-    <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,Auto">
-        <TextBlock x:Name="DescriptionText"
-                   Foreground="{DynamicResource SecondaryTextBrush}"
-                   TextWrapping="Wrap" />
-        <Border x:Name="PathField"
-                Grid.Row="1"
-                Classes="field"
-                Height="36"
-                Margin="0,10,0,0"
-                CornerRadius="0">
-            <Grid ColumnDefinitions="*,Auto">
-                <TextBox x:Name="PathBox"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         CornerRadius="0"
-                         VerticalContentAlignment="Center" />
-                <Button x:Name="BrowseButton"
-                        Grid.Column="1"
-                        Theme="{StaticResource FlatButton}"
-                        Padding="10,4"
-                        MinHeight="36"
-                        Margin="8,0,0,0"
-                        Click="OnBrowseClick" />
-            </Grid>
-        </Border>
-        <Grid Grid.Row="2" ColumnDefinitions="Auto,*"
-                    Margin="0,8,0,0">
-            <Button x:Name="AutoDetectButton"
-                    Theme="{StaticResource FlatButton}"
-                    MinHeight="30"
-                    Padding="12,4"
-                    Click="OnAutoDetectClick" />
-            <TextBlock x:Name="AutoDetectStatus"
-                       Grid.Column="1" Margin="12,0,0,0"
-                       Foreground="{DynamicResource SecondaryTextBrush}"
-                       VerticalAlignment="Center"
-                       TextWrapping="Wrap" />
-        </Grid>
-
-        <StackPanel Grid.Row="3"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Right"
-                    Spacing="8"
-                    Margin="0,12,0,0">
-            <Button x:Name="CancelButton"
-                    IsCancel="True"
-                    Theme="{StaticResource FlatButton}"
-                    MinHeight="32"
-                    Click="OnCancelClick" />
-            <Button x:Name="ConfirmButton"
-                    IsDefault="True"
-                    Theme="{StaticResource FlatButton}"
-                    MinHeight="32"
-                    Click="OnConfirmClick" />
-        </StackPanel>
+        Background="{DynamicResource AppBackgroundBrush}" RequestedThemeVariant="Dark">
+    <Grid Margin="20" RowDefinitions="Auto,*,Auto">
+        <TextBlock x:Name="HeadingText" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap"
+                   Foreground="{DynamicResource PrimaryTextBrush}" />
+        <ScrollViewer Grid.Row="1" Margin="0,12,0,0" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="10" Margin="0,0,8,0">
+                <TextBlock x:Name="DescriptionText" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                <StackPanel x:Name="CurrentFolderPanel" Spacing="4">
+                    <TextBlock x:Name="CurrentFolderLabel" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
+                    <SelectableTextBlock x:Name="CurrentFolderText" TextWrapping="Wrap" Foreground="{DynamicResource PrimaryTextBrush}" />
+                </StackPanel>
+                <TextBlock x:Name="PathLabel" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                <Border x:Name="PathField" Classes="field" Height="38" CornerRadius="0">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBox x:Name="PathBox" Background="Transparent" BorderThickness="0" CornerRadius="0" VerticalContentAlignment="Center" />
+                        <Button x:Name="BrowseButton" Grid.Column="1" Theme="{StaticResource FlatButton}" Padding="10,4"
+                                MinHeight="36" Margin="8,0,0,0" Click="OnBrowseClick" />
+                    </Grid>
+                </Border>
+                <Button x:Name="AutoDetectButton" Theme="{StaticResource FlatButton}" MinHeight="30" Padding="12,4" Click="OnAutoDetectClick" />
+                <TextBlock x:Name="AutoDetectStatus" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
+            </StackPanel>
+        </ScrollViewer>
+        <WrapPanel Grid.Row="2" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button x:Name="CancelButton" IsCancel="True" Theme="{StaticResource FlatButton}" MinHeight="32" Margin="0,4,8,0" Click="OnCancelClick" />
+            <Button x:Name="ConfirmButton" IsDefault="True" Theme="{StaticResource FlatButton}" MinHeight="32" Margin="0,4,0,0" Click="OnConfirmClick" />
+        </WrapPanel>
     </Grid>
 </Window>

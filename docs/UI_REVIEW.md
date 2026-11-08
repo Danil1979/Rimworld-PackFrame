@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 1,076 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 1,113 regression
 checks. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -20,7 +20,7 @@ relying on a font being installed on the computer.
 | Confirmation | Long message fits, action buttons remain visible, safe initial focus and Escape | Extreme translated strings |
 | Rename | Empty input stays open with an error; Escape from button focus cancels | Filesystem rename failures on each OS |
 | Import mode | Exact source/destination and format-specific overwrite scope, pending-edit warning, bounded scrolling and pinned controls; native invalid-XML rejection, safe cancellation, separate-new-instance Undo/Redo; four-language compact review | Full native picker/overwrite failure matrix, Windows/macOS |
-| Config folder | Invalid path error and focus, compact layout, named field | Native folder pickers on each OS |
+| Config folder | Named current/proposed paths, bounded layout, native folder-picker Cancel, failed-save retention and repair/retry, pending-destination protection, no-op history preservation, four-language error layouts at 480×380 | Auto-detection integration and folder pickers on Windows/macOS |
 | Language | Named main action, current-language indicator, visible Cancel, four-language picker review, minimum Japanese and first-run layouts, selection/cancel results, pending edits and Undo across language switches; failed-save retention and repair/retry | Platform screen readers and OS-specific startup behavior |
 | Pending changes | Safe initial focus, wrapped message/actions inspected | Update-and-restart integration on each OS |
 | Color palette | Native edit/cancel persistence, corrupt-file retention, repair/retry, selected-color + label commit, brush rollback, Undo/Redo and persistent error/Log | Four-language recovery layouts; Windows/macOS permissions and races |
@@ -514,3 +514,37 @@ relying on a font being installed on the computer.
   console suite. Counts include both existing `PASS:` and `PASS ` output formats.
   Live downloads/publishing and real game files were not used. Native confirmed
   overwrite and OS-specific permission failure scenarios remain open.
+
+
+## Official configuration destination recovery
+
+- Folder choices persist a validated candidate before changing the live official
+  destination. Selecting the same canonical folder does not rewrite preferences
+  or clear Undo/Redo. Unrelated preferences and sample game files remain unchanged.
+- A different destination cannot hide unsaved edits in the current official
+  folder. The chooser retains the proposed path, identifies where those edits
+  belong, and asks the user to cancel and save/undo them first. No draft is
+  discarded and no unrelated list is saved automatically. Missing old folders
+  still retain their lexical identity for this guard.
+- The chooser identifies the current folder separately from the editable input
+  and uses “Use this folder” instead of a generic confirmation label. Its 600×420
+  layout resizes down to 480×380, with scrolling content and pinned controls.
+  Errors remain in the dialog, scroll into view and retain input for retry.
+- Manual selection, initial official-folder setup, and the scratch-pane
+  auto-detection route use guarded persistence. Auto-detection failures retain the
+  old destination and show a persistent Close/Log dialog rather than proceeding.
+  The automatic route is source-reviewed and helper-tested, not exercised against
+  an actual installed game.
+- Native Linux baseline reproduced the original bug with a synthetic settings
+  file replaced by an agent-owned marker directory: the chooser closed and the
+  visible list changed even though preferences were not saved. Revised behavior
+  kept the chooser and old list, preserved the typed path, and succeeded after
+  repairing the exact fixture setting path and pressing Enter to retry.
+- Native checks also covered the OS folder picker's Cancel, pending-edit rejection,
+  same-folder confirmation preserving Undo and the pending badge, subsequent Undo
+  returning to a clean state, and all four language error layouts at 480×380.
+  Initial/final sample game configuration bytes stayed unchanged. Test preferences
+  were restored afterward. No real user configuration, game launch, or installer
+  was used.
+- Final Release build: zero warnings/errors; full console suite 1,113 PASS lines.
+  Remaining platform permission/auto-detection checks are explicitly open.

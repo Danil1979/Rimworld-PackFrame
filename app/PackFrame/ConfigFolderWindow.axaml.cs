@@ -5,6 +5,7 @@ using Avalonia.Automation;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 
 namespace PackFrame;
 
@@ -14,10 +15,13 @@ public partial class ConfigFolderWindow : Window
     private readonly TextBlock _autoDetectStatus;
     private string _autoDetectFailedText = string.Empty;
     private string? _language;
+    private bool _closed;
+    internal Func<string, string?>? TryAcceptPath { get; set; }
 
     public ConfigFolderWindow()
     {
         InitializeComponent();
+        Closed += (_, _) => _closed = true;
         _pathField = this.FindControl<Border>("PathField")!;
         _autoDetectStatus = this.FindControl<TextBlock>("AutoDetectStatus")!;
         this.FindControl<TextBox>("PathBox")!.TextChanged += (_, _) =>
@@ -42,6 +46,11 @@ public partial class ConfigFolderWindow : Window
     {
         _language = language;
         Title = OperationText.Choose(language, "RimWorld configuration folder", "RimWorld 配置文件夹", "RimWorld 設定資料夾", "RimWorld 設定フォルダー");
+        this.FindControl<TextBlock>("HeadingText")!.Text = Title;
+        this.FindControl<TextBlock>("CurrentFolderLabel")!.Text = OfficialConfigWorkflow.CurrentFolder(language);
+        this.FindControl<SelectableTextBlock>("CurrentFolderText")!.Text = currentPath;
+        this.FindControl<StackPanel>("CurrentFolderPanel")!.IsVisible = !string.IsNullOrWhiteSpace(currentPath);
+        this.FindControl<TextBlock>("PathLabel")!.Text = OfficialConfigWorkflow.NewFolder(language);
         var pathBox = this.FindControl<TextBox>("PathBox")!;
         AutomationProperties.SetName(pathBox, Title);
         pathBox.Text = currentPath ?? string.Empty;
@@ -118,6 +127,17 @@ public partial class ConfigFolderWindow : Window
             return;
         }
 
+        var error = TryAcceptPath?.Invoke(fullPath);
+        if (!string.IsNullOrWhiteSpace(error))
+        {
+            // The chosen path is valid; persistence or an old draft prevents the
+            // change. Keep the input for retry without marking the path invalid.
+            _autoDetectStatus.Text = error;
+            SetInvalid(false);
+            this.FindControl<Button>("ConfirmButton")!.Focus();
+            RevealStatus();
+            return;
+        }
         Close(fullPath);
     }
 
@@ -133,6 +153,7 @@ public partial class ConfigFolderWindow : Window
         {
             _autoDetectStatus.Text = _autoDetectFailedText;
             SetInvalid(true);
+            RevealStatus();
             return;
         }
 
@@ -156,7 +177,7 @@ public partial class ConfigFolderWindow : Window
             {
                 AllowMultiple = false
             });
-            if (folders.Count == 0)
+            if (_closed || folders.Count == 0)
             {
                 return;
             }
@@ -173,6 +194,7 @@ public partial class ConfigFolderWindow : Window
         catch (Exception ex)
         {
             AppLog.Error("Open configuration folder picker", ex);
+            if (_closed) return;
             ShowPathError(OperationText.Choose(_language, "Could not open the folder picker. Enter the path directly or try again.", "无法打开文件夹选择器，请直接输入路径或重试。", "無法開啟資料夾選擇器，請直接輸入路徑或重試。", "フォルダー選択を開けませんでした。パスを入力するか再試行してください。"));
         }
     }
@@ -182,7 +204,13 @@ public partial class ConfigFolderWindow : Window
         _autoDetectStatus.Text = message;
         SetInvalid(true);
         this.FindControl<TextBox>("PathBox")!.Focus();
+        RevealStatus();
     }
+
+    private void RevealStatus() => Dispatcher.UIThread.Post(() =>
+    {
+        if (!_closed) _autoDetectStatus.BringIntoView();
+    }, DispatcherPriority.Loaded);
 
     private void SetInvalid(bool invalid)
     {

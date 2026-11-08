@@ -402,6 +402,8 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
     AppUpdateReviewChecks.Run();
     CollectionTargetChecks.Run();
     LanguageChoiceChecks.Run(root);
+    ConfigFolderPreferenceChecks.Run(root);
+    OfficialConfigWorkflowChecks.Run(root);
     WorkshopSelectionRefreshChecks.Run();
     PaneLayoutChecks.Run();
     ProblemFilterChecks.Run();

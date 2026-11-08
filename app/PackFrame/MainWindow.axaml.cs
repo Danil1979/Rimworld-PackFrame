@@ -3711,13 +3711,15 @@ public partial class MainWindow : Window
             _config.OfficialConfigPath,
             Localization.ConfigFolderTooltip(language),
             Localization.BrowseButton(language),
-            Localization.ConfirmButton(language),
+            OfficialConfigWorkflow.UseFolder(language),
             Localization.CancelButton(language),
             Localization.ConfigFolderWatermark(language),
             Localization.AutoDetectButton(language),
             Localization.AutoDetectConfigFailed(language),
             language
         );
+        dialog.TryAcceptPath = TryAcceptOfficialConfigPath;
+        var previousPath = _config.OfficialConfigPath;
         var path = await dialog.ShowDialog<string?>(this);
         var comboBox = column == 0 ? _instanceCombo1 : _instanceCombo2;
 
@@ -3739,8 +3741,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        _config.OfficialConfigPath = path;
-        _config.Save();
+        if (_windowClosed || string.Equals(previousPath, _config.OfficialConfigPath, StringComparison.Ordinal)) return;
         _instances = BuildInstances(_instances.Where(instance => !instance.IsOfficial));
         var officialIndex = _instances.FindIndex(instance => instance.IsOfficial);
         if (officialIndex < 0)
@@ -3769,24 +3770,50 @@ public partial class MainWindow : Window
             _config.OfficialConfigPath,
             Localization.ConfigFolderTooltip(language),
             Localization.BrowseButton(language),
-            Localization.ConfirmButton(language),
+            OfficialConfigWorkflow.UseFolder(language),
             Localization.CancelButton(language),
             Localization.ConfigFolderWatermark(language),
             Localization.AutoDetectButton(language),
             Localization.AutoDetectConfigFailed(language),
             language
         );
+        dialog.TryAcceptPath = TryAcceptOfficialConfigPath;
+        var previousPath = _config.OfficialConfigPath;
         var path = await dialog.ShowDialog<string?>(this);
         if (string.IsNullOrWhiteSpace(path))
         {
             return;
         }
 
-        _config.OfficialConfigPath = path;
-        _config.Save();
+        if (_windowClosed || string.Equals(previousPath, _config.OfficialConfigPath, StringComparison.Ordinal)) return;
         _instances = BuildInstances(_instances.Where(instance => !instance.IsOfficial));
         ClearUndoHistory();
         RefreshManager(true);
+    }
+
+    private string? TryAcceptOfficialConfigPath(string path)
+    {
+        var result = OfficialConfigWorkflow.TryChange(_config, path, InstanceStore.PendingConfigDirectories);
+        return result switch
+        {
+            OfficialConfigChange.PendingChanges => OfficialConfigWorkflow.PendingWarning(_config.Language, _config.OfficialConfigPath),
+            OfficialConfigChange.SaveFailed => OfficialConfigWorkflow.SaveFailure(_config.Language),
+            _ => null
+        };
+    }
+
+    private bool _officialConfigErrorOpen;
+    private async Task ShowOfficialConfigErrorAsync(string message)
+    {
+        if (_windowClosed || _officialConfigErrorOpen) return;
+        _officialConfigErrorOpen = true;
+        try
+        {
+            if (await new ConfirmWindow(message, Localization.LogButton(_config.Language),
+                    Localization.CloseButton(_config.Language)).ShowDialog<bool>(this) && !_windowClosed)
+                await new LogWindow(_config.Language).ShowDialog(this);
+        }
+        finally { _officialConfigErrorOpen = false; }
     }
 
     private void OnListSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -3974,8 +4001,12 @@ public partial class MainWindow : Window
                 var detected = RimWorldLocator.FindConfigDirectory();
                 if (!string.IsNullOrWhiteSpace(detected))
                 {
-                    _config.OfficialConfigPath = detected;
-                    _config.Save();
+                    var error = TryAcceptOfficialConfigPath(detected);
+                    if (error is not null)
+                    {
+                        _ = ShowOfficialConfigErrorAsync(error);
+                        return;
+                    }
                     _instances = BuildInstances(_instances.Where(instance =>
                         !instance.IsOfficial && !instance.IsScratch));
                     InitializeInstanceSelectors();

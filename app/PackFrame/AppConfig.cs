@@ -67,6 +67,46 @@ public sealed class AppConfig
         return true;
     }
 
+    internal bool TrySetOfficialConfigPath(string directory, string? configFilePath = null)
+    {
+        if (!TryGetCanonicalDirectory(directory, out var fullPath) || !Directory.Exists(fullPath)) return false;
+
+        // An unchanged selection needs no write, including in a read-only install.
+        // Keep the existing spelling rather than changing live state without saving.
+        // Normalize lexical paths only; a user-managed link remains its own destination.
+        if (IsCurrentOfficialConfigPath(fullPath)) return true;
+
+        var candidate = Copy();
+        candidate.OfficialConfigPath = fullPath;
+        if (!candidate.TrySave(configFilePath ?? ConfigPath)) return false;
+        OfficialConfigPath = fullPath;
+        return true;
+    }
+
+    // Identity is lexical even when the folder has disappeared, so pending edits
+    // can still be associated with their original destination before switching.
+    internal bool IsCurrentOfficialConfigPath(string directory) =>
+        TryGetCanonicalDirectory(directory, out var fullPath) &&
+        TryGetCanonicalDirectory(OfficialConfigPath, out var currentPath) &&
+        string.Equals(currentPath, fullPath, OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+
+    private static bool TryGetCanonicalDirectory(string? directory, out string fullPath)
+    {
+        fullPath = string.Empty;
+        if (string.IsNullOrWhiteSpace(directory)) return false;
+        try
+        {
+            fullPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory));
+            return true;
+        }
+        catch (Exception exception) when (exception is ArgumentException or IOException or
+                                         NotSupportedException or System.Security.SecurityException)
+        {
+            return false;
+        }
+    }
+
     internal bool TrySave(string path)
     {
         try
