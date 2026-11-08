@@ -140,6 +140,7 @@ public partial class MainWindow
         }
         ToolTip.SetTip(_instanceCombo1, InstanceHeaderHint(first));
         ToolTip.SetTip(_instanceCombo2, InstanceHeaderHint(second));
+        UpdatePaneAccessibility();
         UpdateSplitViewButton();
     }
 

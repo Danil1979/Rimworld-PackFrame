@@ -835,3 +835,35 @@ beside its state makes it easier to identify a mod and choose the correct action
   padded-presenter geometry for short/overflowing lists at two widths and resize.
   The main left description pane, download PR and persisted history are unchanged.
   Windows/macOS, screen readers and live network recovery remain unverified.
+
+## Workspace keyboard and accessibility review
+
+A native Linux review of the completed left-details workspace covered search,
+Down-to-results, Enter-to-enable, context-menu dismissal, undo, opening the same
+list in comparison, switching comparison instances, closing comparison, and
+Japanese no-match/Escape recovery. Fixture edits were undone; no real game or
+network action was launched. The familiar left inspector stays in place.
+
+The actual AT-SPI tree exposed a navigation gap: each search was named only
+“Search mods…”, each list “ListBox”, and selectors “ComboBox”. With two views of
+the same instance, assistive navigation could not identify the control's target.
+Names now include both purpose and pane context, with instance names for load
+orders. Comparison stays distinct even when viewing the same instance. Names
+refresh after instance and language changes; existing keyboard guidance remains.
+This follows the principle of making action scope explicit without adding visual
+clutter or changing the established layout.
+
+- Native AT-SPI confirmed distinct available/primary/comparison searches, lists,
+  search-field selectors and instance controls. Switching from Frontier colony to
+  Experimental colony replaced the comparison target throughout. Japanese
+  language switching updated the accessible labels in place.
+- 25 new checks cover all four languages, same-instance distinctions, actual
+  automation properties, replacement of stale targets and empty selections.
+- Final regression run: 2,045 PASS lines. Application Release build: zero warnings
+  or errors. The isolated native harness build had a NuGet vulnerability-cache
+  warning because its default cache path was read-only; it still built and ran.
+- This is accessibility-tree and keyboard validation, not a screen-reader audit.
+  Windows/macOS and real screen-reader speech remain unverified. The Linux
+  accessibility tree also exposed stale virtualized list-item nodes after filtering;
+  rendered results and keyboard selection were correct, but that virtualized-tree
+  behavior needs investigation before claiming full assistive-technology support.

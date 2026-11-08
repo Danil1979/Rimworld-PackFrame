@@ -435,6 +435,7 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
     PendingRecoveryChecks.Run(root);
     ModStatusLinkChecks.Run();
     ModStatusLayoutChecks.Run();
+    PaneAccessibilityChecks.Run();
     ModpackFooterChecks.Run();
     CatalogSearchChecks.Run();
     await CatalogChecks.Run(root);

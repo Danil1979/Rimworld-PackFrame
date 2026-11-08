@@ -54,7 +54,6 @@ public partial class MainWindow
             var actions = OperationText.Choose(language, "Manage instance", "管理实例", "管理實例", "インスタンスの管理");
             button.Content = WorkflowText("Instance ▾", "实例 ▾", "實例 ▾", "管理 ▾");
             ToolTip.SetTip(button, actions);
-            AutomationProperties.SetName(button, actions);
         }
         var searchHelp = OperationText.Choose(language,
             "Down or Enter moves to matching mods without enabling or disabling them. Esc clears search and filters. In the list, Shift+F10 opens mod actions.",
@@ -69,13 +68,27 @@ public partial class MainWindow
         for (var column = 0; column < 3; column++)
         {
             var pane = PaneWorkflow(column);
-            AutomationProperties.SetName(pane.Search, Localization.SearchMods(language));
             AutomationProperties.SetHelpText(pane.Search, searchHelp);
             AutomationProperties.SetHelpText(pane.List, listHelp);
             var hint = Find<TextBlock>($"SearchShortcutHint{column}");
             hint.Text = System.OperatingSystem.IsMacOS() ? "⌘F · ↓" : "Ctrl+F · ↓";
             hint.IsHitTestVisible = true;
             ToolTip.SetTip(hint, searchHelp);
+        }
+        UpdatePaneAccessibility();
+    }
+
+    private void UpdatePaneAccessibility()
+    {
+        for (var column = 0; column < 3; column++)
+        {
+            var pane = PaneWorkflow(column);
+            var field = column == 0 ? _inactiveSearchField : column == 1 ? _activeSearchField1 : _activeSearchField2;
+            var instance = column == 0 ? null : GetSelectedInstance(column - 1);
+            PaneAccessibility.Create(_config.Language, column, instance?.DisplayName).Apply(
+                pane.List, pane.Search, field,
+                column == 0 ? null : column == 1 ? _instanceCombo1 : _instanceCombo2,
+                column == 0 ? null : column == 1 ? _instanceActionButton1 : _instanceActionButton2);
         }
     }
 
