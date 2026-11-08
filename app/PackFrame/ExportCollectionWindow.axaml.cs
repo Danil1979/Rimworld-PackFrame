@@ -705,7 +705,7 @@ public partial class ExportCollectionWindow : Window
                     if (cancellation.IsCancellationRequested) { completion.TrySetCanceled(cancellation.Token); return; }
                     try
                     {
-                        var dialog = new CollectionTargetWindow(candidates, _language);
+                        var dialog = new CollectionTargetWindow(candidates, _language, _result.WorkshopIds);
                         using var registration = cancellation.Token.Register(() => Dispatcher.UIThread.Post(() => dialog.Close()));
                         completion.TrySetResult(await dialog.ShowDialog<ulong?>(this));
                     }

@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 877 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 893 regression
 checks. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -16,7 +16,7 @@ relying on a font being installed on the computer.
 
 | Surface | Checked in this pass | Remaining checks |
 | --- | --- | --- |
-| Main mod lists | Explicit per-pane enable target, matching-instance views, X/Escape filter recovery, visible shortcuts, pending header badges, Ctrl+S disk save, typing undo, 1100×700 English layout; copy unsaved lists while source disk remains unchanged | Long real lists, populated four-language main-window pass, Windows/macOS |
+| Main mod lists | Explicit per-pane enable target, matching-instance views, X/Escape filter recovery, visible shortcuts, pending header badges, Ctrl+S disk save, typing undo, 1100×700 English layout; copy unsaved lists while source disk remains unchanged; native hidden-ID reorder, filtered insertion, 10-step Undo/Redo and redo invalidation | Long real lists, populated four-language main-window pass, Windows/macOS |
 | Confirmation | Long message fits, action buttons remain visible, safe initial focus and Escape | Extreme translated strings |
 | Rename | Empty input stays open with an error; Escape from button focus cancels | Filesystem rename failures on each OS |
 | Import mode | Full labels, unavailable-overwrite explanation, safe Cancel/Escape | Full native import matrix |
@@ -24,7 +24,7 @@ relying on a font being installed on the computer.
 | Language | Choices inspected, Escape support reviewed | Complete four-language walkthrough |
 | Pending changes | Safe initial focus, wrapped message/actions inspected | Update-and-restart integration on each OS |
 | Color palette | Native edit/cancel persistence, corrupt-file retention, repair/retry, selected-color + label commit, brush rollback, Undo/Redo and persistent error/Log | Four-language recovery layouts; Windows/macOS permissions and races |
-| Collection target | Long names/identity readable; empty selection and disabled update reviewed | Live Steam-owned collection retrieval |
+| Collection target | Explicit selection, duplicate-title IDs, mod addition/removal preview, name/ID search, hidden-selection recovery, 1,000-row keyboard navigation, compact four-language layouts, empty/cancel/result checks | Live Steam-owned collection retrieval and publishing |
 | Update choices | Separate file/order views, searchable virtualized files, retained decisions, bulk scope, 1,000-file native review, keyboard confirmation/cancel, all four languages and compact Japanese layout | Actual mixed keep/replace installation; no-conflict native confirmation remains unverified |
 | Completion | Long action labels fit; Close/Escape | All installer completion variants |
 | Index summary | Validation and keyboard behavior reviewed | Four-language keyboard walkthrough |
@@ -404,3 +404,31 @@ relying on a font being installed on the computer.
   including safe release URL handling and opener-error propagation. Actual Windows
   installation/restart, live download failures and platform screen readers remain
   unverified by this checkpoint.
+
+## Main-list load-order and collection-target checkpoint
+
+- Native reorder moved a visible mod across an unseen missing ID and preserved
+  that ID at its expected full-list position. A second drag into a filtered list
+  inserted before the matching row rather than using the visible index as the
+  full-list index. Saved XML matched both expected orders, and the comparison
+  instance remained byte-for-byte unchanged. Undo and Save restored both samples.
+- Twelve keyboard enable/disable edits were followed by ten Undo and ten Redo
+  steps. The history actions disabled at their expected limits; the dirty state
+  alternated correctly and a new edit invalidated Redo. Final sample files matched
+  their original bytes. These were isolated fixtures, not real game instances.
+- Collection updates no longer preselect the first matching collection. Name/ID
+  search retains an explicit selection only while it remains visible. Hiding it
+  disables Update; clearing search does not resurrect the hidden decision. Rows
+  expose unique IDs to accessibility, and the pinned review shows the exact ID
+  and distinct mod additions/removals before choosing Update selected.
+- The production export dialog passes its desired Workshop IDs into that preview.
+  Existing ownership validation, candidate matching and Steam operations are not
+  changed. The review itself makes no network calls or mutations.
+- Native checks covered matched 680×540 before/after views, 1,000 collections at
+  480×440, ID search, the last virtualized row, no-result Enter, inline clear,
+  Escape recovery/cancellation, and English, Japanese and both Chinese variants.
+  An isolated host confirmed selection returned the intended ID and Create new
+  returned zero; it has no publication operation. No live collection was changed.
+- Clean Linux Release build: zero warnings/errors; 893 regression checks passed.
+  Live Steam retrieval/publishing, OS screen readers and Windows/macOS remain
+  unverified for this checkpoint.
