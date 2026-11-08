@@ -117,14 +117,6 @@
         </Grid>
 
         <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,8,0,0">
-            <Grid ColumnDefinitions="Auto,*" Margin="0,0,16,0">
-                <Button x:Name="SelectionActionButton" Theme="{StaticResource FlatButton}"
-                        MinHeight="32" Padding="12,6" IsEnabled="False"
-                        Click="OnSelectionActionClick" />
-                <TextBlock x:Name="SelectionSummary" Grid.Column="1" Margin="12,0,0,0"
-                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                           Foreground="{DynamicResource SecondaryTextBrush}" />
-            </Grid>
         <StackPanel Grid.Column="1"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
@@ -287,8 +279,19 @@
                         </Grid>
                         <Grid Grid.Row="1" RowDefinitions="32,30" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,2,0,4">
                             <Border Grid.ColumnSpan="4" Classes="field" Height="30" CornerRadius="0">
-                                <TextBox x:Name="InactiveSearchBox" Background="#01000000" BorderThickness="0"
-                                         CornerRadius="0" Padding="8,4" VerticalContentAlignment="Center" />
+                                <Grid ColumnDefinitions="*,Auto,28">
+                                    <Border MinWidth="0" ClipToBounds="True">
+                                        <TextBox x:Name="InactiveSearchBox" Background="#01000000" BorderThickness="0"
+                                                 MinWidth="0" ClipToBounds="True" HorizontalAlignment="Stretch"
+                                                 CornerRadius="0" Padding="8,4" VerticalContentAlignment="Center" />
+                                    </Border>
+                                    <TextBlock x:Name="SearchShortcutHint0" Grid.Column="1" FontSize="11"
+                                               Margin="2,0,4,0" VerticalAlignment="Center" IsHitTestVisible="False"
+                                               Foreground="{DynamicResource SecondaryTextBrush}" />
+                                    <Button x:Name="ClearPaneFilters0" Grid.Column="2" Tag="0" Content="×"
+                                            Theme="{StaticResource FlatButton}" Padding="0" FontSize="18"
+                                            Click="OnResetPaneFiltersClick" />
+                                </Grid>
                             </Border>
                             <ComboBox x:Name="InactiveSearchField" Grid.Row="1" MinWidth="0"
                                       HorizontalAlignment="Stretch" MinHeight="26" Height="26" Padding="6,3" />
@@ -298,26 +301,23 @@
                             <Button x:Name="InactiveViewModeButton" Grid.Row="1" Grid.Column="2"
                                     Theme="{StaticResource FlatButton}" Width="26" MinWidth="26" MinHeight="26"
                                     Height="26" Padding="0" Margin="4,0,0,0" Click="OnInactiveViewModeClick" />
-                            <Button x:Name="ResetFilters0" Grid.Row="1" Grid.Column="3" Tag="0"
-                                    Theme="{StaticResource FlatButton}" MinHeight="26" Height="26" Padding="6,2"
-                                    Margin="4,0,0,0" Click="OnResetPaneFiltersClick" />
                         </Grid>
-                        <Grid Grid.Row="2">
-                        <ListBox x:Name="InactiveList"
+                        <Grid Grid.Row="2" RowDefinitions="56,*">
+                            <TextBlock x:Name="InactiveActionHint" Height="56" Margin="2,0" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
+                        <ListBox Grid.Row="1" x:Name="InactiveList"
                                  Classes="modpane"
                                  ItemTemplate="{StaticResource ModTemplate}"
 
                                  ItemContainerTheme="{StaticResource ModListItem}"
                                  SelectionChanged="OnListSelectionChanged">
                         </ListBox>
-                        <Border x:Name="PaneEmpty0" IsVisible="False" Margin="10,26" VerticalAlignment="Top">
+                        <Border Grid.Row="1" x:Name="PaneEmpty0" IsVisible="False" Margin="10,26" VerticalAlignment="Top">
                             <StackPanel Spacing="10">
                                 <TextBlock x:Name="PaneEmptyTitle0" FontSize="17" FontWeight="SemiBold"
                                            Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
                                 <TextBlock x:Name="PaneEmptyBody0" Foreground="{DynamicResource SecondaryTextBrush}"
                                            TextWrapping="Wrap" />
-                                <Button x:Name="PaneEmptyReset0" Tag="0" HorizontalAlignment="Left"
-                                        Theme="{StaticResource FlatButton}" Padding="10,6" Click="OnResetPaneFiltersClick" />
                             </StackPanel>
                         </Border>
                         </Grid>
@@ -407,6 +407,11 @@
                                         VerticalAlignment="Center"
                                         Click="OnModpack1Click" />
                             </Grid>
+                            <Border x:Name="PendingBadge1" Grid.Row="2" HorizontalAlignment="Left"
+                                    Background="#553EA6B5" CornerRadius="3" Padding="5,1" IsVisible="False">
+                                <TextBlock x:Name="PendingLabel1" FontWeight="SemiBold" FontSize="12"
+                                           Foreground="{DynamicResource PrimaryTextBrush}" />
+                            </Border>
                             <TextBlock x:Name="ActiveHeader1"
                                        Grid.Row="2" Margin="2,0"
                                        Foreground="{DynamicResource SecondaryTextBrush}"
@@ -417,8 +422,19 @@
                         </Border>
                         <Grid Grid.Row="1" RowDefinitions="32,30" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,2,0,4">
                             <Border Grid.ColumnSpan="4" Classes="field" Height="30" CornerRadius="0">
-                                <TextBox x:Name="ActiveSearchBox1" Background="#01000000" BorderThickness="0"
-                                         CornerRadius="0" Padding="8,4" VerticalContentAlignment="Center" />
+                                <Grid ColumnDefinitions="*,Auto,28">
+                                    <Border MinWidth="0" ClipToBounds="True">
+                                        <TextBox x:Name="ActiveSearchBox1" Background="#01000000" BorderThickness="0"
+                                                 MinWidth="0" ClipToBounds="True" HorizontalAlignment="Stretch"
+                                                 CornerRadius="0" Padding="8,4" VerticalContentAlignment="Center" />
+                                    </Border>
+                                    <TextBlock x:Name="SearchShortcutHint1" Grid.Column="1" FontSize="11"
+                                               Margin="2,0,4,0" VerticalAlignment="Center" IsHitTestVisible="False"
+                                               Foreground="{DynamicResource SecondaryTextBrush}" />
+                                    <Button x:Name="ClearPaneFilters1" Grid.Column="2" Tag="1" Content="×"
+                                            Theme="{StaticResource FlatButton}" Padding="0" FontSize="18"
+                                            Click="OnResetPaneFiltersClick" />
+                                </Grid>
                             </Border>
                             <ComboBox x:Name="ActiveSearchField1" Grid.Row="1" MinWidth="0"
                                       HorizontalAlignment="Stretch" MinHeight="26" Height="26" Padding="6,3" />
@@ -428,26 +444,33 @@
                             <Button x:Name="ActiveViewModeButton1" Grid.Row="1" Grid.Column="2"
                                     Theme="{StaticResource FlatButton}" Width="26" MinWidth="26" MinHeight="26"
                                     Height="26" Padding="0" Margin="4,0,0,0" Click="OnActiveViewMode1Click" />
-                            <Button x:Name="ResetFilters1" Grid.Row="1" Grid.Column="3" Tag="1"
-                                    Theme="{StaticResource FlatButton}" MinHeight="26" Height="26" Padding="6,2"
-                                    Margin="4,0,0,0" Click="OnResetPaneFiltersClick" />
                         </Grid>
-                        <Grid Grid.Row="2">
-                        <ListBox x:Name="ActiveList1"
+                        <Grid Grid.Row="2" RowDefinitions="56,*">
+                            <Grid Height="56" RowDefinitions="24,32">
+                                <TextBlock x:Name="PaneActionTarget1" Margin="2,0" TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
+                                <Grid Grid.Row="1" ColumnDefinitions="*,*">
+                                    <Button x:Name="EnableSelection1" Tag="0:1" Margin="0,0,3,4"
+                                            Theme="{StaticResource FlatButton}" HorizontalAlignment="Stretch" Padding="4,2"
+                                            Click="OnSelectionActionClick" />
+                                    <Button x:Name="DisableSelection1" Grid.Column="1" Tag="1:0" Margin="3,0,0,4"
+                                            Theme="{StaticResource FlatButton}" HorizontalAlignment="Stretch" Padding="4,2"
+                                            Click="OnSelectionActionClick" />
+                                </Grid>
+                            </Grid>
+                        <ListBox Grid.Row="1" x:Name="ActiveList1"
                                  Classes="modpane"
                                  ItemTemplate="{StaticResource ModTemplate}"
 
                                  ItemContainerTheme="{StaticResource ModListItem}"
                                  SelectionChanged="OnListSelectionChanged">
                         </ListBox>
-                        <Border x:Name="PaneEmpty1" IsVisible="False" Margin="10,26" VerticalAlignment="Top">
+                        <Border Grid.Row="1" x:Name="PaneEmpty1" IsVisible="False" Margin="10,26" VerticalAlignment="Top">
                             <StackPanel Spacing="10">
                                 <TextBlock x:Name="PaneEmptyTitle1" FontSize="17" FontWeight="SemiBold"
                                            Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
                                 <TextBlock x:Name="PaneEmptyBody1" Foreground="{DynamicResource SecondaryTextBrush}"
                                            TextWrapping="Wrap" />
-                                <Button x:Name="PaneEmptyReset1" Tag="1" HorizontalAlignment="Left"
-                                        Theme="{StaticResource FlatButton}" Padding="10,6" Click="OnResetPaneFiltersClick" />
                             </StackPanel>
                         </Border>
                         </Grid>
@@ -538,6 +561,11 @@
                                         VerticalAlignment="Center"
                                         Click="OnModpack2Click" />
                             </Grid>
+                            <Border x:Name="PendingBadge2" Grid.Row="2" HorizontalAlignment="Left"
+                                    Background="#553EA6B5" CornerRadius="3" Padding="5,1" IsVisible="False">
+                                <TextBlock x:Name="PendingLabel2" FontWeight="SemiBold" FontSize="12"
+                                           Foreground="{DynamicResource PrimaryTextBrush}" />
+                            </Border>
                             <TextBlock x:Name="ActiveHeader2"
                                        Grid.Row="2" Margin="2,0"
                                        Foreground="{DynamicResource SecondaryTextBrush}"
@@ -548,8 +576,19 @@
                         </Border>
                         <Grid Grid.Row="1" RowDefinitions="32,30" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,2,0,4">
                             <Border Grid.ColumnSpan="4" Classes="field" Height="30" CornerRadius="0">
-                                <TextBox x:Name="ActiveSearchBox2" Background="#01000000" BorderThickness="0"
-                                         CornerRadius="0" Padding="8,4" VerticalContentAlignment="Center" />
+                                <Grid ColumnDefinitions="*,Auto,28">
+                                    <Border MinWidth="0" ClipToBounds="True">
+                                        <TextBox x:Name="ActiveSearchBox2" Background="#01000000" BorderThickness="0"
+                                                 MinWidth="0" ClipToBounds="True" HorizontalAlignment="Stretch"
+                                                 CornerRadius="0" Padding="8,4" VerticalContentAlignment="Center" />
+                                    </Border>
+                                    <TextBlock x:Name="SearchShortcutHint2" Grid.Column="1" FontSize="11"
+                                               Margin="2,0,4,0" VerticalAlignment="Center" IsHitTestVisible="False"
+                                               Foreground="{DynamicResource SecondaryTextBrush}" />
+                                    <Button x:Name="ClearPaneFilters2" Grid.Column="2" Tag="2" Content="×"
+                                            Theme="{StaticResource FlatButton}" Padding="0" FontSize="18"
+                                            Click="OnResetPaneFiltersClick" />
+                                </Grid>
                             </Border>
                             <ComboBox x:Name="ActiveSearchField2" Grid.Row="1" MinWidth="0"
                                       HorizontalAlignment="Stretch" MinHeight="26" Height="26" Padding="6,3" />
@@ -559,26 +598,33 @@
                             <Button x:Name="ActiveViewModeButton2" Grid.Row="1" Grid.Column="2"
                                     Theme="{StaticResource FlatButton}" Width="26" MinWidth="26" MinHeight="26"
                                     Height="26" Padding="0" Margin="4,0,0,0" Click="OnActiveViewMode2Click" />
-                            <Button x:Name="ResetFilters2" Grid.Row="1" Grid.Column="3" Tag="2"
-                                    Theme="{StaticResource FlatButton}" MinHeight="26" Height="26" Padding="6,2"
-                                    Margin="4,0,0,0" Click="OnResetPaneFiltersClick" />
                         </Grid>
-                        <Grid Grid.Row="2">
-                        <ListBox x:Name="ActiveList2"
+                        <Grid Grid.Row="2" RowDefinitions="56,*">
+                            <Grid Height="56" RowDefinitions="24,32">
+                                <TextBlock x:Name="PaneActionTarget2" Margin="2,0" TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
+                                <Grid Grid.Row="1" ColumnDefinitions="*,*">
+                                    <Button x:Name="EnableSelection2" Tag="0:2" Margin="0,0,3,4"
+                                            Theme="{StaticResource FlatButton}" HorizontalAlignment="Stretch" Padding="4,2"
+                                            Click="OnSelectionActionClick" />
+                                    <Button x:Name="DisableSelection2" Grid.Column="1" Tag="2:0" Margin="3,0,0,4"
+                                            Theme="{StaticResource FlatButton}" HorizontalAlignment="Stretch" Padding="4,2"
+                                            Click="OnSelectionActionClick" />
+                                </Grid>
+                            </Grid>
+                        <ListBox Grid.Row="1" x:Name="ActiveList2"
                                  Classes="modpane"
                                  ItemTemplate="{StaticResource ModTemplate}"
 
                                  ItemContainerTheme="{StaticResource ModListItem}"
                                  SelectionChanged="OnListSelectionChanged">
                         </ListBox>
-                        <Border x:Name="PaneEmpty2" IsVisible="False" Margin="10,26" VerticalAlignment="Top">
+                        <Border Grid.Row="1" x:Name="PaneEmpty2" IsVisible="False" Margin="10,26" VerticalAlignment="Top">
                             <StackPanel Spacing="10">
                                 <TextBlock x:Name="PaneEmptyTitle2" FontSize="17" FontWeight="SemiBold"
                                            Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
                                 <TextBlock x:Name="PaneEmptyBody2" Foreground="{DynamicResource SecondaryTextBrush}"
                                            TextWrapping="Wrap" />
-                                <Button x:Name="PaneEmptyReset2" Tag="2" HorizontalAlignment="Left"
-                                        Theme="{StaticResource FlatButton}" Padding="10,6" Click="OnResetPaneFiltersClick" />
                             </StackPanel>
                         </Border>
                         </Grid>
@@ -612,10 +658,10 @@
         <Grid Grid.Row="3"
               ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto"
               Margin="0,8,0,0">
-            <Border Grid.ColumnSpan="2" Margin="0,0,0,8" Padding="10,7"
+            <Border x:Name="EditStatusBanner" Grid.ColumnSpan="2" Margin="0,0,0,8" Padding="10,7" Background="#553EA6B5"
                     BorderBrush="{DynamicResource SecondaryBrush}" BorderThickness="1">
-                <TextBlock x:Name="EditStatusText" Foreground="{DynamicResource SecondaryTextBrush}"
-                           TextTrimming="CharacterEllipsis" />
+                <TextBlock x:Name="EditStatusText" Foreground="{DynamicResource PrimaryTextBrush}"
+                           TextWrapping="Wrap" />
             </Border>
             <StackPanel Grid.Row="1" Orientation="Horizontal"
                         VerticalAlignment="Center"

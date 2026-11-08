@@ -384,6 +384,7 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
         "https://example.com/cover.png", "absolute cover image stays absolute");
     InstanceCopyChecks.Run(root);
     OperationStateChecks.Run(root);
+    await LocalModCopyChecks.Run(root);
     ArchiveImportChecks.Run(root);
     await ModpackOperationChecks.Run(root);
     LoadOrderChecks.Run();
@@ -393,6 +394,7 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
     PaneLayoutChecks.Run();
     ProblemFilterChecks.Run();
     DialogStateChecks.Run(root);
+    MissingHistoryChecks.Run(root);
     DiagnosticLogChecks.Run();
     await IndexSubmissionChecks.Run();
     await UpdateServiceChecks.Run();

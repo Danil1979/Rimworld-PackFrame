@@ -59,7 +59,20 @@ public static class ModFullNameList
 
     public static IReadOnlyList<MissingHistoryEntry> LoadHistory(ManagedInstance instance)
     {
-        var document = LoadDocument(instance);
+        try { return LoadHistoryOrThrow(instance); }
+        catch { return Array.Empty<MissingHistoryEntry>(); }
+    }
+
+    // A negative count represents unavailable history, never an empty history.
+    public static int GetHistoryCount(ManagedInstance instance)
+    {
+        try { return LoadHistoryOrThrow(instance).Count; }
+        catch { return -1; }
+    }
+
+    public static IReadOnlyList<MissingHistoryEntry> LoadHistoryOrThrow(ManagedInstance instance)
+    {
+        var document = LoadDocumentOrThrow(instance);
         return ToHistoryDictionary(document.MissingHistory)
             .Values
             .OrderByDescending(entry => entry.LastMissingAt, StringComparer.OrdinalIgnoreCase)
@@ -79,7 +92,7 @@ public static class ModFullNameList
             return;
         }
 
-        var document = LoadDocument(instance);
+        var document = LoadDocumentOrThrow(instance);
         var oldMods = ToModDictionary(document.Mods);
         var history = ToHistoryDictionary(document.MissingHistory);
         var missing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -165,52 +178,48 @@ public static class ModFullNameList
 
     public static void ClearHistory(ManagedInstance instance)
     {
-        if (string.IsNullOrWhiteSpace(instance.DirectoryPath))
-        {
-            return;
-        }
-
-        var document = LoadDocument(instance);
+        var document = LoadDocumentOrThrow(instance);
         document.MissingHistory.Clear();
         WriteDocument(instance, document);
     }
 
     private static ModFullNameDocument LoadDocument(ManagedInstance instance)
     {
+        try { return LoadDocumentOrThrow(instance); }
+        catch { return new ModFullNameDocument(); }
+    }
+
+    private static ModFullNameDocument LoadDocumentOrThrow(ManagedInstance instance)
+    {
         if (string.IsNullOrWhiteSpace(instance.DirectoryPath))
-        {
-            return new ModFullNameDocument();
-        }
+            throw new IOException("The instance folder is unavailable.");
 
-        var path = GetPath(instance);
-        if (!File.Exists(path))
-        {
-            return new ModFullNameDocument();
-        }
+        // File.Exists also returns false on access errors. Read directly so those
+        // failures cannot be mistaken for a new, empty history and overwritten.
+        string json;
+        try { json = File.ReadAllText(GetPath(instance)); }
+        catch (FileNotFoundException) { return new ModFullNameDocument(); }
+        catch (DirectoryNotFoundException) { return new ModFullNameDocument(); }
 
-        try
-        {
-            return JsonSerializer.Deserialize(
-                File.ReadAllText(path),
-                PackFrameJsonContext.Default.ModFullNameDocument
-            ) ?? new ModFullNameDocument();
-        }
-        catch
-        {
-            return new ModFullNameDocument();
-        }
+        var document = JsonSerializer.Deserialize(json, PackFrameJsonContext.Default.ModFullNameDocument)
+            ?? throw new JsonException("The mod history document is null.");
+        document.Mods ??= new();
+        document.MissingHistory ??= new();
+        return document;
     }
 
     private static void WriteDocument(ManagedInstance instance, ModFullNameDocument document)
     {
+        // Serialize before touching the destination and flush the complete sibling
+        // file before atomic replacement. A failed write leaves the old file intact.
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(document, PackFrameJsonContext.Default.ModFullNameDocument);
         Directory.CreateDirectory(instance.DirectoryPath);
-        File.WriteAllText(
-            GetPath(instance),
-            JsonSerializer.Serialize(
-                document,
-                PackFrameJsonContext.Default.ModFullNameDocument
-            )
-        );
+        FileTransactions.WriteAtomic(GetPath(instance), temporary =>
+        {
+            using var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+            stream.Write(bytes);
+            stream.Flush(flushToDisk: true);
+        });
     }
 
     private static Dictionary<string, ModFullNameEntry> ToModDictionary(

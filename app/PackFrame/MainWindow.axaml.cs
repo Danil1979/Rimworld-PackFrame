@@ -815,6 +815,25 @@ public partial class MainWindow : Window
 
         var control = e.KeyModifiers.HasFlag(KeyModifiers.Control) ||
                       e.KeyModifiers.HasFlag(KeyModifiers.Meta);
+        // Scope Escape to the focused search/list, never dialogs, combo popups or other text fields.
+        if (e.Key == Key.Escape && e.KeyModifiers == KeyModifiers.None && IsActive && !_customDragActive && !_painting)
+        {
+            var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
+            for (var column = 0; column < 3; column++)
+            {
+                var pane = PaneWorkflow(column);
+                if (pane.Search.IsKeyboardFocusWithin || (pane.List.IsKeyboardFocusWithin && focused is not TextBox))
+                {
+                    if (HasPaneFilters(pane.State, pane.Filter))
+                    {
+                        ClearPaneFilters(column);
+                        e.Handled = true;
+                    }
+                    return;
+                }
+            }
+        }
+
         if (!control && (e.Key == Key.Up || e.Key == Key.Down))
         {
             var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
@@ -1821,12 +1840,12 @@ public partial class MainWindow : Window
             return 0;
         }
 
-        return ModFullNameList.LoadHistory(_instances[instanceIndex]).Count;
+        return ModFullNameList.GetHistoryCount(_instances[instanceIndex]);
     }
 
     private void UpdateMissingButton(Button button, IReadOnlyList<MissingModRow> rows, int historyCount)
     {
-        button.IsVisible = rows.Count > 0 || historyCount > 0;
+        button.IsVisible = rows.Count > 0 || historyCount != 0;
         if (rows.Count > 0)
         {
             var missing = rows.Count(row => row.Availability == WorkshopModAvailability.Missing);
@@ -1841,10 +1860,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        button.Content = Localization.MissingHistoryLabel(
-            _config.Language,
-            historyCount
-        );
+        button.Content = historyCount < 0
+            ? OperationText.Choose(_config.Language, "History unavailable", "历史记录不可用", "歷史記錄無法使用", "履歴を読み取れません")
+            : Localization.MissingHistoryLabel(_config.Language, historyCount);
         AutomationProperties.SetName(button, button.Content?.ToString());
         ToolTip.SetTip(button, Localization.MissingHistoryTooltip(_config.Language));
     }
@@ -1870,13 +1888,15 @@ public partial class MainWindow : Window
 
         if (rows.Count == 0)
         {
-            if (ModFullNameList.LoadHistory(instance).Count == 0)
+            if (ModFullNameList.GetHistoryCount(instance) == 0)
             {
                 return;
             }
 
             var historyWindow = new MissingHistoryWindow(instance, _config.Language);
             await historyWindow.ShowDialog(this);
+            UpdateMissingButton(column == 0 ? _activeMissing1 : _activeMissing2,
+                column == 0 ? _missingMods1 : _missingMods2, ModFullNameList.GetHistoryCount(instance));
             return;
         }
 
@@ -3803,6 +3823,7 @@ public partial class MainWindow : Window
         }
 
         SetPaneInteractionContext(list);
+        UpdateSelectionAction();
         var mod = list.SelectedItems!.Cast<ModInfo>().LastOrDefault();
         if (mod is not null)
         {
@@ -3962,6 +3983,11 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Explicit action buttons must not switch the inactive catalog's target before
+        // their Click event consumes its selection (including clicks on button text).
+        for (var visual = e.Source as Visual; visual is not null; visual = visual.GetVisualParent())
+            if (visual is Button action && TryGetPaneActionRoute(action.Tag?.ToString(), out _, out _)) return;
+
         var column = ReferenceEquals(border, _activeColumn1) ? 1 : 2;
         SetPaneInteractionContext(column == 1 ? _activeList1 : _activeList2);
         if (column == 1 && GetSelectedInstance(0)?.IsScratch == true)
@@ -4052,8 +4078,8 @@ public partial class MainWindow : Window
         var hasMissing = _missingMods1.Count > 0 || _missingMods2.Count > 0;
         _saveButton.IsEnabled = hasPending || hasMissing;
         _saveButton.Content = hasPending
-            ? Localization.Save(_config.Language) + " *"
-            : Localization.Save(_config.Language);
+            ? WorkflowText("Save changes", "保存修改", "儲存修改", "変更を保存") + (OperatingSystem.IsMacOS() ? " · ⌘S" : " · Ctrl+S")
+            : Localization.Save(_config.Language) + (OperatingSystem.IsMacOS() ? " · ⌘S" : " · Ctrl+S");
         UpdateEditStatus();
     }
     private void SaveModFullNameLists()
@@ -5131,7 +5157,7 @@ public partial class MainWindow : Window
 
             if (copy)
             {
-                CopyModsToProfile(payload, targetColumn, targetIndex);
+                _ = CopyModsToProfileAsync(payload, targetColumn, targetIndex);
             }
             else
             {
@@ -5454,7 +5480,7 @@ public partial class MainWindow : Window
         };
     }
 
-    private void CopyModsToProfile(
+    private async Task CopyModsToProfileCoreAsync(
         DragPayload payload,
         int targetColumn,
         int targetIndex
@@ -5476,70 +5502,80 @@ public partial class MainWindow : Window
             return;
         }
 
-        var sourceInstance = GetInstanceForColumn(payload.SourceColumn);
-        if (sourceInstance is not null && !sourceInstance.IsDamaged)
+        if (payload.Mods.Any(mod => mod.Source == ModSource.Local) && !CanModifyInstanceFiles()) return;
+        var targetOriginal = await CopyAndStageModsAsync(targetInstance, selectedIds, targetIndex, async () =>
         {
-            foreach (var mod in payload.Mods)
+            var sourceInstance = GetInstanceForColumn(payload.SourceColumn);
+            var localMods = payload.Mods.Where(mod => mod.Source == ModSource.Local).ToList();
+            if (sourceInstance is not null && !sourceInstance.IsDamaged && localMods.Count > 0)
             {
-                try
+                var game = _gameInstallation;
+                var root = _packRoot;
+                var mods = await RunInstanceWorkCoreAsync(CopyModsOperation, async () =>
                 {
-                    CopyLocalModToTarget(mod, sourceInstance, targetInstance);
-                }
-                catch (Exception exception)
+                    await Task.Run(() =>
+                    {
+                        foreach (var mod in localMods)
+                            CopyLocalModToTarget(mod, sourceInstance, targetInstance, game?.GamePath);
+                    });
+                    return game is null ? null : await ModCatalog.LoadAsync(game, root);
+                });
+                if (_windowClosed) throw new OperationCanceledException();
+                // Refresh catalog models without discarding pending lists, selection or undo history.
+                if (mods is not null)
                 {
-                    AppLog.Error("Copy local mod for cross-instance activation: " + mod.Path, exception);
-                    ShowToast(exception.Message);
+                    _allMods = mods;
+                    _modsByPackage = mods.GroupBy(mod => mod.PackageId, StringComparer.OrdinalIgnoreCase)
+                        .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
+                    _modsById = _modsByPackage.ToDictionary(pair => pair.Key, pair => pair.Value[0], StringComparer.OrdinalIgnoreCase);
                 }
+                RefreshManager(false);
             }
-        }
+        });
+        if (_windowClosed || ActiveIdsEqual(targetOriginal, targetInstance.ActivePackageIds)) return;
 
-        var targetOriginal = targetInstance.ActivePackageIds.ToList();
-        var targetUpdated = ModListOperations.InsertSelection(targetOriginal, selectedIds, targetIndex);
-        if (ActiveIdsEqual(targetOriginal, targetUpdated))
-        {
-            return;
-        }
-
-        try
-        {
-            InstanceStore.StageActiveMods(targetInstance, targetUpdated);
-            PushUndo(
-                new List<InstanceSnapshot>
-                {
-                    new(targetInstance.FolderName, targetOriginal)
-                },
-                selectedIds,
-                payload.SourceColumn,
-                targetColumn
-            );
-            _selectionAnchorList = null;
-            _selectionAnchorIndex = -1;
-            RefreshManager(false);
-            Dispatcher.UIThread.Post(() => SelectMovedMods(targetColumn, selectedIds));
-        }
-        catch
-        {
-        }
+        PushUndo(
+            new List<InstanceSnapshot>
+            {
+                new(targetInstance.FolderName, targetOriginal)
+            },
+            selectedIds,
+            payload.SourceColumn,
+            targetColumn
+        );
+        _selectionAnchorList = null;
+        _selectionAnchorIndex = -1;
+        RefreshManager(false);
+        Dispatcher.UIThread.Post(() => SelectMovedMods(targetColumn, selectedIds));
     }
-    private void CopyLocalModToTarget(
+    internal static async Task<List<string>> CopyAndStageModsAsync(
+        ManagedInstance target, IReadOnlyList<string> selectedIds, int targetIndex, Func<Task> copy)
+    {
+        // Do not activate any IDs until every requested file copy succeeds.
+        await copy();
+        var original = target.ActivePackageIds.ToList();
+        var updated = ModListOperations.InsertSelection(original, selectedIds, targetIndex);
+        if (!ActiveIdsEqual(original, updated)) InstanceStore.StageActiveMods(target, updated);
+        return original;
+    }
+
+    internal static void CopyLocalModToTarget(
         ModInfo mod,
         ManagedInstance source,
-        ManagedInstance target
+        ManagedInstance target,
+        string? gamePath
     )
     {
-        if (mod.Source != ModSource.Local ||
-            string.IsNullOrWhiteSpace(mod.Path) ||
-            !Directory.Exists(mod.Path))
-        {
-            return;
-        }
+        if (mod.Source != ModSource.Local) return;
+        if (string.IsNullOrWhiteSpace(mod.Path) || !Directory.Exists(mod.Path))
+            throw new DirectoryNotFoundException("The local mod source is unavailable: " + mod.Path);
 
         var sourcePath = Path.GetFullPath(mod.Path);
         var sourceMods = Path.GetFullPath(Path.Combine(source.DirectoryPath, "Mods"));
         var targetMods = Path.GetFullPath(Path.Combine(target.DirectoryPath, "Mods"));
-        var gameMods = string.IsNullOrWhiteSpace(_gameInstallation?.GamePath)
+        var gameMods = string.IsNullOrWhiteSpace(gamePath)
             ? null
-            : Path.GetFullPath(Path.Combine(_gameInstallation.GamePath, "Mods"));
+            : Path.GetFullPath(Path.Combine(gamePath, "Mods"));
         var destinationRoot = IsPathUnder(sourcePath, sourceMods)
             ? targetMods
             : gameMods;
@@ -5578,7 +5614,17 @@ public partial class MainWindow : Window
             suffix++;
         }
 
-        ModpackInstanceInstaller.CopyTree(sourcePath, destination);
+        // Publish only complete folders. A failed copy must not look installed on retry.
+        var staging = Path.Combine(destinationRoot, ".copy-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            ModpackInstanceInstaller.CopyTree(sourcePath, staging);
+            Directory.Move(staging, destination);
+        }
+        finally
+        {
+            FileTransactions.TryDeleteDirectory(staging);
+        }
     }
 
     private static bool HasPackageInDirectory(string root, string packageId)
@@ -5778,7 +5824,7 @@ public partial class MainWindow : Window
         await OpenModpacksAsync(1);
     }
 
-    private async Task OpenModpacksAsync(int column)
+    private async Task OpenModpacksCoreAsync(int column)
     {
         if (_packRoot is null ||
             _gameInstallation is null ||
@@ -5796,6 +5842,7 @@ public partial class MainWindow : Window
             currentInstance
         );
         var result = await window.ShowDialog<ModpackInstallResult?>(this);
+        if (_windowClosed) return;
         if (window.ConfigApplied && currentInstance is not null)
         {
             if (_gameInstallation is not null)
@@ -5812,52 +5859,49 @@ public partial class MainWindow : Window
             return;
         }
 
-        try
+        var packRoot = _packRoot;
+        var gameVersion = _gameVersion;
+        var game = _gameInstallation;
+        var created = await RunInstanceWorkCoreAsync(Localization.ModpacksTitle(_config.Language), async () =>
         {
-            var created = await Task.Run(() => ModpackInstanceInstaller.Create(_packRoot, _gameVersion, result));
-            if (_gameInstallation is not null)
-            {
-                await LoadModsAsync(_gameInstallation);
-            }
+            var instance = await Task.Run(() => ModpackInstanceInstaller.Create(packRoot, gameVersion, result));
+            if (game is not null) await LoadModsAsync(game);
+            return instance;
+        });
+        if (_windowClosed) return;
 
-            ReloadInstances(created.FolderName, column);
-            SaveProfileSelection();
-            _lastEnableColumn = column + 1;
-            UpdateEnableTargetBorders();
-            ClearUndoHistory();
-            var pending = result.UnresolvedWorkshopCount;
-            var completion = new CompletionWindow(
-                Localization.CompletionTitle(_config.Language),
-                pending > 0
-                    ? Localization.ModpackCreatedPending(
-                        _config.Language,
-                        result.Name,
-                        result.PackageIds.Count,
-                        pending
-                    )
-                    : Localization.ModpackCreated(
-                        _config.Language,
-                        result.Name,
-                        result.PackageIds.Count
-                    ),
-                pending > 0 ? Localization.ViewMissingMods(_config.Language) : null,
-                Localization.OpenInstanceFolder(_config.Language),
-                Localization.CloseButton(_config.Language)
-            );
-            var choice = await completion.ShowDialog<CompletionChoice>(this);
-            if (choice == CompletionChoice.MissingMods)
-            {
-                await ShowMissingModsAsync(column);
-            }
-            else if (choice == CompletionChoice.OpenFolder)
-            {
-                InstanceStore.OpenFolder(created.DirectoryPath);
-            }
-        }
-        catch (Exception exception)
+        ReloadInstances(created.FolderName, column);
+        SaveProfileSelection();
+        _lastEnableColumn = column + 1;
+        UpdateEnableTargetBorders();
+        ClearUndoHistory();
+        var pending = result.UnresolvedWorkshopCount;
+        var completion = new CompletionWindow(
+            Localization.CompletionTitle(_config.Language),
+            pending > 0
+                ? Localization.ModpackCreatedPending(
+                    _config.Language,
+                    result.Name,
+                    result.PackageIds.Count,
+                    pending
+                )
+                : Localization.ModpackCreated(
+                    _config.Language,
+                    result.Name,
+                    result.PackageIds.Count
+                ),
+            pending > 0 ? Localization.ViewMissingMods(_config.Language) : null,
+            Localization.OpenInstanceFolder(_config.Language),
+            Localization.CloseButton(_config.Language)
+        );
+        var choice = await completion.ShowDialog<CompletionChoice>(this);
+        if (choice == CompletionChoice.MissingMods)
         {
-            AppLog.Error("Create installed modpack instance", exception);
-            ShowToast(Localization.ModpackCreateFailed(_config.Language));
+            await ShowMissingModsAsync(column);
+        }
+        else if (choice == CompletionChoice.OpenFolder)
+        {
+            InstanceStore.OpenFolder(created.DirectoryPath);
         }
     }
 

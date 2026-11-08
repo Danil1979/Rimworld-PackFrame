@@ -5,6 +5,13 @@ internal static class PaneLayoutChecks
 {
     public static void Run()
     {
+        foreach (var (tag, source, target) in new[] { ("0:1", 0, 1), ("0:2", 0, 2), ("1:0", 1, 0), ("2:0", 2, 0) })
+            Require(MainWindow.TryGetPaneActionRoute(tag, out var actualSource, out var actualTarget) &&
+                    actualSource == source && actualTarget == target,
+                $"pane action {tag} explicitly identifies its selection source and destination");
+        foreach (var tag in new string?[] { null, "", "1", "0:0", "1:2", "2:1", "3:0", "0:3", "-1:0", "0:1:2" })
+            Require(!MainWindow.TryGetPaneActionRoute(tag, out _, out _),
+                $"invalid pane action '{tag}' cannot silently fall back to the last-focused list");
         Require(!new AppConfig().ShowSecondaryPane,
             "new users start with a single enabled pane");
         var unspecified = Read("{\"language\":\"en\",\"profileFolder1\":\"profile1\"}");

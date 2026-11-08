@@ -27,6 +27,15 @@ public partial class MainWindow
     private Task ImportInstancesAsync(int column) => RunInstanceOperationAsync(
         Localization.ImportInstance(_config.Language), () => ImportInstancesCoreAsync(column));
 
+    private Task OpenModpacksAsync(int column) => RunInstanceOperationAsync(
+        Localization.ModpacksTitle(_config.Language), () => OpenModpacksCoreAsync(column));
+
+    private string CopyModsOperation => OperationText.Choose(_config.Language,
+        "Copy mods to instance", "复制模组到实例", "複製模組到執行個體", "インスタンスに MOD をコピー");
+
+    private Task CopyModsToProfileAsync(DragPayload payload, int column, int index) => RunInstanceOperationAsync(
+        CopyModsOperation, () => CopyModsToProfileCoreAsync(payload, column, index));
+
     private async Task RunInstanceOperationAsync(string operation, Func<Task> action)
     {
         if (_windowClosed || _instanceOperationBusy) return;
@@ -69,7 +78,10 @@ public partial class MainWindow
         "無法匯入此檔案。請選擇有效的 ModsConfig XML、JSON 模組清單、RML、RimWorld 存檔，或包含 Config/ModsConfig.xml 的執行個體 ZIP。目前執行個體未被取代。",
         "このファイルをインポートできません。有効な ModsConfig XML、JSON MOD リスト、RML、RimWorld セーブ、または Config/ModsConfig.xml を含むインスタンス ZIP を選んでください。現在のインスタンスは置き換えられていません。");
 
-    private async Task<T> RunInstanceWorkAsync<T>(string operation, Func<T> work)
+    private Task<T> RunInstanceWorkAsync<T>(string operation, Func<T> work) =>
+        RunInstanceWorkCoreAsync(operation, () => Task.Run(work));
+
+    private async Task<T> RunInstanceWorkCoreAsync<T>(string operation, Func<Task<T>> work)
     {
         var content = Content as Control;
         var wasEnabled = content?.IsEnabled ?? true;
@@ -86,7 +98,7 @@ public partial class MainWindow
         _undoToastTimer.Stop();
         try
         {
-            return await Task.Run(work);
+            return await work();
         }
         finally
         {

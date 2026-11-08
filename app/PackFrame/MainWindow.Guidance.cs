@@ -25,15 +25,20 @@ public partial class MainWindow
                 "選擇模組，在此檢視作者、位置和簡介。",
                 "MOD を選択すると、作者、保存場所、説明がここに表示されます。");
         Find<TextBlock>("DetailsWorkflow").Text = OperationText.Choose(language,
-            "1  Choose an instance above the active list.\n\n2  Select mods, then use Enable / Disable selected above. Drag to change their order.\n\n3  Save your changes, then launch the game.",
-            "1  在启用列表上方选择实例。\n\n2  选择模组，使用上方的启用或禁用所选按钮。拖动调整顺序。\n\n3  保存修改后，再启动游戏。",
-            "1  在啟用清單上方選擇實例。\n\n2  選擇模組，使用上方的啟用或停用所選按鈕。拖曳調整順序。\n\n3  儲存修改後，再啟動遊戲。",
-            "1  有効なリストの上でインスタンスを選択。\n\n2  MOD を選び、上部の有効化・無効化ボタンを使用。ドラッグで順序を変更。\n\n3  変更を保存してからゲームを起動。");
+            "1  Choose an instance above the active list.\n\n2  Select mods in Inactive, then use Enable above the destination list. Disable acts on its own list. Drag to reorder.\n\n3  Use Save changes at the bottom right (Ctrl+S / ⌘S), then launch.",
+            "1  在启用列表上方选择实例。\n\n2  在未启用列表中选择模组，点击目标列表上方的“启用”。“禁用”只作用于所在列表。拖动调整顺序。\n\n3  点击右下角“保存修改”（Ctrl+S / ⌘S），然后启动游戏。",
+            "1  在啟用清單上方選擇實例。\n\n2  在未啟用清單中選擇模組，點選目標清單上方的「啟用」。「停用」只作用於所在清單。拖曳調整順序。\n\n3  點選右下角「儲存修改」（Ctrl+S / ⌘S），然後啟動遊戲。",
+            "1  有効なリストの上でインスタンスを選択。\n\n2  無効リストで選択し、移動先の上の「有効化」を使用。「無効化」はそのリストに適用。ドラッグで順序を変更。\n\n3  右下の「変更を保存」（Ctrl+S / ⌘S）で保存後、ゲームを起動。");
         Find<TextBlock>("DetailsSelectionHint").Text = OperationText.Choose(language,
             "Open on right adds another view for comparing or copying between instances.",
             "“在右侧打开”可添加另一视图，用于比较或在实例间复制模组。",
             "「在右側開啟」可新增另一個檢視，用於比較或在實例間複製模組。",
             "「右側で開く」で別のビューを追加し、インスタンス間で比較やコピーができます。");
+        Find<TextBlock>("InactiveActionHint").Text = WorkflowText(
+            "Select here; Enable above the target list.\nEsc clears search and filters.",
+            "在此选择，在目标列表上方启用。\nEsc 清除搜索和筛选。",
+            "在此選擇，在目標清單上方啟用。\nEsc 清除搜尋和篩選。",
+            "ここで選択し、移動先の上で有効化。\nEsc で検索とフィルターを解除。");
         var resize = OperationText.Choose(language,
             "Resize mod details. Drag, or use the arrow keys when focused.",
             "调整详情宽度：拖动分隔线，或聚焦后使用方向键。",
@@ -52,6 +57,8 @@ public partial class MainWindow
         }
         foreach (var search in new[] { _inactiveSearchBox, _activeSearchBox1, _activeSearchBox2 })
             AutomationProperties.SetName(search, Localization.SearchMods(language));
+        for (var column = 0; column < 3; column++)
+            Find<TextBlock>($"SearchShortcutHint{column}").Text = System.OperatingSystem.IsMacOS() ? "⌘F" : "Ctrl+F";
     }
 
     private string SummaryCaption(TextBlock label)

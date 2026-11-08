@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -135,8 +136,8 @@ public partial class ModpackWindow : Window
             Find<Button>("ApplyConfigButton"),
             Localization.ModpackApplyConfig(_language)
         );
-        Find<Button>("AdvancedOptionsButton").Content = T(
-            "Advanced options", "高级选项", "進階選項", "詳細オプション");
+        SetButtonText(Find<Button>("AdvancedOptionsButton"), T(
+            "Advanced options", "高级选项", "進階選項", "詳細オプション"));
         Find<Button>("CloseButton").Content = Localization.CloseButton(_language);
         Find<Button>("CancelOperationButton").Content =
             Localization.CancelButton(_language);
@@ -181,6 +182,12 @@ public partial class ModpackWindow : Window
         );
 
         Find<TextBlock>("StatusText").Text = Localization.ModpackNoUrl(_language);
+        AutomationProperties.SetName(RepoBox, Localization.ModpackRepoLabel(_language));
+        AutomationProperties.SetName(Find<TextBox>("LinkBox"), Localization.ModpackLinkLabel(_language));
+        AutomationProperties.SetName(Find<ListBox>("PackList"), title);
+        var sourceLabel = T("Choose catalog source", "选择合集来源", "選擇合集來源", "カタログのソースを選択");
+        AutomationProperties.SetName(Find<Button>("RepoMenuButton"), sourceLabel);
+        ToolTip.SetTip(Find<Button>("RepoMenuButton"), sourceLabel);
         SetControls(true);
     }
 
@@ -204,6 +211,7 @@ public partial class ModpackWindow : Window
         }
 
         button.Content = panel;
+        AutomationProperties.SetName(button, text.Replace('\n', ' '));
     }
 
     private T Find<T>(string name) where T : Control
@@ -232,6 +240,7 @@ public partial class ModpackWindow : Window
         }
 
         CancelDetailLoad();
+        Find<ScrollViewer>("DetailScroll").Offset = default;
         var version = _detailVersion;
         var indexUri = _indexUri;
         var key = ModpackDetailsCache.GetKey(item.Entry, indexUri);
@@ -305,6 +314,8 @@ public partial class ModpackWindow : Window
 
     private void ShowPack(ModpackDefinition pack, ModpackListItem item)
     {
+        Find<Border>("ModsSection").IsVisible = true;
+        Find<Border>("LinkSection").IsVisible = true;
         var title = string.IsNullOrWhiteSpace(pack.Name) ? item.Name : pack.Name;
         Find<SelectableTextBlock>("PackTitle").Text = title;
         Find<SelectableTextBlock>("PackDescription").Text =
@@ -509,6 +520,7 @@ public partial class ModpackWindow : Window
     {
         var image = Find<Image>("CoverImage");
         image.Source = bitmap;
+        Find<Border>("CoverContainer").IsVisible = bitmap is not null;
         _coverBitmap?.Dispose();
         _coverStream?.Dispose();
         _coverBitmap = bitmap;
@@ -518,6 +530,8 @@ public partial class ModpackWindow : Window
     private void ClearDetail(string status)
     {
         SetPackNotice(status);
+        Find<Border>("ModsSection").IsVisible = false;
+        Find<Border>("LinkSection").IsVisible = false;
         _coverCancellation?.Cancel();
         _canInstall = false;
         _canApplyConfig = false;
@@ -543,6 +557,8 @@ public partial class ModpackWindow : Window
         RefreshUpdateControls();
         var ready = enabled && !_busy;
         Find<Button>("RefreshButton").IsEnabled = ready;
+        Find<TextBox>("LinkBox").IsEnabled = ready && _selectedPack is not null;
+        Find<Button>("OpenWorkshopButton").IsEnabled = ready && _selectedPack is not null;
         Find<Button>("AdvancedOptionsButton").IsEnabled = ready && _selectedPack is not null;
         Find<Button>("WorkshopOnlyButton").IsEnabled = ready && _selectedPack is not null;
         Find<TextBox>("RepoBox").IsEnabled = ready;

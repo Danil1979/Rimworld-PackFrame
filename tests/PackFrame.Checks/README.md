@@ -199,3 +199,18 @@ input, destination-specific index retries, anonymous manifest verification,
 transactional OSS settings, malformed archive rejection, recursive config rollback,
 install cancellation tails, and distinct diagnostic-log read failures. See
 [UI review coverage](../../docs/UI_REVIEW.md) for native checks and remaining gaps.
+
+Local-mod copy checks exercise the main-window copy/stage orchestration without a GUI:
+missing sources and mid-copy failures preserve pending active IDs, asynchronous copies
+finish before activation, successful copies publish complete folders, and retries
+reuse installed packages. Manually verify that cross-instance local-mod drops and
+modpack instance creation remain responsive, suppress repeated actions and keyboard
+shortcuts, block window close during disk work, and show a persistent log-linked error
+on failure. Confirm existing unsaved orders survive catalog refreshes.
+
+### Main-list contextual controls
+
+- At 1180×812 and the 1100×700 minimum, test single and split layouts in English and Chinese. Action rows remain fixed-height when selections/counts change. Each active list names its target above its Enable/Disable controls.
+- Select several inactive mods, then click Enable over the other active pane without focusing its list first. Confirm the named target receives that exact selection; Disable removes only its own pane's selection. Repeat with both views on the same instance. Double-click and drag keep their existing target behavior.
+- In each search, test text-only, source-only, status-only and combined filters. The trailing × and Escape in the search/list clear the same query/source/status state, including a no-results list. Search field/view preferences remain intact. Ctrl+F (⌘F on Mac) focuses the current pane's search; Ctrl+Z while typing remains text undo. Escape in dialogs or combo menus must not reset a pane.
+- Edit two different instances: each affected header says Unsaved, the bottom status names both, and Save changes shows its shortcut and emphasis. Save or discard removes badges/emphasis. Returning to an already-edited instance restores its badge.
