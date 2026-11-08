@@ -129,6 +129,38 @@ internal static class WorkshopTrackingChecks
         Require(initiallyInstalled.ReadyToRefresh.Count == 0,
             "a newly downloaded Workshop item can be acknowledged after its full retry budget is reset");
 
+        var betweenPolls = new WorkshopDownloadTracking();
+        var versioned = installed with { InstalledManifest = 1001 };
+        betweenPolls.Observe(Snapshot(versioned));
+        betweenPolls.Refreshed(new[] { first }, new[] { first });
+        betweenPolls.Observe(Snapshot(versioned));
+        Require(betweenPolls.ReadyToRefresh.Count == 0,
+            "an unchanged installed manifest does not repeatedly refresh an acknowledged item");
+        versioned = versioned with { InstalledManifest = 1002 };
+        betweenPolls.Observe(Snapshot(versioned));
+        Require(betweenPolls.ReadyToRefresh.SequenceEqual(new[] { first }),
+            "an update completed between polls refreshes when its installed manifest changes");
+        for (var attempt = 0; attempt < WorkshopDownloadTracking.MaximumCompletionScans; attempt++)
+        {
+            betweenPolls.Refreshed(new[] { first }, Array.Empty<ulong>());
+            betweenPolls.Observe(Snapshot(versioned));
+        }
+        Require(betweenPolls.ReadyToRefresh.Count == 0,
+            "an unchanged installed manifest cannot reset an exhausted completion-scan budget");
+        betweenPolls.Observe(null);
+        betweenPolls.Observe(Snapshot(versioned));
+        Require(betweenPolls.ReadyToRefresh.Count == 0,
+            "a temporary read failure cannot reset the same manifest's exhausted scan budget");
+        betweenPolls.Observe(Snapshot());
+        versioned = versioned with { InstalledManifest = 999 };
+        betweenPolls.Observe(Snapshot(versioned));
+        Require(betweenPolls.ReadyToRefresh.SequenceEqual(new[] { first }),
+            "a changed manifest resets retries across omitted snapshots without assuming IDs increase");
+        betweenPolls.Refreshed(new[] { first }, new[] { first });
+        betweenPolls.Observe(Snapshot(versioned));
+        Require(betweenPolls.ReadyToRefresh.Count == 0,
+            "a between-polls update is acknowledged once its replacement is discovered");
+
         var interrupted = new WorkshopDownloadTracking();
         interrupted.Observe(Snapshot(installed));
         interrupted.Observe(Snapshot(downloading));

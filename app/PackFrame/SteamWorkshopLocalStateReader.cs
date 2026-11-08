@@ -50,7 +50,12 @@ internal static class SteamWorkshopLocalStateReader
         internal DateTime SubscriptionUtc;
     }
 
-    internal static async Task<WorkshopDownloadSnapshot?> QueryAsync(string gamePath,
+    internal static Task<WorkshopDownloadSnapshot?> QueryAsync(string gamePath,
+        IReadOnlyList<ulong> ids, CancellationToken cancellationToken = default) =>
+        QueryFromSteamRootsAsync(gamePath, RimWorldLocator.GetSteamRoots(), SteamStartedUtc(), ids, cancellationToken);
+
+    internal static async Task<WorkshopDownloadSnapshot?> QueryFromSteamRootsAsync(string gamePath,
+        IReadOnlyList<string> clientRoots, DateTime? steamStartedUtc,
         IReadOnlyList<ulong> ids, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -58,7 +63,7 @@ internal static class SteamWorkshopLocalStateReader
         if (requested.Length == 0) return new(new());
         if (requested.Length > MaximumItems) return null;
         var workshopRoots = new List<string>();
-        var steamRoots = RimWorldLocator.GetSteamRoots();
+        var steamRoots = clientRoots.ToList();
         try
         {
             var current = new DirectoryInfo(Path.GetFullPath(gamePath));
@@ -93,7 +98,7 @@ internal static class SteamWorkshopLocalStateReader
         return await QueryFromPathsAsync(roots,
             logRoots.Select(root => Path.Combine(root, "logs", "content_log.txt")).ToArray(),
             logRoots.Select(root => Path.Combine(root, "logs", "workshop_log.txt")).ToArray(),
-            SteamStartedUtc(), requested, cancellationToken);
+            steamStartedUtc, requested, cancellationToken);
     }
 
     internal static async Task<WorkshopDownloadSnapshot?> QueryFromPathsAsync(
@@ -158,21 +163,31 @@ internal static class SteamWorkshopLocalStateReader
             var subscribed = Number(details?.Value("subscribedby")) != 0;
             evidence.Items.TryGetValue(id, out var logged);
             var freshManifest = logged is { Manifest: not 0 } &&
-                (!hasRecordedItem || logged.ManifestUtc > library.ModifiedUtc);
+                (!hasRecordedItem || LogMayFollowManifest(logged.ManifestUtc, library.ModifiedUtc));
+            if (freshManifest && hasRecordedItem && expectedManifest != 0 &&
+                expectedManifest != logged!.Manifest &&
+                logged.ManifestUtc.Ticks / TimeSpan.TicksPerSecond == library.ModifiedUtc.Ticks / TimeSpan.TicksPerSecond)
+            {
+                // The log may precede the ACF within this second. Never let an
+                // old logged installed version erase a pending target in the ACF.
+                // If both sources name different replacements, their order is unknown.
+                if (logged.Manifest == installedManifest) freshManifest = false;
+                else if (expectedManifest != installedManifest) continue;
+            }
             // Steam can keep a new subscription and its manifest only in
             // memory until the whole Workshop job commits. Its own current
             // session's item-specific events bridge that stale ACF interval.
             if (freshManifest) expectedManifest = logged!.Manifest;
             if (logged?.Subscribed is { } loggedSubscribed &&
-                (!hasRecordedItem || logged.SubscriptionUtc > library.ModifiedUtc))
+                (!hasRecordedItem || LogMayFollowManifest(logged.SubscriptionUtc, library.ModifiedUtc)))
                 subscribed = loggedSubscribed;
             var state = subscribed ? WorkshopItemState.Subscribed : WorkshopItemState.None;
             if (logged?.Subscribed == false &&
-                (!hasRecordedItem || logged.SubscriptionUtc > library.ModifiedUtc)) continue;
+                (!hasRecordedItem || LogMayFollowManifest(logged.SubscriptionUtc, library.ModifiedUtc))) continue;
             if (expectedManifest != 0 && installedManifest == expectedManifest &&
                 ReadableContent(library.Root, key))
             {
-                items[id] = new(id, state | WorkshopItemState.Installed);
+                items[id] = new(id, state | WorkshopItemState.Installed, InstalledManifest: installedManifest);
                 continue;
             }
             if (evidence.FailedItems.Contains(id)) continue;
@@ -183,7 +198,8 @@ internal static class SteamWorkshopLocalStateReader
                 evidence.Manifests.Contains(expectedManifest))
             {
                 items[id] = new(id, state | WorkshopItemState.Downloading |
-                    (installedManifest != 0 ? WorkshopItemState.Installed | WorkshopItemState.NeedsUpdate : 0));
+                    (installedManifest != 0 ? WorkshopItemState.Installed | WorkshopItemState.NeedsUpdate : 0),
+                    InstalledManifest: installedManifest);
                 continue;
             }
             // An app-level queued flag alone cannot make an arbitrary missing
@@ -194,7 +210,8 @@ internal static class SteamWorkshopLocalStateReader
                 ((pendingInManifest && (staging || evidence.Queued)) || pendingInLog))
             {
                 items[id] = new(id, state | WorkshopItemState.DownloadPending |
-                    (installedManifest != 0 ? WorkshopItemState.Installed | WorkshopItemState.NeedsUpdate : 0));
+                    (installedManifest != 0 ? WorkshopItemState.Installed | WorkshopItemState.NeedsUpdate : 0),
+                    InstalledManifest: installedManifest);
                 continue;
             }
             if (!staging && ((!hasRecordedItem && logged?.Subscribed != true && !freshManifest) ||
@@ -205,6 +222,12 @@ internal static class SteamWorkshopLocalStateReader
         }
         return new(items);
     }
+
+    // Logs have one-second resolution; an ACF mtime may include fractions.
+    // Events in the same second cannot be ordered reliably, so do not discard
+    // current item-specific evidence merely because its timestamp was rounded.
+    private static bool LogMayFollowManifest(DateTime loggedUtc, DateTime modifiedUtc) =>
+        loggedUtc.Ticks / TimeSpan.TicksPerSecond >= modifiedUtc.Ticks / TimeSpan.TicksPerSecond;
 
     private static ulong Number(string? value) => ulong.TryParse(value, NumberStyles.None,
         CultureInfo.InvariantCulture, out var number) ? number : 0;

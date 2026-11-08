@@ -19,7 +19,7 @@ internal enum WorkshopItemState : uint
 }
 
 internal sealed record WorkshopDownloadItem(ulong WorkshopId, WorkshopItemState State,
-    ulong BytesDownloaded = 0, ulong BytesTotal = 0)
+    ulong BytesDownloaded = 0, ulong BytesTotal = 0, ulong InstalledManifest = 0)
 {
     public bool IsDownloading =>
         (State & (WorkshopItemState.Downloading | WorkshopItemState.DownloadPending)) != 0;

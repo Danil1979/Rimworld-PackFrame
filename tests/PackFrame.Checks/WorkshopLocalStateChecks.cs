@@ -50,7 +50,7 @@ internal static class WorkshopLocalStateChecks
             "an installed but outdated manifest and old staging files alone remain unknown");
         fixture.Manifest(fixture.Root, false, new Item(11, 101, 101));
         snapshot = await fixture.Query(11);
-        Require(snapshot!.Items[11].IsInstalled,
+        Require(snapshot!.Items[11].IsInstalled && snapshot.Items[11].InstalledManifest == 101,
             "matching committed and latest manifests plus readable installed content authorize completion");
         fixture.Manifest(fixture.Root, false, new Item(13, 103, 103));
         snapshot = await fixture.Query(13);
@@ -177,6 +177,67 @@ internal static class WorkshopLocalStateChecks
                 "completion still requires Steam to persist the new installed/latest manifests and readable content");
         }
 
+        using (var sameSecond = new Fixture())
+        {
+            var second = DateTime.UtcNow.AddMinutes(-1);
+            second = second.AddTicks(-(second.Ticks % TimeSpan.TicksPerSecond));
+            var manifestPath = Path.Combine(sameSecond.Root, "appworkshop_294100.acf");
+            sameSecond.Manifest(sameSecond.Root, false, new Item(31, 301, 301));
+            sameSecond.Content(31);
+            sameSecond.Stage(31);
+            File.SetLastWriteTimeUtc(manifestPath, second.AddMilliseconds(750));
+            sameSecond.WorkshopLogAt(second,
+                "[AppID 294100] Detected workshop change : changed cached item 31, new manifest 302");
+            sameSecond.ContentLog("AppID 294100 Workshop update changed : Running Update,Downloading,",
+                "Downloading 20 chunks for depot 294100 (302)");
+            var pending = await sameSecond.Query(31);
+            Require(pending!.Items[31].IsDownloading && !pending.Items[31].IsInstalled &&
+                    pending.Items[31].InstalledManifest == 301,
+                "whole-second log evidence can supersede a fractional ACF timestamp in the same second");
+
+            File.SetLastWriteTimeUtc(manifestPath, second.AddSeconds(1).AddMilliseconds(250));
+            pending = await sameSecond.Query(31);
+            Require(pending!.Items[31].IsInstalled && pending.Items[31].InstalledManifest == 301,
+                "a log from an earlier second cannot override a later committed manifest");
+
+            sameSecond.WorkshopLogAt(second, "[AppID 294100] Unsubscribed from item 31 @ fixture");
+            File.SetLastWriteTimeUtc(manifestPath, second.AddMilliseconds(750));
+            pending = await sameSecond.Query(31);
+            Require(pending is not null && !pending.Items.ContainsKey(31),
+                "a same-second unsubscribe cannot be hidden by fractional ACF timestamp precision");
+
+            sameSecond.Manifest(sameSecond.Root, false, new Item(31, 301, 301, false));
+            File.SetLastWriteTimeUtc(manifestPath, second.AddMilliseconds(750));
+            sameSecond.WorkshopLogAt(second,
+                "[AppID 294100] Subscribed to item 31 @ fixture",
+                "[AppID 294100] Detected workshop change : changed cached item 31, new manifest 302");
+            pending = await sameSecond.Query(31);
+            Require(pending!.Items[31].IsSubscribed && pending.Items[31].IsDownloading,
+                "a same-second resubscription supplies pending evidence despite an old unsubscribed ACF");
+
+            sameSecond.Manifest(sameSecond.Root, true, new Item(31, 301, 302));
+            File.SetLastWriteTimeUtc(manifestPath, second.AddMilliseconds(750));
+            sameSecond.WorkshopLogAt(second,
+                "[AppID 294100] Detected workshop change : changed cached item 31, new manifest 301");
+            pending = await sameSecond.Query(31);
+            Require(pending!.Items[31].IsDownloading && !pending.Items[31].IsInstalled,
+                "an older same-second log cannot erase a newer pending ACF target or report false completion");
+
+            sameSecond.Manifest(sameSecond.Root, true, new Item(31, 301, 303));
+            File.SetLastWriteTimeUtc(manifestPath, second.AddMilliseconds(750));
+            sameSecond.WorkshopLogAt(second,
+                "[AppID 294100] Detected workshop change : changed cached item 31, new manifest 302");
+            pending = await sameSecond.Query(31);
+            Require(pending is not null && !pending.Items.ContainsKey(31),
+                "conflicting replacement manifests in the same second remain unknown instead of guessing their order");
+
+            sameSecond.Manifest(sameSecond.Root, false, new Item(31, 302, 302));
+            File.SetLastWriteTimeUtc(manifestPath, second.AddMilliseconds(750));
+            pending = await sameSecond.Query(31);
+            Require(pending!.Items[31].IsInstalled && pending.Items[31].InstalledManifest == 302,
+                "matching committed and logged manifests complete even within the same second");
+        }
+
         using (var busy = new FileStream(Path.Combine(fixture.Root, "appworkshop_294100.acf"),
                    FileMode.Open, FileAccess.Read, FileShare.None))
             Require(await fixture.Query(11) is null,
@@ -231,6 +292,11 @@ internal static class WorkshopLocalStateChecks
         internal void Stage(ulong id) => Directory.CreateDirectory(Path.Combine(Root, "downloads", "294100", id.ToString(CultureInfo.InvariantCulture)));
         internal void ContentLog(params string[] lines) => WriteLog(ContentLogPath, lines);
         internal void WorkshopLog(params string[] lines) => WriteLog(WorkshopLogPath, lines);
+        internal void WorkshopLogAt(DateTime timestampUtc, params string[] lines)
+        {
+            var timestamp = timestampUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+            File.WriteAllLines(WorkshopLogPath, lines.Select(line => $"[{timestamp}] {line}"));
+        }
         private static void WriteLog(string path, string[] lines)
         {
             var timestamp = DateTime.Now.AddMinutes(-1).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);

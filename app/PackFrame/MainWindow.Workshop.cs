@@ -182,8 +182,9 @@ public partial class MainWindow
                 }
                 _workshopDownloads.Refreshed(ready, mods.Select(GetWorkshopId)
                     .Where(id => id is not null).Select(id => id!.Value));
+                var detailsPackageId = _packageValue.Text;
                 RefreshManager(false);
-                if (GetCommandList()?.SelectedItem is ModInfo retained) ShowDetails(retained);
+                ShowDetails(PaneSelectionSnapshot.ResolveDetails(GetCommandList(), detailsPackageId));
             }
             _workshopMonitorTimer!.Interval = TimeSpan.FromSeconds(snapshot is null ? 15 :
                 snapshot.Items.Values.Any(item => item.IsDownloading || item.NeedsUpdate) ||

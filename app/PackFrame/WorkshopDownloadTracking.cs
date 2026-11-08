@@ -14,6 +14,9 @@ internal sealed class WorkshopDownloadTracking
     private readonly HashSet<ulong> _refresh = new();
     private readonly HashSet<ulong> _observedDownloading = new();
     private readonly Dictionary<ulong, int> _scanAttempts = new();
+    // Keep committed identities through temporary unreadable/missing snapshots.
+    // A complete update can start and finish between two polling intervals.
+    private readonly Dictionary<ulong, ulong> _installedManifests = new();
     internal bool HasQueried { get; private set; }
     internal bool Available { get; private set; }
     internal IReadOnlyList<ulong> ReadyToRefresh => _refresh
@@ -27,16 +30,21 @@ internal sealed class WorkshopDownloadTracking
         foreach (var (id, item) in snapshot.Items)
         {
             var hadPrevious = _items.TryGetValue(id, out var previous);
+            var changedManifest = item.IsInstalled && item.InstalledManifest != 0 &&
+                _installedManifests.TryGetValue(id, out var installedManifest) &&
+                installedManifest != item.InstalledManifest;
+            if (item.IsInstalled && item.InstalledManifest != 0)
+                _installedManifests[id] = item.InstalledManifest;
             if (item.IsDownloading)
             {
                 _observedDownloading.Add(id);
                 _scanAttempts.Remove(id);
                 _refresh.Remove(id);
             }
-            if (item.IsInstalled && hadPrevious && !previous!.IsInstalled)
+            if (item.IsInstalled && (changedManifest || hadPrevious && !previous!.IsInstalled))
                 _scanAttempts.Remove(id);
             if (item.IsInstalled && _scanAttempts.GetValueOrDefault(id) < MaximumCompletionScans &&
-                (_observedDownloading.Contains(id) ||
+                (changedManifest || _observedDownloading.Contains(id) ||
                 !hadPrevious || !previous!.IsInstalled))
                 _refresh.Add(id);
         }

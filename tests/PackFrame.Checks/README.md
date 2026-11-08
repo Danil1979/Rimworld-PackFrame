@@ -36,6 +36,11 @@ unavailable records, deferred/bounded completion rescans, saved item/package map
 restart recovery, and preserving pending edits and unrelated instance metadata.
 These checks use synthetic state and temporary files; they do not contact Steam.
 
+Workshop checks cover installed-manifest changes completed between polls,
+same-second log/ACF timestamps, and secondary-library discovery using Linux
+and macOS client roots. Selection checks repeatedly replace all three panes'
+models while retaining selected package IDs, range anchors and displayed details.
+
 Manual platform checks:
 
 - On Windows x64 with Steam running, install a pack whose local download finishes
