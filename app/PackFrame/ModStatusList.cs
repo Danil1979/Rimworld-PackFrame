@@ -54,6 +54,8 @@ internal sealed class ModStatusList
     {
         _language = language;
         _list = window.FindControl<ListBox>("Rows")!;
+        Avalonia.Automation.AutomationProperties.SetName(_list, history
+            ? Localization.MissingHistory(language) : Localization.ModAvailabilityTitle(language));
         _search = window.FindControl<TextBox>("SearchBox")!;
         _clear = window.FindControl<Button>("ClearSearchButton")!;
         _count = window.FindControl<TextBlock>("FilterCountText")!;

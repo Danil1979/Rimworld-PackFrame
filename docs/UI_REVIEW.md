@@ -867,3 +867,38 @@ clutter or changing the established layout.
   accessibility tree also exposed stale virtualized list-item nodes after filtering;
   rendered results and keyboard selection were correct, but that virtualized-tree
   behavior needs investigation before claiming full assistive-technology support.
+
+## Filtered accessibility children: isolated and corrected
+
+The stale-list warning above was reproduced with a stock Avalonia 12.1.4 ListBox
+and Fluent theme, without PackFrame's filtering, selection or mod templates.
+For 50 synthetic items, filtering to one and then zero gave correct internal
+peer counts (10 → 1 → 0), while AT-SPI kept the initial ten item nodes.
+
+The bridge flattens selection-item descendants and caches them, but listens to
+the list peer rather than changes inside the virtualizing panel. See
+[Avalonia 12.1.4 AtSpiNode](https://github.com/AvaloniaUI/Avalonia/blob/12.1.4/src/Avalonia.FreeDesktop.AtSpi/AtSpiNode.cs),
+particularly GetChildPeers, EnsureChildren and OnPeerChildrenChanged.
+
+PackFrame now uses a ListBox subclass that invalidates its existing automation
+peer only when its visible realized-container sequence changes. This is limited
+to Linux. It keeps the standard theme, scroll and selection providers, and
+virtualization; it neither rebuilds every mod row nor changes saved lists.
+The same correction covers availability and missing-history lists, now also
+named for their purpose rather than their implementation class.
+
+- Native minimal reproduction: one result → zero → restore, followed by scrolling,
+  matched AT-SPI children to current realized items. No ghost items remained.
+- Native PackFrame: search Camera Plus → no matches → Escape restored only the
+  current accessible rows; enable/undo remained correct. Availability filtering
+  to zero and restoring its row also worked. Empty history opened normally.
+- Fifteen checks protect cache invalidation, unchanged-layout suppression,
+  hidden recycle pools, restoration/order changes, retained automation providers,
+  stock styling, platform scope, and all five virtualized-list declarations.
+- Final application Release build: zero warnings/errors. Full suite: 2,060 PASS
+  lines. Screen-reader speech and Windows/macOS remain unverified; the workaround
+  deliberately leaves their stock peers unchanged.
+
+A separate remaining usability opportunity is keyboard load-order rearrangement.
+Arrow keys currently select, Enter enables/disables, and the mod action menu has
+no move-up/down action. Dragging is still required for manual order changes.

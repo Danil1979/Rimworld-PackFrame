@@ -299,13 +299,13 @@
                         <Grid Grid.Row="2" RowDefinitions="38,*">
                             <TextBlock x:Name="InactiveActionHint" Height="38" FontSize="12" Margin="2,0" TextWrapping="Wrap"
                                        Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
-                        <ListBox Grid.Row="1" x:Name="InactiveList"
+                        <local:AccessibleModListBox Grid.Row="1" x:Name="InactiveList"
                                  Classes="modpane"
                                  ItemTemplate="{StaticResource ModTemplate}"
 
                                  ItemContainerTheme="{StaticResource ModListItem}"
                                  SelectionChanged="OnListSelectionChanged">
-                        </ListBox>
+                        </local:AccessibleModListBox>
                         <Border Grid.Row="1" x:Name="PaneEmpty0" IsVisible="False" Margin="10,26" VerticalAlignment="Top">
                             <StackPanel Spacing="10">
                                 <TextBlock x:Name="PaneEmptyTitle0" FontSize="17" FontWeight="SemiBold"
@@ -457,13 +457,13 @@
                                             Click="OnSelectionActionClick" />
                                 </Grid>
                             </Grid>
-                        <ListBox Grid.Row="1" x:Name="ActiveList1"
+                        <local:AccessibleModListBox Grid.Row="1" x:Name="ActiveList1"
                                  Classes="modpane"
                                  ItemTemplate="{StaticResource ModTemplate}"
 
                                  ItemContainerTheme="{StaticResource ModListItem}"
                                  SelectionChanged="OnListSelectionChanged">
-                        </ListBox>
+                        </local:AccessibleModListBox>
                         <Border Grid.Row="1" x:Name="PaneEmpty1" IsVisible="False" Margin="10,26" VerticalAlignment="Top">
                             <StackPanel Spacing="10">
                                 <TextBlock x:Name="PaneEmptyTitle1" FontSize="17" FontWeight="SemiBold"
@@ -616,13 +616,13 @@
                                             Click="OnSelectionActionClick" />
                                 </Grid>
                             </Grid>
-                        <ListBox Grid.Row="1" x:Name="ActiveList2"
+                        <local:AccessibleModListBox Grid.Row="1" x:Name="ActiveList2"
                                  Classes="modpane"
                                  ItemTemplate="{StaticResource ModTemplate}"
 
                                  ItemContainerTheme="{StaticResource ModListItem}"
                                  SelectionChanged="OnListSelectionChanged">
-                        </ListBox>
+                        </local:AccessibleModListBox>
                         <Border Grid.Row="1" x:Name="PaneEmpty2" IsVisible="False" Margin="10,26" VerticalAlignment="Top">
                             <StackPanel Spacing="10">
                                 <TextBlock x:Name="PaneEmptyTitle2" FontSize="17" FontWeight="SemiBold"

@@ -68,7 +68,7 @@
                 </Border>
 
                 <Grid Grid.Row="1">
-                <ListBox x:Name="Rows" SelectionMode="Single" AutoScrollToSelectedItem="False"
+                <local:AccessibleModListBox x:Name="Rows" SelectionMode="Single" AutoScrollToSelectedItem="False"
                              Background="Transparent" BorderThickness="0" Padding="0"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                         <ListBox.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
@@ -105,7 +105,7 @@
                                 </Border>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
-                    </ListBox>
+                    </local:AccessibleModListBox>
                     <TextBlock x:Name="EmptyText" IsVisible="False" Margin="24" TextWrapping="Wrap"
                         HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryTextBrush}" />
                 </Grid>
