@@ -53,6 +53,7 @@ public partial class MainWindow : Window
         public ProblemFilterMode Sort;
         public ProblemFilterMode Version;
         public ProblemFilterMode Duplicate;
+        public ProblemFilterMode Local;
     }
 
     private readonly AppConfig _config;
@@ -1927,12 +1928,15 @@ public partial class MainWindow : Window
     {
         _inactiveProblemV.TextDecorations = ProblemDecoration(_inactiveFilter.Version);
         _inactiveProblemR.TextDecorations = ProblemDecoration(_inactiveFilter.Duplicate);
+        _inactiveLocalCount.TextDecorations = ProblemDecoration(_inactiveFilter.Local);
         _activeProblemS1.TextDecorations = ProblemDecoration(_activeFilter1.Sort);
         _activeProblemV1.TextDecorations = ProblemDecoration(_activeFilter1.Version);
         _activeProblemR1.TextDecorations = ProblemDecoration(_activeFilter1.Duplicate);
+        _activeLocalCount1.TextDecorations = ProblemDecoration(_activeFilter1.Local);
         _activeProblemS2.TextDecorations = ProblemDecoration(_activeFilter2.Sort);
         _activeProblemV2.TextDecorations = ProblemDecoration(_activeFilter2.Version);
         _activeProblemR2.TextDecorations = ProblemDecoration(_activeFilter2.Duplicate);
+        _activeLocalCount2.TextDecorations = ProblemDecoration(_activeFilter2.Local);
     }
 
     private static TextDecorationCollection? ProblemDecoration(ProblemFilterMode mode)
@@ -2016,7 +2020,8 @@ public partial class MainWindow : Window
     {
         if (filter.Sort == ProblemFilterMode.Off &&
             filter.Version == ProblemFilterMode.Off &&
-            filter.Duplicate == ProblemFilterMode.Off)
+            filter.Duplicate == ProblemFilterMode.Off &&
+            filter.Local == ProblemFilterMode.Off)
         {
             return mods as List<ModInfo> ?? mods.ToList();
         }
@@ -2024,7 +2029,8 @@ public partial class MainWindow : Window
         return mods
             .Where(mod => PassesProblemFilter(filter.Sort, mod.SortError) &&
                           PassesProblemFilter(filter.Version, mod.VersionMismatch) &&
-                          PassesProblemFilter(filter.Duplicate, mod.IsDuplicate))
+                          PassesProblemFilter(filter.Duplicate, mod.IsDuplicate) &&
+                          PassesProblemFilter(filter.Local, mod.IsLocal))
             .ToList();
     }
 
@@ -2063,6 +2069,13 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private void OnInactiveLocalCountClick(object? sender, PointerPressedEventArgs e)
+    {
+        _inactiveFilter.Local = CycleProblemFilter(_inactiveFilter.Local);
+        RefreshManager(false);
+        e.Handled = true;
+    }
+
     private void OnActiveProblemS1Click(object? sender, PointerPressedEventArgs e)
     {
         _activeFilter1.Sort = CycleProblemFilter(_activeFilter1.Sort);
@@ -2084,6 +2097,13 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private void OnActiveLocalCount1Click(object? sender, PointerPressedEventArgs e)
+    {
+        _activeFilter1.Local = CycleProblemFilter(_activeFilter1.Local);
+        RefreshManager(false);
+        e.Handled = true;
+    }
+
     private void OnActiveProblemS2Click(object? sender, PointerPressedEventArgs e)
     {
         _activeFilter2.Sort = CycleProblemFilter(_activeFilter2.Sort);
@@ -2101,6 +2121,13 @@ public partial class MainWindow : Window
     private void OnActiveProblemR2Click(object? sender, PointerPressedEventArgs e)
     {
         _activeFilter2.Duplicate = CycleProblemFilter(_activeFilter2.Duplicate);
+        RefreshManager(false);
+        e.Handled = true;
+    }
+
+    private void OnActiveLocalCount2Click(object? sender, PointerPressedEventArgs e)
+    {
+        _activeFilter2.Local = CycleProblemFilter(_activeFilter2.Local);
         RefreshManager(false);
         e.Handled = true;
     }

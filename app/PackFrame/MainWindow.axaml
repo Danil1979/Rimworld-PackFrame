@@ -292,7 +292,9 @@
                                 <TextBlock x:Name="InactiveLocalCount"
                                            Text="L: 0"
                                            Foreground="{DynamicResource PrimaryTextBrush}"
-                                           TextWrapping="NoWrap" />
+                                           TextWrapping="NoWrap"
+                                           Cursor="Hand"
+                                           PointerPressed="OnInactiveLocalCountClick" />
                             </StackPanel>
                         </Border>                    </Grid>
                 </Border>
@@ -440,7 +442,9 @@
                                 <TextBlock x:Name="ActiveLocalCount1"
                                            Text="L: 0"
                                            Foreground="{DynamicResource PrimaryTextBrush}"
-                                           TextWrapping="NoWrap" />
+                                           TextWrapping="NoWrap"
+                                           Cursor="Hand"
+                                           PointerPressed="OnActiveLocalCount1Click" />
                                 <Button x:Name="ActiveMissing1"
                                         Classes="footerlink"
                                         IsVisible="False"
@@ -587,7 +591,9 @@
                                 <TextBlock x:Name="ActiveLocalCount2"
                                            Text="L: 0"
                                            Foreground="{DynamicResource PrimaryTextBrush}"
-                                           TextWrapping="NoWrap" />
+                                           TextWrapping="NoWrap"
+                                           Cursor="Hand"
+                                           PointerPressed="OnActiveLocalCount2Click" />
                                 <Button x:Name="ActiveMissing2"
                                         Classes="footerlink"
                                         IsVisible="False"
