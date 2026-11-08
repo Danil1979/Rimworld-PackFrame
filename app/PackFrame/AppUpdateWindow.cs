@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -14,9 +15,11 @@ internal sealed class AppUpdateWindow : Window
     private readonly string? _language;
     private readonly UpdateInfo _update;
     private readonly Action<string?> _openUrl;
+    private readonly bool _canInstall;
+    private readonly Func<UpdateInfo, IProgress<AppUpdateProgress>, CancellationToken, Task<PreparedAppUpdate>> _prepare;
     private readonly Button _action;
     private readonly Button _later;
-    private readonly TextBlock _status;
+    private readonly SelectableTextBlock _status;
     private readonly ProgressBar _progress;
     private CancellationTokenSource? _download;
     private bool _closed;
@@ -24,60 +27,82 @@ internal sealed class AppUpdateWindow : Window
     internal PreparedAppUpdate? Prepared { get; private set; }
 
     internal AppUpdateWindow(string? language, UpdateInfo update, PreparedAppUpdate? prepared,
-        Action<string?> openUrl)
+        Action<string?>? openUrl = null,
+        Func<UpdateInfo, IProgress<AppUpdateProgress>, CancellationToken, Task<PreparedAppUpdate>>? prepare = null,
+        bool? canInstall = null)
     {
         _language = language;
         _update = update;
         Prepared = prepared;
-        _openUrl = openUrl;
+        _openUrl = openUrl ?? (url => OpenReleasePage(url));
+        _canInstall = canInstall ?? AppUpdateService.CanInstall;
+        _prepare = prepare ?? ((info, progress, token) => AppUpdateService.PrepareAsync(info, progress, token));
         Title = T("PackFrame update", "PackFrame 更新", "PackFrame 更新", "PackFrame の更新");
         RequestedThemeVariant = ThemeVariant.Dark;
         Background = ThemeService.BackgroundBrush;
         Foreground = ThemeService.PrimaryTextBrush;
-        Width = 560;
-        SizeToContent = SizeToContent.Height;
-        CanResize = false;
+        Width = 640;
+        Height = 560;
+        MinWidth = 480;
+        MinHeight = 420;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
-        _status = new TextBlock { TextWrapping = TextWrapping.Wrap };
+        _status = new SelectableTextBlock { TextWrapping = TextWrapping.Wrap };
+        AutomationProperties.SetName(_status, T("Update status", "更新状态", "更新狀態", "更新状態"));
         _progress = new ProgressBar { Minimum = 0, Maximum = 100, Height = 6, IsVisible = false };
         _later = MakeButton(T("Later", "稍后", "稍後", "後で"));
         _later.IsCancel = true;
         _later.Click += (_, _) => Close();
         _action = MakeButton(string.Empty);
         _action.Click += OnActionClick;
-        var buttons = new StackPanel
+        AutomationProperties.SetName(_progress, T("Download progress", "下载进度", "下載進度", "ダウンロードの進行状況"));
+        var buttons = new WrapPanel
         {
             Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right,
-            Spacing = 8, Children = { _later, _action }
+            Children = { _later, _action }
         };
+        _later.Margin = new Thickness(0, 4, 8, 0);
+        _action.Margin = new Thickness(0, 4, 0, 0);
         var notes = string.IsNullOrWhiteSpace(update.ReleaseNotes)
             ? T("No release notes provided.", "未提供更新说明。", "未提供更新說明。", "更新内容の記載はありません。")
             : update.ReleaseNotes.Length > 20000 ? update.ReleaseNotes[..20000] : update.ReleaseNotes;
-        Content = new StackPanel
+        var heading = new StackPanel
         {
-            Margin = new Thickness(20), Spacing = 16,
+            Margin = new Thickness(0, 0, 0, 12), Spacing = 8,
             Children =
             {
                 new TextBlock
                 {
                     Text = T("Available version: ", "可用版本：", "可用版本：", "利用可能なバージョン: ") + update.Tag,
-                    FontSize = 18, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap
+                    FontSize = 18, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap,
+                    MaxHeight = 64, TextTrimming = TextTrimming.CharacterEllipsis
                 },
                 new TextBlock
                 {
                     Text = T("Current version: ", "当前版本：", "目前版本：", "現在のバージョン: ") + UpdateService.CurrentVersion,
-                    Foreground = ThemeService.SecondaryTextBrush
+                    Foreground = ThemeService.SecondaryTextBrush, TextWrapping = TextWrapping.Wrap
                 },
-                new TextBlock { Text = T("Release notes", "更新说明", "更新說明", "更新内容") },
-                new ScrollViewer
-                {
-                    MaxHeight = 240, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
-                    Content = new SelectableTextBlock { Text = notes, TextWrapping = TextWrapping.Wrap }
-                },
-                _status, _progress, buttons
+                new TextBlock { Text = T("Release notes", "更新说明", "更新說明", "更新内容") }
             }
         };
+        var notesView = new ScrollViewer
+        {
+            Margin = new Thickness(0, 0, 0, 12),
+            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
+            Content = new SelectableTextBlock { Text = notes, TextWrapping = TextWrapping.Wrap }
+        };
+        var statusView = new ScrollViewer
+        {
+            MaxHeight = 120, Margin = new Thickness(0, 0, 0, 12),
+            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
+            Content = _status
+        };
+        var footer = new StackPanel { Spacing = 8, Children = { _progress, buttons } };
+        var layout = new Grid { Margin = new Thickness(20), RowDefinitions = new RowDefinitions("Auto,*,Auto,Auto") };
+        Grid.SetRow(notesView, 1); Grid.SetRow(statusView, 2); Grid.SetRow(footer, 3);
+        layout.Children.Add(heading); layout.Children.Add(notesView);
+        layout.Children.Add(statusView); layout.Children.Add(footer);
+        Content = layout;
         SetReadyState();
         Opened += (_, _) => _later.Focus();
         Closing += (_, _) => _download?.Cancel();
@@ -89,6 +114,12 @@ internal sealed class AppUpdateWindow : Window
         Content = text, MinHeight = 32,
         Theme = Application.Current?.FindResource("FlatButton") as ControlTheme
     };
+
+    internal static void OpenReleasePage(string? url, Action<Uri>? open = null)
+    {
+        if (!ModStatusLink.TryOpen(url, out var error, open))
+            throw error ?? new InvalidOperationException("The release page does not have a valid web address.");
+    }
 
     private string T(string en, string zh, string tw, string ja) =>
         OperationText.Choose(_language, en, zh, tw, ja);
@@ -103,7 +134,7 @@ internal sealed class AppUpdateWindow : Window
                 "更新已下载并校验，可以安装。", "更新已下載並驗證，可以安裝。", "更新をダウンロードし、検証しました。インストールできます。");
             _action.Content = T("Install and restart", "安装并重启", "安裝並重新啟動", "インストールして再起動");
         }
-        else if (_update.Asset is not null && AppUpdateService.CanInstall)
+        else if (_update.Asset is not null && _canInstall)
         {
             var size = _update.Asset.Size / 1024d / 1024d;
             _status.Text = T($"Download: {size:0.#} MB. Instances and settings are preserved.",
@@ -128,13 +159,22 @@ internal sealed class AppUpdateWindow : Window
             Close(Prepared);
             return;
         }
-        if (_update.Asset is null || !AppUpdateService.CanInstall)
+        if (_update.Asset is null || !_canInstall)
         {
-            _openUrl(_update.Url);
+            try { _openUrl(_update.Url); }
+            catch (Exception exception)
+            {
+                AppLog.Error("Open update release page", exception);
+                _status.Text = T("Could not open the release page. You can copy this address into your browser:",
+                    "无法打开发布页面。您可以将此地址复制到浏览器：",
+                    "無法開啟發行頁面。您可以將此位址複製到瀏覽器：",
+                    "リリースページを開けませんでした。このアドレスをブラウザーにコピーできます:") + "\n" + _update.Url;
+            }
             return;
         }
 
-        _download = new CancellationTokenSource();
+        var download = new CancellationTokenSource();
+        _download = download;
         _action.IsEnabled = false;
         _later.Content = Localization.CancelButton(_language);
         _progress.IsVisible = true;
@@ -144,7 +184,7 @@ internal sealed class AppUpdateWindow : Window
         {
             var progress = new Progress<AppUpdateProgress>(value =>
             {
-                if (_closed || _download is null) return;
+                if (_closed || !ReferenceEquals(_download, download)) return;
                 if (value.Phase == "verify")
                 {
                     _progress.IsIndeterminate = true;
@@ -161,28 +201,41 @@ internal sealed class AppUpdateWindow : Window
                     _progress.Value = Math.Clamp(100d * value.BytesReceived / value.TotalBytes.Value, 0, 100);
                 }
             });
-            var token = _download.Token;
-            Prepared = await Task.Run(() => AppUpdateService.PrepareAsync(_update, progress, token), token);
-            if (!_closed)
+            var token = download.Token;
+            var prepared = await Task.Run(() => _prepare(_update, progress, token), token);
+            if (!_closed && !token.IsCancellationRequested)
             {
+                Prepared = prepared;
                 SetReadyState();
                 _later.Focus();
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            if (!_closed)
+            {
+                SetReadyState();
+                _status.Text = T("Download canceled. You can try again.", "下载已取消，可以重试。",
+                    "下載已取消，可以重試。", "ダウンロードをキャンセルしました。再試行できます。");
+            }
+        }
         catch (Exception exception)
         {
             AppLog.Error("Download app update", exception);
             if (!_closed)
             {
                 SetReadyState();
-                _status.Text = T("Download failed: ", "下载失败：", "下載失敗：", "ダウンロードに失敗しました: ") + exception.Message;
+                _action.Content = T("Retry download", "重试下载", "重試下載", "ダウンロードを再試行");
+                _status.Text = T("Download failed. Check your connection, free disk space and folder permissions, then try again.",
+                    "下载失败。请检查网络连接、磁盘空间和文件夹权限，然后重试。",
+                    "下載失敗。請檢查網路連線、磁碟空間和資料夾權限，然後重試。",
+                    "ダウンロードに失敗しました。接続、ディスクの空き容量、フォルダーの権限を確認して再試行してください。") + "\n" + exception.Message;
             }
         }
         finally
         {
-            _download.Dispose();
-            _download = null;
+            download.Dispose();
+            if (ReferenceEquals(_download, download)) _download = null;
             if (!_closed) _progress.IsVisible = false;
         }
     }

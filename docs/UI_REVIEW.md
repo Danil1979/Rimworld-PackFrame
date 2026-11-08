@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 873 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 877 regression
 checks. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -33,7 +33,7 @@ relying on a font being installed on the computer.
 | Diagnostic log | Missing-file state, disabled Open, Refresh/Close inspected; read errors retain prior content in checks | Native permission-denied log and external opener failures |
 | Export wizard | Five stages at 640×560 in all four languages; local-only Save and close, required-name focus/recovery, missing-manifest failure and retry, explicit optional stages, scoped Close; draft/clear preservation in checks | Real Steam/Gitee/GitHub publishing, live partial network failure, native populated Workshop lists and successful-PR link rows |
 | Modpack catalog | Offline bundled entries, unavailable details, named disabled install actions, proportional split and pinned actions; minimum 1000×650 in all four languages; loaded/no-cover switching, scroll reset and selected-pack footer | Online install/cancellation matrix; very large selected-pack mod detail lists |
-| Application update | Unavailable-asset state and release notes inspected | Long errors, small screen, real isolated replacement/recovery |
+| Application update | Resizable bounded notes/errors, pinned retry/cancel, all four languages at 480×420, injected failure/retry/cancellation and stale progress, release-opener recovery | Actual Windows download/install/restart and cross-platform browser failures |
 
 ## Regression protections added
 
@@ -377,3 +377,30 @@ relying on a font being installed on the computer.
   Native checks used English and synthetic files. Other-language help is localized,
   but macOS modifier conventions, platform screen readers, touch and platform
   native context menus remain unverified by this checkpoint.
+
+## Application-update dialog recovery checkpoint
+
+- The dialog is resizable with a 480×420 minimum. Release notes and error details
+  scroll independently, while progress and Later/Cancel/Retry remain outside both
+  scroll regions. Status text is selectable and progress has a localized name.
+- Failed downloads offer an explicit Retry download action and connection, disk
+  and permission guidance. Each attempt owns its progress callback; delayed
+  reports from a prior failed attempt cannot overwrite the running retry. A
+  canceled or closed dialog does not accept a late prepared result.
+- The release action now uses a validated web opener that propagates failures to
+  the dialog. A failed opener leaves a copyable URL and keeps the dialog usable.
+  This fixes the production path's previously swallowed launcher exception.
+- Native Linux checks used injected local callbacks, with no live network request,
+  external browser launch, archive write or installer execution. A 50-line failure
+  fit at 480×420 in English, Japanese, simplified and traditional Chinese; scrolling
+  to the last error did not hide the footer. Retry reached ready state.
+- A delayed old-attempt preparation message was injected while a 15-second retry
+  remained in its verification phase. The displayed current phase stayed correct
+  and later reached ready. Closing ready returned no install result; Cancel during
+  a separate pending callback also closed without an install result. The Install
+  and restart action itself was not exercised. Production platform gating is
+  unchanged; the fixture supplies its own capability and preparation callbacks.
+- Clean Linux Release build: zero warnings/errors; 877 regression checks passed,
+  including safe release URL handling and opener-error propagation. Actual Windows
+  installation/restart, live download failures and platform screen readers remain
+  unverified by this checkpoint.

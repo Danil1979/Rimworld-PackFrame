@@ -396,6 +396,7 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
     DropPreviewChecks.Run();
     PaneSelectionChecks.Run();
     ModPaneKeyboardChecks.Run();
+    AppUpdateReviewChecks.Run();
     WorkshopSelectionRefreshChecks.Run();
     PaneLayoutChecks.Run();
     ProblemFilterChecks.Run();

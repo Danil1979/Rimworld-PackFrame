@@ -36,7 +36,7 @@ public partial class MainWindow
 
             var prepared = await Task.Run(() => AppUpdateService.FindPrepared(update), cancellation.Token);
             if (_windowClosed) return;
-            var offer = new AppUpdateWindow(_config.Language, update, prepared, OpenUrl);
+            var offer = new AppUpdateWindow(_config.Language, update, prepared);
             var install = await offer.ShowDialog<PreparedAppUpdate?>(this);
             if (install is null || _windowClosed) return;
             await InstallAppUpdateAsync(install);
