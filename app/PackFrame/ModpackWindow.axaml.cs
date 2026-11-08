@@ -88,6 +88,7 @@ public partial class ModpackWindow : Window
         _language = config.Language ?? Localization.English;
 
         ApplyLocalization();
+        InitializeCatalogSearch();
         var indexUrl = ModpackService.StartupIndexUrl(config.ModpackIndexUrl);
         RepoBox.Text = indexUrl;
         config.ModpackIndexUrl = indexUrl;
@@ -247,6 +248,7 @@ public partial class ModpackWindow : Window
         var key = ModpackDetailsCache.GetKey(item.Entry, indexUri);
         var saved = ModpackDetailsCache.Shared.LoadLocal(item.Entry, indexUri);
         _selectedItem = item;
+        _preferredCatalogEntry = item.Entry;
         _selectedPack = null;
         if (saved is not null)
         {
@@ -571,6 +573,9 @@ public partial class ModpackWindow : Window
         Find<TextBox>("RepoBox").IsEnabled = ready;
         Find<Button>("RepoMenuButton").IsEnabled = ready;
         Find<ListBox>("PackList").IsEnabled = ready;
+        Find<TextBox>("CatalogSearchBox").IsEnabled = ready;
+        Find<Button>("ClearCatalogSearchButton").IsEnabled = ready &&
+            !string.IsNullOrEmpty(Find<TextBox>("CatalogSearchBox").Text);
         Find<Button>("CancelOperationButton").IsVisible =
             _operationCancellation is not null && !_committingUpdate;
         Find<Button>("CancelOperationButton").IsEnabled = _operationCancellation?.IsCancellationRequested != true;

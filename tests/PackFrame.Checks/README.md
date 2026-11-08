@@ -248,3 +248,15 @@ folders, empty catalogs and filtered installed rows.
 - While history is filtered, Clear History must explicitly include hidden entries
   in its confirmation. Cancel retains the query and saved history; read failures
   retain displayed rows and disable unsafe clearing.
+
+### Catalog search and target safety
+
+- Open a large cached catalog. Search name, summary or ID with Ctrl+F/⌘F; verify
+  visible/total counts and no-result guidance. Down/Enter from search must focus a
+  selected result, visibly outlined, without activating any installation action.
+- Filter the selected pack out: its details and install actions must clear. × or
+  Escape from search/results restores the previous target, including after Refresh.
+  A second Escape with an empty query closes. Escape outside search/results retains
+  the existing dialog behavior. Do not confuse duplicate display names with identity.
+- While installing/updating, catalog search/clear remain disabled. Cancel/reopen and
+  background catalog updates must not change an active operation's target.

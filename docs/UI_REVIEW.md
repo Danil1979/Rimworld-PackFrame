@@ -32,7 +32,7 @@ relying on a font being installed on the computer.
 | OSS settings | Required/invalid field errors and focus, custom-port preview, disabling/cancel, scrolling; atomic failed-save preservation in checks | Four-language layout; live upload failure matrix |
 | Diagnostic log | Missing-file state, disabled Open, Refresh/Close inspected; read errors retain prior content in checks | Native permission-denied log and external opener failures |
 | Export wizard | All five pages inspected; custom title and repository URL survive Back/Next; intentional clearing survives navigation | Real Steam/Gitee/GitHub publishing, partial network failure, all languages |
-| Modpack catalog | Offline bundled entries, unavailable details, named disabled install actions, proportional split and pinned actions; minimum 1000×650 in all four languages; loaded/no-cover switching, scroll reset and selected-pack footer | Large catalog, online install and cancellation matrix |
+| Modpack catalog | Offline bundled entries, unavailable details, named disabled install actions, proportional split and pinned actions; minimum 1000×650 in all four languages; loaded/no-cover switching, scroll reset and selected-pack footer | Online install/cancellation matrix; very large selected-pack mod detail lists |
 | Application update | Unavailable-asset state and release notes inspected | Long errors, small screen, real isolated replacement/recovery |
 
 ## Regression protections added
@@ -165,3 +165,23 @@ relying on a font being installed on the computer.
   saved both IDs through Ctrl+S.
 - Clean Linux Release build: zero warnings/errors; 717 regression checks passed.
   Windows/macOS and live network transactions remain unverified in this pass.
+
+## Searchable catalog checkpoint
+
+- The catalog now filters by pack name, summary and stable ID, with a trailing ×,
+  visible Ctrl+F/⌘F and arrow-key guidance, and visible/total counts. Down or Enter
+  moves focus from search into a result with a visible focus border.
+- Filtering out a selected pack clears its detail/installation state. It does not
+  silently select another target. Clearing search restores the prior selection by
+  ID (or file/mirror identity for older entries), never by a duplicate display name.
+- Catalog refresh retains the query and matching selection. No-result refresh stays
+  unselected, with install/advanced actions disabled and clear recovery guidance.
+  Search is disabled during an active operation and adds no installation/network
+  side effects of its own beyond ordinary selected-detail loading.
+- Native tests used 1,000 cached synthetic entries at 1000×650: one result out of
+  1,000, summary search returning 500, hidden selection, no results, clear/restore,
+  Refresh, Down/Enter, and actual keyboard focus. English, Japanese and both Chinese
+  layouts fit. No fixture was installed, published or opened externally.
+- Clean Linux Release build: zero warnings/errors; 727 regression checks passed.
+  The new pure search/identity checks include 10,000 rows. Cross-platform native
+  behavior, active-download GUI filtering and real online operations remain pending.

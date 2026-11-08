@@ -123,7 +123,7 @@ public partial class ModpackWindow
             return;
         }
 
-        var previous = _selectedItem?.Entry;
+        var previous = _selectedItem?.Entry ?? _preferredCatalogEntry;
         var previousStatus = Find<TextBlock>("StatusText").Text;
         var hadSelectedDetails = _selectedPack is not null;
         CancelDetailLoad();
@@ -142,30 +142,31 @@ public partial class ModpackWindow
                     ? Localization.ModpackModsCount(_language, entry.ModCount)
                     : string.Empty
             }).ToList();
-        ClearDetail(_items.Count == 0
-            ? Localization.ModpackEmpty(_language)
-            : Localization.ModpackSelectHint(_language));
+        var visible = CatalogSearch.Filter(_items, Find<TextBox>("CatalogSearchBox").Text);
+        ClearCatalogSelection(visible.Count);
 
-        var matching = previous is null ? -1 : _items.FindIndex(item =>
-            !string.IsNullOrWhiteSpace(previous.Id)
-                ? item.Entry.Id == previous.Id
-                : item.Entry.File == previous.File && item.Entry.GiteeFile == previous.GiteeFile);
+        var matching = CatalogSearch.Find(_items, previous);
         // Background/deferred catalog updates retain a result for the same selected pack.
         // An explicit Refresh or a genuinely new selection starts fresh browsing guidance.
-        var preserveStatus = hadSelectedDetails && previous is not null && matching >= 0 && !refreshDetails &&
+        var preserveStatus = hadSelectedDetails && previous is not null && matching >= 0 &&
+            CatalogSearch.Find(visible, previous) >= 0 && !refreshDetails &&
             !ModpackFooterStatus.IsSelectionHint(previousStatus, _language);
         if (preserveStatus) Find<TextBlock>("StatusText").Text = previousStatus;
         if (matching < 0 && _currentInstance?.Metadata?.PackId is { } bound)
             matching = _items.FindIndex(item => item.Entry.Id == bound);
+        var preferred = matching >= 0 ? _items[matching] :
+            string.IsNullOrWhiteSpace(Find<TextBox>("CatalogSearchBox").Text) && _items.Count > 0 ? _items[0] : null;
+        _preferredCatalogEntry = preferred?.Entry ?? previous;
+        var visibleMatching = CatalogSearch.Find(visible, _preferredCatalogEntry);
         var list = Find<ListBox>("PackList");
         _applyingCatalog = true;
         try
         {
-            list.ItemsSource = _items;
-            list.SelectedIndex = _items.Count == 0 ? -1 : matching >= 0 ? matching : 0;
+            list.ItemsSource = visible;
+            list.SelectedIndex = visibleMatching;
         }
         finally { _applyingCatalog = false; }
-        Find<TextBlock>("ListCount").Text = _items.Count.ToString();
+        UpdateCatalogSearchState(visible.Count);
         if (list.SelectedItem is ModpackListItem selected) _ = LoadPackAsync(selected, refreshDetails, preserveStatus);
         else SetControls(true);
     }
@@ -177,8 +178,9 @@ public partial class ModpackWindow
         _selectedItem = null;
         _selectedPack = null;
         _items = new List<ModpackListItem>();
+        _preferredCatalogEntry = null;
         Find<ListBox>("PackList").ItemsSource = _items;
-        Find<TextBlock>("ListCount").Text = "0";
+        UpdateCatalogSearchState(0);
         ClearDetail(Localization.ModpackNoUrl(_language));
         SetControls(true);
     }
