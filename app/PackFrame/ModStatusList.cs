@@ -50,16 +50,14 @@ internal sealed class ModStatusList
     private string? _selectedPackage;
     private bool _updating;
 
-    internal ModStatusList(Window window, string? language)
+    internal ModStatusList(Window window, string? language, bool history = false)
     {
         _language = language;
         _list = window.FindControl<ListBox>("Rows")!;
         _search = window.FindControl<TextBox>("SearchBox")!;
         _clear = window.FindControl<Button>("ClearSearchButton")!;
         _count = window.FindControl<TextBlock>("FilterCountText")!;
-        _search.PlaceholderText = OperationText.Choose(language,
-            "Search name, author, package ID, link or status…", "搜索名称、作者、包 ID、链接或状态…",
-            "搜尋名稱、作者、套件 ID、連結或狀態…", "名前・作者・パッケージ ID・リンク・状態を検索…");
+        _search.PlaceholderText = ModStatusDisplayRow.SearchPlaceholder(language, history);
         var shortcut = OperatingSystem.IsMacOS() ? "⌘F" : "Ctrl+F";
         window.FindControl<TextBlock>("SearchHintText")!.Text = OperationText.Choose(language,
             $"{shortcut} to search · Esc clears search", $"{shortcut} 搜索 · Esc 清除搜索",
@@ -67,6 +65,13 @@ internal sealed class ModStatusList
         Avalonia.Automation.AutomationProperties.SetName(_search, _search.PlaceholderText);
         Avalonia.Automation.AutomationProperties.SetName(_clear, OperationText.Choose(language,
             "Clear search", "清除搜索", "清除搜尋", "検索をクリア"));
+        var header = window.FindControl<Border>("RowHeaderContent")!;
+        // Scroll.Viewport includes the scroll presenter's padding. The arranged
+        // items panel is the same width used by row containers, even after filtering.
+        _list.LayoutUpdated += (_, _) =>
+        {
+            if (_list.ItemsPanelRoot is { } panel) AlignHeaderToRows(header, panel);
+        };
         _list.ItemsSource = _visible;
         _list.SelectionChanged += (_, _) =>
         {
@@ -77,6 +82,13 @@ internal sealed class ModStatusList
         _clear.Click += (_, _) => { _search.Clear(); _search.Focus(); };
         // Tunnel so a focused text control cannot consume Escape before the search clears.
         window.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
+    }
+
+    internal static void AlignHeaderToRows(Border header, Panel panel)
+    {
+        var width = panel.Bounds.Width;
+        if (width > 0 && double.IsFinite(width) && header.Width != width)
+            header.Width = width;
     }
 
     internal void Update(IEnumerable<ModStatusDisplayRow> rows)

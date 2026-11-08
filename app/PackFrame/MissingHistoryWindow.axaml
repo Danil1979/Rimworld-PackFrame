@@ -46,8 +46,10 @@
                         Theme="{StaticResource FlatButton}" Margin="4,0,0,0" />
             </Grid>
             </Border>
-            <TextBlock x:Name="SearchHintText" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
-            <TextBlock x:Name="FilterCountText" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+            <WrapPanel Orientation="Horizontal">
+                <TextBlock x:Name="FilterCountText" Margin="0,0,16,0" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                <TextBlock x:Name="SearchHintText" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+            </WrapPanel>
         </StackPanel>
 
         <Border Grid.Row="5"
@@ -55,32 +57,15 @@
                 BorderBrush="{StaticResource SecondaryBrush}"
                 BorderThickness="1">
             <Grid RowDefinitions="Auto,*">
-                <Border Background="{DynamicResource SecondaryBrush}" Padding="12,9">
-                    <Grid ColumnDefinitions="2*,1.1*,1.5*,2*,1.2*">
-                        <TextBlock x:Name="LabelHeader"
-                                   Foreground="{DynamicResource PrimaryTextBrush}"
-                                   FontWeight="SemiBold"
-                                   Margin="0,0,12,0" />
-                        <TextBlock x:Name="AuthorHeader"
-                                   Grid.Column="1"
-                                   Foreground="{DynamicResource PrimaryTextBrush}"
-                                   FontWeight="SemiBold"
-                                   Margin="0,0,12,0" />
-                        <TextBlock x:Name="PackageHeader"
-                                   Grid.Column="2"
-                                   Foreground="{DynamicResource PrimaryTextBrush}"
-                                   FontWeight="SemiBold"
-                                   Margin="0,0,12,0" />
-                        <TextBlock x:Name="LinkHeader"
-                                   Grid.Column="3"
-                                   Foreground="{DynamicResource PrimaryTextBrush}"
-                                   FontWeight="SemiBold"
-                                   Margin="0,0,12,0" />
-                        <TextBlock x:Name="LastMissingHeader"
-                                   Grid.Column="4"
-                                   Foreground="{DynamicResource PrimaryTextBrush}"
-                                   FontWeight="SemiBold" />
+                <Border Background="{DynamicResource SecondaryBrush}">
+                    <!-- Width follows the actual items panel after scroll-presenter padding. -->
+                    <Border x:Name="RowHeaderContent" HorizontalAlignment="Left" Padding="12,9">
+                    <Grid ColumnDefinitions="*,160,130">
+                        <TextBlock x:Name="LabelHeader" Foreground="{DynamicResource PrimaryTextBrush}" FontWeight="SemiBold" />
+                        <TextBlock x:Name="LastMissingHeader" Grid.Column="1" Foreground="{DynamicResource PrimaryTextBrush}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="12,0,0,0" />
+                        <TextBlock x:Name="LinkHeader" Grid.Column="2" Foreground="{DynamicResource PrimaryTextBrush}" FontWeight="SemiBold" HorizontalAlignment="Right" />
                     </Grid>
+                    </Border>
                 </Border>
 
                 <Grid Grid.Row="1">
@@ -93,38 +78,32 @@
                         </ListBox.Styles>
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="local:ModStatusListRow">
-                                    <Border BorderBrush="{DynamicResource SecondaryBrush}"
-                                            BorderThickness="0,0,0,1"
-                                            Padding="12,9">
-                                        <Grid ColumnDefinitions="2*,1.1*,1.5*,2*,1.2*">
-                                            <SelectableTextBlock Text="{Binding Snapshot.Label}"
-                                                                 Foreground="{DynamicResource PrimaryTextBrush}"
-                                                                 TextWrapping="Wrap"
-                                                                 Margin="0,0,12,0" />
-                                            <SelectableTextBlock Grid.Column="1"
-                                                                 Text="{Binding Snapshot.Author}"
-                                                                 Foreground="{DynamicResource PrimaryTextBrush}"
-                                                                 TextWrapping="Wrap"
-                                                                 Margin="0,0,12,0" />
-                                            <SelectableTextBlock Grid.Column="2"
-                                                                 Text="{Binding Snapshot.PackageId}"
-                                                                 Foreground="{DynamicResource PrimaryTextBrush}"
-                                                                 TextWrapping="Wrap"
-                                                                 Margin="0,0,12,0" />
-                                            <StackPanel Grid.Column="3" Margin="0,0,12,0" Spacing="6">
-                                            <SelectableTextBlock Text="{Binding Snapshot.Link}"
+                                <Border BorderBrush="{DynamicResource SecondaryBrush}" BorderThickness="0,0,0,1" Padding="12,9">
+                                    <Grid ColumnDefinitions="*,160,130" RowDefinitions="Auto,Auto">
+                                        <StackPanel Spacing="3">
+                                            <SelectableTextBlock Text="{Binding Snapshot.Label}" FontWeight="SemiBold"
                                                 Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
-                                            <Button Theme="{StaticResource FlatButton}" Content="{Binding Snapshot.LinkAction}"
-                                                IsEnabled="{Binding Snapshot.CanOpenLink}" AutomationProperties.Name="{Binding Snapshot.LinkAccessibleName}"
-                                                ToolTip.Tip="{Binding Snapshot.Link}" HorizontalAlignment="Left" MinHeight="30"
-                                                Click="OnOpenLinkClick" />
+                                            <Grid ColumnDefinitions="Auto,*">
+                                                <TextBlock Text="{Binding Snapshot.AuthorLabel}" Margin="0,0,6,0" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                                <SelectableTextBlock Grid.Column="1" Text="{Binding Snapshot.Author}"
+                                                    Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                                            </Grid>
+                                            <Grid ColumnDefinitions="Auto,*">
+                                                <TextBlock Text="{Binding Snapshot.PackageLabel}" Margin="0,0,6,0" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                                <SelectableTextBlock Grid.Column="1" Text="{Binding Snapshot.PackageId}"
+                                                    Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                                            </Grid>
                                         </StackPanel>
-                                            <SelectableTextBlock Grid.Column="4"
-                                                                 Text="{Binding Snapshot.LastMissingAt}"
-                                                                 Foreground="{DynamicResource PrimaryTextBrush}"
-                                                                 TextWrapping="Wrap" />
-                                        </Grid>
-                                    </Border>
+                                        <SelectableTextBlock Grid.Column="1" Text="{Binding Snapshot.LastMissingAt}"
+                                            Margin="12,0,8,0" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
+                                        <Button Grid.Column="2" Theme="{StaticResource FlatButton}" Content="{Binding Snapshot.LinkAction}"
+                                            IsEnabled="{Binding Snapshot.CanOpenLink}" AutomationProperties.Name="{Binding Snapshot.LinkAccessibleName}"
+                                            ToolTip.Tip="{Binding Snapshot.Link}" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                            MinHeight="32" Padding="10,6" Click="OnOpenLinkClick" />
+                                        <SelectableTextBlock Grid.Row="1" Grid.ColumnSpan="3" Text="{Binding Snapshot.Link}"
+                                            Margin="0,6,0,0" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                                    </Grid>
+                                </Border>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>

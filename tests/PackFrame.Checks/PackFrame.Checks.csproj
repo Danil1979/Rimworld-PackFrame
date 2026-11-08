@@ -13,5 +13,7 @@
     <EmbeddedResource Include="../../app/PackFrame/ColorPaletteWindow.axaml.cs" LogicalName="UiWiring.ColorPaletteWindow.axaml.cs" />
     <EmbeddedResource Include="../../app/PackFrame/MainWindow.axaml" LogicalName="UiWiring.MainWindow.axaml" />
     <EmbeddedResource Include="../../app/PackFrame/MainWindow.axaml.cs" LogicalName="UiWiring.MainWindow.axaml.cs" />
+    <EmbeddedResource Include="../../app/PackFrame/MissingModsWindow.axaml" LogicalName="UiWiring.MissingModsWindow.axaml" />
+    <EmbeddedResource Include="../../app/PackFrame/MissingHistoryWindow.axaml" LogicalName="UiWiring.MissingHistoryWindow.axaml" />
   </ItemGroup>
 </Project>

@@ -798,3 +798,40 @@ selection should use a distinct shape, and keyboard focus should be visible.
 - Final Linux Release build: zero warnings/errors; 1,998 PASS lines. Seven new
   checks protect swatch templates and the constructed marker. Windows/macOS,
   actual screen-reader operation, and live upload/install/publish flows remain open.
+
+
+## Missing-mod recovery information hierarchy
+
+**Problem and principle.** Availability and Missing History treated name, author,
+package ID, full URL and state/date as five competing columns. At 780px, even a
+normal mod name wrapped, the sample Workshop URL took four lines, and only one
+complete entry fit. Grouping related identity information and placing each action
+beside its state makes it easier to identify a mod and choose the correct action.
+
+- Each row now has a strong name above labeled author and package ID, with status
+  or last-missing date and the single web action beside it. Exact, selectable URLs
+  use the full row width below. No identifying data is abbreviated or hidden in a
+  tooltip, and link validation/launch behavior is unchanged.
+- Count and search guidance share one wrapping line. History search now names
+  dates rather than status; an empty availability list has explicit body feedback.
+  Existing Ctrl+F, in-field clear, Escape and no-match recovery remain available.
+- Headers follow the actual arranged item-panel width, including the native
+  presenter's reserved scrollbar padding. Native review caught and fixed a 16px
+  header offset and a clipped Japanese action label before release.
+- Matched native screenshots use the same fixture and dimensions: default
+  `178-recovery-default-before.jpg` / `181-recovery-default-after.jpg` (1040×640),
+  minimum `177-recovery-minimum-before.jpg` / `180-recovery-minimum-after.jpg`
+  (780×420), and history `179-history-minimum-before.jpg` /
+  `182-history-minimum-after.jpg` (820×420). The default example now keeps the
+  long name and full URL on single lines and reveals most of a fourth row, rather
+  than three complete rows. Minimum size remains a constrained recovery view.
+- Native Linux checks covered all four languages at minimum sizes, package-ID
+  and date searches, no matches, empty state, Ctrl+F/Escape, selected-row Tab and
+  Shift+Tab, disabled links, and filtered one-row alignment. A 1,500-row synthetic
+  live-update list kept the scrolled row, selection and focused link while statuses
+  changed. No external links or real Steam downloads were opened.
+- Release build: zero warnings/errors; full regression suite: 2,020 PASS lines (verified by a fresh Release run).
+  New checks cover raw-value preservation, localization, wiring and actual
+  padded-presenter geometry for short/overflowing lists at two widths and resize.
+  The main left description pane, download PR and persisted history are unchanged.
+  Windows/macOS, screen readers and live network recovery remain unverified.

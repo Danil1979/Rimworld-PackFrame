@@ -34,9 +34,6 @@ public partial class MissingModsWindow : Window
         this.FindControl<TextBlock>("RefreshNoteText")!.Text =
             Localization.WorkshopAutoRefreshNote(language);
         this.FindControl<TextBlock>("LabelHeader")!.Text = Localization.FieldName(language);
-        this.FindControl<TextBlock>("AuthorHeader")!.Text = Localization.FieldAuthor(language);
-        this.FindControl<TextBlock>("PackageHeader")!.Text =
-            Localization.FieldPackageId(language);
         this.FindControl<TextBlock>("LinkHeader")!.Text = Localization.Link(language);
         this.FindControl<TextBlock>("StatusHeader")!.Text = Localization.StatusHeader(language);
         this.FindControl<Button>("HistoryButton")!.Content =
@@ -59,6 +56,9 @@ public partial class MissingModsWindow : Window
         this.FindControl<TextBlock>("RefreshNoteText")!.IsVisible = _instance?.IsSteamCmd == false &&
             rows.Any(row => row.WorkshopId is not null && row.Availability != WorkshopModAvailability.Missing);
         _rowList?.Update(rows.Select(row => ModStatusDisplayRow.From(row, _language)));
+        var empty = this.FindControl<TextBlock>("EmptyText")!;
+        empty.Text = ModStatusDisplayRow.EmptyAvailabilityText(_language);
+        empty.IsVisible = rows.Count == 0;
     }
 
     private async void OnHistoryClick(object? sender, RoutedEventArgs e)

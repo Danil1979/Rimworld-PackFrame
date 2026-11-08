@@ -26,15 +26,12 @@ public partial class MissingHistoryWindow : Window
     {
         _instance = instance;
         _language = language;
-        _rowList = new ModStatusList(this, language);
+        _rowList = new ModStatusList(this, language, history: true);
         var title = Localization.MissingHistoryTitle(language);
         Title = $"Rimworld PackFrame - {title}";
         this.FindControl<TextBlock>("TitleText")!.Text = title;
         this.FindControl<Button>("ClearButton")!.Content = Localization.ClearHistory(language);
         this.FindControl<TextBlock>("LabelHeader")!.Text = Localization.FieldName(language);
-        this.FindControl<TextBlock>("AuthorHeader")!.Text = Localization.FieldAuthor(language);
-        this.FindControl<TextBlock>("PackageHeader")!.Text =
-            Localization.FieldPackageId(language);
         this.FindControl<TextBlock>("LinkHeader")!.Text = Localization.Link(language);
         this.FindControl<TextBlock>("LastMissingHeader")!.Text =
             Localization.LastMissing(language);

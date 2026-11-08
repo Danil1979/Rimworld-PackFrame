@@ -9,6 +9,21 @@ public sealed record ModStatusDisplayRow(
     string Label, string Author, string PackageId, string Link, string Status,
     string LastMissingAt, string? Language)
 {
+    public string AuthorLabel => Localization.FieldAuthor(Language) + ":";
+    public string PackageLabel => Localization.FieldPackageId(Language) + ":";
+
+    internal static string SearchPlaceholder(string? language, bool history) => history
+        ? OperationText.Choose(language,
+            "Search name, author, package ID, link or date…", "搜索名称、作者、包 ID、链接或日期…",
+            "搜尋名稱、作者、套件 ID、連結或日期…", "名前・作者・パッケージ ID・リンク・日付を検索…")
+        : OperationText.Choose(language,
+            "Search name, author, package ID, link or status…", "搜索名称、作者、包 ID、链接或状态…",
+            "搜尋名稱、作者、套件 ID、連結或狀態…", "名前・作者・パッケージ ID・リンク・状態を検索…");
+
+    internal static string EmptyAvailabilityText(string? language) => OperationText.Choose(language,
+        "No mod availability entries to display.", "没有可显示的模组可用性记录。",
+        "沒有可顯示的模組可用性記錄。", "表示する MOD の状態情報はありません。");
+
     public bool CanOpenLink => ModStatusLink.TryGetUri(Link, out _);
     public string LinkAction => CanOpenLink
         ? OperationText.Choose(Language, "Open link ↗", "打开链接 ↗", "開啟連結 ↗", "リンクを開く ↗")
