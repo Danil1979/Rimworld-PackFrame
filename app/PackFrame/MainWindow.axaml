@@ -685,8 +685,12 @@
             <Border x:Name="EditStatusBanner" Grid.ColumnSpan="2" Margin="0,0,0,8" Padding="10,5" Background="#553EA6B5"
                     BorderBrush="{DynamicResource SecondaryBrush}" BorderThickness="1">
                 <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock x:Name="EditStatusText" Foreground="{DynamicResource PrimaryTextBrush}"
-                               VerticalAlignment="Center" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                    <StackPanel VerticalAlignment="Center" Spacing="3">
+                        <TextBlock x:Name="EditStatusText" Foreground="{DynamicResource PrimaryTextBrush}"
+                                   TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Name="EditRecoveryText" Foreground="{DynamicResource PrimaryTextBrush}"
+                                   IsVisible="False" TextWrapping="Wrap" />
+                    </StackPanel>
                     <Button x:Name="ReviewPendingInstancesButton" Grid.Column="1" Margin="12,0,0,0"
                             Theme="{StaticResource FlatButton}" MinHeight="28" Padding="8,3"
                             Click="OnReviewPendingInstancesClick" />

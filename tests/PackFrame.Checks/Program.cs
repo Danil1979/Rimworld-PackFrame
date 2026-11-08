@@ -304,7 +304,8 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
         "damaged XML and JSON profiles are isolated from healthy profiles");
     try { InstanceStore.StageActiveMods(damaged, new[] { "overwrite" }); throw new Exception("Expected damaged edit rejection"); }
     catch (IOException) { }
-    InstanceStore.SavePendingMods();
+    try { InstanceStore.SavePendingMods(); }
+    catch (PendingRecoveryException) { }
     Check(File.ReadAllText(configPath) == "<broken>", "damaged profile cannot be staged or overwritten by stale pending edits");
     var damagedOfficial = InstanceStore.LoadOfficial(loaded.ConfigDirectoryPath, "Official");
     Check(damagedOfficial.IsDamaged, "damaged official config is isolated");
@@ -317,6 +318,7 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
     catch (IOException) { }
     Check(installed.ActivePackageIds.SequenceEqual(new[] { "blocked.mod" }), "damaged undo target does not partially modify healthy instance");
     Check(File.ReadAllText(AppLog.LogPath).Contains("Read mod list"), "critical error includes operation in log");
+    InstanceStore.DiscardPendingMods();
     if (!OperatingSystem.IsWindows())
     {
         var archive = Path.Combine(root, "unix.tar.gz");
@@ -412,6 +414,7 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
     PaneEmptyGuidanceChecks.Run();
     PendingInstanceSummaryChecks.Run();
     PendingEditIdentityChecks.Run(root);
+    PendingRecoveryChecks.Run(root);
     ModStatusLinkChecks.Run();
     ModpackFooterChecks.Run();
     CatalogSearchChecks.Run();

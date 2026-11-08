@@ -281,3 +281,9 @@ independent instances, order and duplicate occurrences, normalized IDs, version
 and expansion changes, official/scratch modes, and missing/corrupt/unreadable file
 comparisons. Native checks additionally verify badge/banner recovery, clean close,
 and unchanged config bytes and timestamps when returning to saved state.
+
+Pending-recovery checks cover corrupted/missing/unreadable configuration, malformed
+or unreadable metadata, save preflight across independent instances, stale object
+rejection, strict repair/reload, retained missing IDs, official first-save behavior,
+and explicit remove/discard. Recovery notices and damaged-pane instructions cover
+all four languages. Native tests use only isolated synthetic instance files.

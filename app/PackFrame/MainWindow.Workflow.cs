@@ -56,7 +56,8 @@ public partial class MainWindow
                 _allMods.Count > 0, filtered, column > 0,
                 _searchSources.TryGetValue(pane.List, out var source) ? source.Count : 0,
                 column == 1 ? _missingMods1.Count : column == 2 ? _missingMods2.Count : 0,
-                column == 0 || GetInstanceForColumn(column) is not null);
+                column == 0 || GetInstanceForColumn(column) is not null,
+                column > 0 && GetInstanceForColumn(column)?.IsDamaged == true);
             Find<TextBlock>($"PaneEmptyTitle{column}").Text = guidance.Title;
             Find<TextBlock>($"PaneEmptyBody{column}").Text = guidance.Body;
 
@@ -141,13 +142,19 @@ public partial class MainWindow
     private void UpdateEditStatus()
     {
         var pending = InstanceStore.PendingConfigDirectories;
-        var rows = PendingInstanceSummary.Rows(pending, _instances);
+        var blocked = InstanceStore.BlockedPendingConfigDirectories;
+        var rows = PendingInstanceSummary.Rows(pending, _instances, blocked);
         if (!_pendingInstanceRows.SequenceEqual(rows))
         {
             _pendingInstanceRows.Clear();
             foreach (var row in rows) _pendingInstanceRows.Add(row);
         }
-        var text = PendingInstanceSummary.Caption(_config.Language, pending.Count);
+        var text = blocked.Count > 0
+            ? PendingInstanceSummary.BlockedCaption(_config.Language, pending.Count, blocked.Count)
+            : PendingInstanceSummary.Caption(_config.Language, pending.Count);
+        var recovery = Find<TextBlock>("EditRecoveryText");
+        recovery.IsVisible = blocked.Count > 0;
+        recovery.Text = PendingInstanceSummary.RecoveryHint(_config.Language);
         Find<Border>("EditStatusBanner").IsVisible = pending.Count > 0;
         if (pending.Count == 0) _pendingInstancesFlyout?.Hide();
         var review = Find<Button>("ReviewPendingInstancesButton");

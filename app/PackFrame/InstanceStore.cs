@@ -80,6 +80,13 @@ public sealed class InstanceMetadata
     public List<WorkshopModReference> WorkshopMods { get; set; } = new();
 }
 
+internal sealed class PendingRecoveryException : IOException
+{
+    internal PendingRecoveryException(IEnumerable<string> paths)
+        : base("Unsaved edits are retained. Repair these unreadable instances and Refresh before saving:\n" +
+            string.Join("\n", paths)) { }
+}
+
 public static class InstanceStore
 {
     public const string MetadataFileName = "packframe.instance.json";
@@ -129,7 +136,7 @@ public static class InstanceStore
             {
                 var damaged = new ManagedInstance { FolderName = Path.GetFileName(directory),
                     DirectoryPath = Path.GetFullPath(directory), LoadError = exception.Message };
-                RemovePending(damaged);
+                BlockPending(damaged);
                 instances.Add(damaged);
             }
         }
@@ -387,13 +394,18 @@ public static class InstanceStore
     private sealed record PendingActiveMods(
         List<string> Active,
         string? Version,
-        List<string> Known
+        List<string> Known,
+        bool IsOfficial,
+        bool RequireExistingConfig
     );
 
     private static readonly Dictionary<string, PendingActiveMods> Pending =
         new(StringComparer.OrdinalIgnoreCase);
 
+    private static readonly HashSet<string> BlockedPending = new(StringComparer.OrdinalIgnoreCase);
+
     public static bool HasPendingMods => Pending.Count > 0;
+    internal static IReadOnlyList<string> BlockedPendingConfigDirectories => BlockedPending.ToArray();
     internal static IReadOnlyList<string> PendingConfigDirectories => Pending.Keys.ToArray();
 
     public static void StageActiveMods(
@@ -419,6 +431,7 @@ public static class InstanceStore
         }
 
         var key = Path.GetFullPath(configDirectory);
+        if (BlockedPending.Contains(key)) throw new PendingRecoveryException(new[] { key });
         instance.ActivePackageIds = active;
         if (MatchesSavedMods(instance, active))
         {
@@ -428,7 +441,10 @@ public static class InstanceStore
         Pending[key] = new PendingActiveMods(
             active,
             instance.GameVersion,
-            instance.KnownExpansions.ToList()
+            instance.KnownExpansions.ToList(),
+            instance.IsOfficial,
+            !instance.IsOfficial || File.Exists(Path.Combine(key, "ModsConfig.xml")) ||
+                (Pending.TryGetValue(key, out var earlier) && earlier.RequireExistingConfig)
         );
     }
 
@@ -449,8 +465,33 @@ public static class InstanceStore
         }
     }
 
+    // Validate every target before any save-side file is written. Drafts remain in
+    // memory if discovery or this check finds damage; only a successful reload
+    // releases the block after the files have been repaired.
+    internal static void EnsurePendingWritable()
+    {
+        foreach (var entry in Pending)
+        {
+            if (BlockedPending.Contains(entry.Key)) continue;
+            try
+            {
+                ReadModsConfig(Path.Combine(entry.Key, "ModsConfig.xml"), entry.Value.RequireExistingConfig);
+                if (!entry.Value.IsOfficial) ReadMetadata(Path.GetDirectoryName(entry.Key)!);
+            }
+            catch (IOException) { BlockedPending.Add(entry.Key); }
+        }
+        if (BlockedPending.Count > 0) throw new PendingRecoveryException(BlockedPending);
+    }
+
+    private static void BlockPending(ManagedInstance instance)
+    {
+        var key = Path.GetFullPath(instance.ConfigDirectoryPath);
+        if (Pending.ContainsKey(key)) BlockedPending.Add(key);
+    }
+
     public static void SavePendingMods()
     {
+        EnsurePendingWritable();
         foreach (var entry in Pending.ToList())
         {
             Directory.CreateDirectory(entry.Key);
@@ -468,6 +509,7 @@ public static class InstanceStore
     public static void DiscardPendingMods()
     {
         Pending.Clear();
+        BlockedPending.Clear();
     }
 
     public static void RemovePending(ManagedInstance instance)
@@ -477,7 +519,9 @@ public static class InstanceStore
             return;
         }
 
-        Pending.Remove(Path.GetFullPath(instance.ConfigDirectoryPath));
+        var key = Path.GetFullPath(instance.ConfigDirectoryPath);
+        Pending.Remove(key);
+        BlockedPending.Remove(key);
     }
     public static void UpdateActiveMods(
         ManagedInstance instance,
@@ -1412,7 +1456,8 @@ public static class InstanceStore
         {
         var (active, version, known) = directory.Length == 0
             ? (new List<string>(), null, new List<string>())
-            : ReadModsConfig(Path.Combine(directory, "ModsConfig.xml"));
+            : ReadModsConfig(Path.Combine(directory, "ModsConfig.xml"),
+                Pending.TryGetValue(directory, out var staged) && staged.RequireExistingConfig);
         if (directory.Length > 0)
         {
             ApplyPending(directory, ref active, ref version, ref known);
@@ -1434,7 +1479,7 @@ public static class InstanceStore
             var damaged = new ManagedInstance { FolderName = OfficialFolderName,
                 DirectoryPath = directory, IsOfficial = true, DisplayNameOverride = displayName,
                 LoadError = exception.Message };
-            RemovePending(damaged);
+            BlockPending(damaged);
             return damaged;
         }
     }
@@ -1442,9 +1487,12 @@ public static class InstanceStore
     internal static ManagedInstance LoadInstance(string directory)
     {
         var folderName = Path.GetFileName(directory);
+        var configDirectory = Path.Combine(directory, "Config");
         var (active, version, known) = ReadModsConfig(
-            Path.Combine(directory, "Config", "ModsConfig.xml")
+            Path.Combine(configDirectory, "ModsConfig.xml"),
+            requireExists: Pending.ContainsKey(Path.GetFullPath(configDirectory))
         );
+        var metadata = ReadMetadata(directory);
         ApplyPending(
             Path.Combine(directory, "Config"),
             ref active,
@@ -1459,7 +1507,7 @@ public static class InstanceStore
             ActivePackageIds = active,
             GameVersion = version,
             KnownExpansions = known,
-            Metadata = ReadMetadata(directory)
+            Metadata = metadata
         };
     }
 
@@ -1473,6 +1521,7 @@ public static class InstanceStore
         var key = Path.GetFullPath(configDirectory);
         if (Pending.TryGetValue(key, out var pending))
         {
+            BlockedPending.Remove(key);
             active = pending.Active.ToList();
             version = pending.Version ?? version;
             known = pending.Known.ToList();
@@ -1590,7 +1639,7 @@ public static class InstanceStore
     private static InstanceMetadata? ReadMetadata(string directory)
     {
         var path = Path.Combine(directory, MetadataFileName);
-        if (!File.Exists(path))
+        if (!File.Exists(path) && !Directory.Exists(path))
         {
             return null;
         }

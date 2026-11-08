@@ -4129,6 +4129,7 @@ public partial class MainWindow : Window
     {
         try
         {
+            InstanceStore.EnsurePendingWritable();
             SaveModFullNameLists();
             InstanceStore.SavePendingMods();
             RefreshManager(false);
@@ -4138,7 +4139,17 @@ public partial class MainWindow : Window
         catch (Exception exception)
         {
             AppLog.Error("Save mod lists", exception);
-            ShowToast(Localization.SaveFailed(_config.Language));
+            if (exception is PendingRecoveryException)
+            {
+                // Reflect the damaged instance immediately so editing/launch actions
+                // cannot continue against a stale, previously healthy object.
+                try { ReloadInstances(null, -1); }
+                catch (Exception reloadException) { AppLog.Error("Reload blocked instances", reloadException); }
+            }
+            UpdateEditStatus();
+            ShowToast(exception is PendingRecoveryException
+                ? PendingInstanceSummary.SaveBlocked(_config.Language)
+                : Localization.SaveFailed(_config.Language));
             return false;
         }
     }
@@ -4233,7 +4244,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (!await ResolvePendingChangesAsync()) return;
+        // Discovery reapplies staged lists. Refresh must not force a save or
+        // discard just to recover an unreadable file or update the catalog.
         ModColorStore.Invalidate();
         UpdateSaveState();
         var inactiveOffset = GetListScrollOffset(_inactiveList);

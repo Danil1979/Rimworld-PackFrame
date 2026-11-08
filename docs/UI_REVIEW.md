@@ -257,3 +257,39 @@ relying on a font being installed on the computer.
 - Clean Linux Release build: zero warnings/errors; 783 regression checks passed.
   Windows/macOS, live external-write races and interrupted multi-file saves remain
   separate verification work.
+
+
+## Retained drafts and safe recovery checkpoint
+
+- Save validates every pending instance before writing mod-name lists or staged
+  configuration. Newly malformed, missing or unreadable targets block saving;
+  other edited instances are not written by that failed preflight. This protects
+  against detected unreadable files, not arbitrary concurrent external changes or
+  failures occurring after validation during a multi-file save.
+- Failed discovery no longer drops the affected staged list. Pending edits remain
+  in memory, blocked until a healthy reload reads both configuration and metadata.
+  Repairing only one broken file does not release the block. Explicit discard or
+  removal still clears the relevant draft and its block.
+- Refresh now retains pending mod lists rather than demanding Save or Discard
+  before rereading the catalog. This also makes repair followed by Refresh possible
+  without first losing the retained draft. Refresh still resets Undo/Redo history.
+- A persistent, localized notice identifies the retained-edit and blocked counts,
+  explains repair + Refresh, and tells the user to keep the window open. The review
+  marks affected instance paths. Damaged panes explain their read-only state rather
+  than incorrectly suggesting that the user enable mods into an empty instance.
+- Draft retention is in-memory recovery, not crash-safe autosave. Closing still
+  requires an explicit pending-change choice; failed Save does not close the app.
+- Native Linux matched-flow checks edited two synthetic instances, corrupted one
+  configuration and invoked Ctrl+S. The baseline silently replaced the corrupt
+  file. The revised build retained both drafts, showed read-only/recovery guidance,
+  and left every instance file's bytes and modification timestamp unchanged.
+- Both ordinary and blocked Refresh retained the staged lists. Closing while
+  blocked still prompted; choosing Save failed safely and left the window open.
+  After restoring the synthetic file, Refresh recovered both edits without writing;
+  Ctrl+S then saved the expected lists, including the pre-existing unresolved ID.
+- Native visual checks covered English, Japanese, simplified and traditional
+  Chinese at 1180×812. The persistent notice wrapped without covering Save/Launch;
+  the pending review identified the blocked folder separately from the healthy one.
+- Clean Linux Release build: zero warnings/errors; 818 regression checks passed.
+  Windows/macOS, crash recovery, live concurrent-file races and write failures
+  after preflight remain unverified by this checkpoint.

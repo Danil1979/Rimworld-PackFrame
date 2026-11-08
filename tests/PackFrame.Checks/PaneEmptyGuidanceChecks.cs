@@ -22,6 +22,13 @@ internal static class PaneEmptyGuidanceChecks
             "all-enabled inactive pane retains useful original guidance");
         Require(PaneEmptyGuidance.Create("en", true, true, false, true, 0, 0, true).Body.Contains("Enable above"),
             "genuinely empty active order points to its nearby enable action");
+        var damaged = PaneEmptyGuidance.Create("en", true, true, true, true, 4, 2, true, isDamaged: true);
+        Require(damaged.Title == "Instance unreadable" && damaged.Body.Contains("read-only") &&
+            damaged.Body.Contains("Refresh") && !damaged.Body.Contains("Enable"),
+            "damaged instance guidance takes precedence over filters and empty-list instructions");
+        foreach (var language in new[] { "en", "zh-Hans", "zh-Hant", "ja" })
+            Require(!string.IsNullOrWhiteSpace(PaneEmptyGuidance.Create(language, true, true, false, true, 0, 0, true, true).Body),
+                "unreadable-instance recovery instructions are available in " + language);
         foreach (var language in new[] { "zh-Hans", "zh-Hant", "ja" })
             Require(PaneEmptyGuidance.Create(language, true, false, false, true, 0, 2, true).Body != missing.Body,
                 "missing-only recovery guidance is localized");
