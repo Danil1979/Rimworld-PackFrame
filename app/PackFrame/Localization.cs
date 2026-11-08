@@ -135,10 +135,10 @@ public static class Localization
     {
         return language switch
         {
-            SimplifiedChinese => "两栏显示的是同一模组列表。",
-            TraditionalChinese => "兩欄顯示的是同一模組清單。",
-            Japanese => "両方の欄で同じ MOD リストを表示しています。",
-            _ => "This list is open in both panes."
+            SimplifiedChinese => "在任一栏调整排序，都会修改同一份加载顺序。",
+            TraditionalChinese => "在任一欄調整排序，都會修改同一份載入順序。",
+            Japanese => "どちらの欄で並べ替えても、同じ読み込み順序が変更されます。",
+            _ => "Reordering either view changes the same load order."
         };
     }
 
@@ -185,6 +185,39 @@ public static class Localization
             _ => "Add here"
         };
     }
+
+    public static string OpenOnRight(string? language) => OperationText.Choose(language,
+        "Open on right", "在右侧打开", "在右側開啟", "右側に開く");
+
+    public static string OpenOnRightHint(string? language) => OperationText.Choose(language,
+        "Open this list on the right with separate search and scrolling.",
+        "在右侧打开当前列表，搜索和滚动互不影响。",
+        "在右側開啟目前清單，搜尋與捲動互不影響。",
+        "このリストを右側に開き、検索とスクロールを個別に操作します。");
+
+    public static string CloseRightPane(string? language) => OperationText.Choose(language,
+        "Close right pane", "关闭右栏", "關閉右欄", "右側を閉じる");
+
+    public static string EnableDestination(string? language) => OperationText.Choose(language,
+        "Enable destination", "启用目标", "啟用目標", "有効化先");
+
+    public static string EnableIn(string? language, string name) => OperationText.Choose(language,
+        $"Enable in {name}", $"启用到 {name}", $"啟用至 {name}", $"有効化先: {name}");
+
+    public static string DragMoveBefore(string? language, string name) => OperationText.Choose(language,
+        $"Move before {name}", $"移到 {name} 前", $"移到 {name} 前", $"{name} の前に移動");
+
+    public static string DragMoveAfter(string? language, string name) => OperationText.Choose(language,
+        $"Move after {name}", $"移到 {name} 后", $"移到 {name} 後", $"{name} の後に移動");
+
+    public static string DragAlreadyHere(string? language) => OperationText.Choose(language,
+        "Already here", "已在此处", "已在此處", "すでにこの位置です");
+
+    public static string DragReorderIn(string? language, string name) => OperationText.Choose(language,
+        $"Reorder in {name}", $"调整 {name} 中的排序", $"調整 {name} 中的排序", $"{name} 内で並べ替え");
+
+    public static string DragAddAndReorderIn(string? language, string name) => OperationText.Choose(language,
+        $"Add and reorder in {name}", $"添加并调整 {name} 中的排序", $"新增並調整 {name} 中的排序", $"{name} に追加して並べ替え");
 
     public static string InstanceName(string? language, int index)
     {

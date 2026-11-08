@@ -17,11 +17,12 @@ internal sealed class PendingChangesWindow : Window
         Background = ThemeService.BackgroundBrush;
         Foreground = ThemeService.PrimaryTextBrush;
         Width = 480;
-        Height = 180;
+        SizeToContent = SizeToContent.Height;
         CanResize = false;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8,
             HorizontalAlignment = HorizontalAlignment.Right };
+        Button? cancelButton = null;
         foreach (var (text, choice) in new[]
         {
             (Localization.CancelButton(language), PendingChangesChoice.Cancel),
@@ -30,9 +31,11 @@ internal sealed class PendingChangesWindow : Window
         })
         {
             var button = new Button { Content = text, MinHeight = 32,
+                IsCancel = choice == PendingChangesChoice.Cancel,
                 Theme = Application.Current?.FindResource("FlatButton") as ControlTheme };
             button.Click += (_, _) => Close(choice);
             buttons.Children.Add(button);
+            if (choice == PendingChangesChoice.Cancel) cancelButton = button;
         }
         Content = new StackPanel
         {
@@ -40,5 +43,6 @@ internal sealed class PendingChangesWindow : Window
             Children = { new TextBlock { Text = Localization.PendingChangesPrompt(language),
                 TextWrapping = Avalonia.Media.TextWrapping.Wrap }, buttons }
         };
+        Opened += (_, _) => cancelButton?.Focus();
     }
 }

@@ -382,6 +382,12 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
         "pack-relative cover image resolves against the pack manifest");
     Check(ModpackService.ResolveImage(packManifest, "https://example.com/cover.png") ==
         "https://example.com/cover.png", "absolute cover image stays absolute");
+    LoadOrderChecks.Run();
+    DropPreviewChecks.Run();
+    PaneSelectionChecks.Run();
+    PaneLayoutChecks.Run();
+    await UpdateServiceChecks.Run();
+    await AppUpdateChecks.Run(root);
     await CatalogChecks.Run(root);
     await DetailsCacheChecks.Run(root);
     await PublishingChecks.Run(root);
