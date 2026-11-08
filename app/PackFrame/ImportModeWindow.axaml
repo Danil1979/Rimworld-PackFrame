@@ -2,23 +2,38 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="PackFrame.ImportModeWindow"
         Title="Rimworld PackFrame"
-        Width="520" SizeToContent="Height" CanResize="False"
+        Width="640" Height="480" MinWidth="480" MinHeight="420" CanResize="True"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource AppBackgroundBrush}" RequestedThemeVariant="Dark">
-    <StackPanel Margin="20" Spacing="12">
-        <TextBlock x:Name="HeadingText" FontSize="20" FontWeight="SemiBold"
-                   Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
-        <TextBlock x:Name="HintText" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
-        <Button x:Name="NewButton" Theme="{StaticResource FlatButton}" MinHeight="40"
-                HorizontalAlignment="Stretch" Click="OnNewClick">
-            <TextBlock x:Name="NewText" TextWrapping="Wrap" />
-        </Button>
-        <Button x:Name="OverwriteButton" Theme="{StaticResource FlatButton}" MinHeight="40"
-                HorizontalAlignment="Stretch" Click="OnOverwriteClick">
-            <TextBlock x:Name="OverwriteText" TextWrapping="Wrap" />
-        </Button>
-        <TextBlock x:Name="UnavailableText" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
-        <Button x:Name="CancelButton" IsCancel="True" Theme="{StaticResource FlatButton}"
-                HorizontalAlignment="Right" MinHeight="32" Click="OnCancelClick" />
-    </StackPanel>
+    <Grid Margin="20" RowDefinitions="Auto,*,Auto">
+        <StackPanel Spacing="8" Margin="0,0,0,16">
+            <TextBlock x:Name="HeadingText" FontSize="20" FontWeight="SemiBold"
+                       Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
+            <TextBlock x:Name="HintText" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+        </StackPanel>
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="12" Margin="0,0,8,0">
+                <StackPanel x:Name="ReviewPanel" IsVisible="False" Spacing="8">
+                    <TextBlock x:Name="SourceLabel" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
+                    <SelectableTextBlock x:Name="SourceText" TextWrapping="Wrap" Foreground="{DynamicResource PrimaryTextBrush}" />
+                    <TextBlock x:Name="TargetLabel" FontWeight="SemiBold" Margin="0,8,0,0" Foreground="{DynamicResource SecondaryTextBrush}" />
+                    <TextBlock x:Name="TargetNameText" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="{DynamicResource PrimaryTextBrush}" />
+                    <SelectableTextBlock x:Name="TargetPathText" TextWrapping="Wrap" Foreground="{DynamicResource PrimaryTextBrush}" />
+                    <TextBlock x:Name="ScopeLabel" FontWeight="SemiBold" Margin="0,8,0,0" Foreground="{DynamicResource SecondaryTextBrush}" />
+                    <TextBlock x:Name="ScopeText" TextWrapping="Wrap" Foreground="{DynamicResource PrimaryTextBrush}" />
+                    <TextBlock x:Name="PendingText" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="{DynamicResource PrimaryTextBrush}" />
+                </StackPanel>
+                <TextBlock x:Name="UnavailableText" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+            </StackPanel>
+        </ScrollViewer>
+        <WrapPanel Grid.Row="2" Margin="0,12,0,0" HorizontalAlignment="Right">
+            <Button x:Name="NewButton" Theme="{StaticResource FlatButton}" MinHeight="36" Margin="0,4,8,0" Click="OnNewClick">
+                <TextBlock x:Name="NewText" TextWrapping="Wrap" />
+            </Button>
+            <Button x:Name="OverwriteButton" Theme="{StaticResource FlatButton}" MinHeight="36" Margin="0,4,8,0" Click="OnOverwriteClick">
+                <TextBlock x:Name="OverwriteText" TextWrapping="Wrap" />
+            </Button>
+            <Button x:Name="CancelButton" IsCancel="True" Theme="{StaticResource FlatButton}" Margin="0,4,0,0" MinHeight="36" Click="OnCancelClick" />
+        </WrapPanel>
+    </Grid>
 </Window>

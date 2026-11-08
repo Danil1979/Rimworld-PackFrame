@@ -391,6 +391,9 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
     await LocalModCopyChecks.Run(root);
     await LocalModDeletionChecks.Run(root);
     ArchiveImportChecks.Run(root);
+    ImportStructureChecks.Run(root);
+    InstanceImportReviewChecks.Run(root);
+    ListImportTransactionChecks.Run(root);
     await ModpackOperationChecks.Run(root);
     LoadOrderChecks.Run();
     DropPreviewChecks.Run();

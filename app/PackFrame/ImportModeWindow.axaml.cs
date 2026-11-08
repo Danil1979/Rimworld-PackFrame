@@ -27,14 +27,10 @@ public partial class ImportModeWindow : Window
         this.FindControl<TextBlock>("NewText")!.Text = newText;
         AutomationProperties.SetName(overwriteButton, overwriteText);
         AutomationProperties.SetName(newButton, newText);
-        var heading = OperationText.Choose(language, "Import mod list", "导入模组列表", "匯入模組清單", "MOD リストのインポート");
+        var heading = Localization.ImportInstance(language);
         Title = heading;
         this.FindControl<TextBlock>("HeadingText")!.Text = heading;
-        this.FindControl<TextBlock>("HintText")!.Text = OperationText.Choose(language,
-            "Create a separate instance, or replace the selected instance's mod list. Replacement will ask for confirmation.",
-            "新建独立实例，或替换所选实例的模组列表。替换前会要求确认。",
-            "建立獨立實例，或取代所選實例的模組清單。取代前會要求確認。",
-            "別のインスタンスを作成するか、選択中の MOD リストを置き換えます。置き換え前に確認します。");
+        this.FindControl<TextBlock>("HintText")!.Text = InstanceImportReview.Hint(language);
         var unavailable = this.FindControl<TextBlock>("UnavailableText")!;
         unavailable.IsVisible = !overwriteEnabled;
         unavailable.Text = OperationText.Choose(language,
@@ -42,6 +38,23 @@ public partial class ImportModeWindow : Window
             "当前选择无法替换。请新建实例。", "目前選擇無法取代。請建立新實例。", "現在の選択は置き換えられません。新しいインスタンスを作成してください。");
         this.FindControl<Button>("CancelButton")!.Content = Localization.CancelButton(language);
         Opened += (_, _) => this.FindControl<Button>("CancelButton")!.Focus();
+    }
+
+    internal ImportModeWindow(InstanceImportReview review, bool overwriteEnabled, string? language = null)
+        : this(InstanceImportReview.ReviewLabel(language), InstanceImportReview.NewLabel(language), overwriteEnabled, language)
+    {
+        this.FindControl<StackPanel>("ReviewPanel")!.IsVisible = true;
+        this.FindControl<TextBlock>("SourceLabel")!.Text = InstanceImportReview.SourceLabel(language);
+        this.FindControl<SelectableTextBlock>("SourceText")!.Text = review.SourcePath;
+        this.FindControl<TextBlock>("TargetLabel")!.Text = InstanceImportReview.TargetLabel(language);
+        this.FindControl<TextBlock>("TargetNameText")!.Text = review.TargetName;
+        this.FindControl<SelectableTextBlock>("TargetPathText")!.Text = review.DestinationPath;
+        this.FindControl<TextBlock>("ScopeLabel")!.Text = InstanceImportReview.ScopeLabel(language);
+        this.FindControl<TextBlock>("ScopeText")!.Text = review.Scope(language);
+        this.FindControl<TextBlock>("PendingText")!.Text = review.PendingWarning(language);
+        this.FindControl<TextBlock>("PendingText")!.IsVisible = review.HasPendingChanges;
+        AutomationProperties.SetHelpText(this.FindControl<Button>("OverwriteButton")!,
+            review.TargetName + "\n" + review.DestinationPath + "\n" + review.Scope(language));
     }
 
     private void OnOverwriteClick(object? sender, RoutedEventArgs e)

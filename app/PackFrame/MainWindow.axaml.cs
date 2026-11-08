@@ -6500,7 +6500,7 @@ public partial class MainWindow : Window
             SuggestedStartLocation = startLocation,
             FileTypeFilter = new[]
             {
-                new FilePickerFileType("Profiles and saves")
+                new FilePickerFileType(OperationText.Choose(_config.Language, "Profiles and saves", "配置与存档", "設定與存檔", "設定とセーブ"))
                 {
                     Patterns = new[] { "*.xml", "*.rml", "*.json", "*.rws", "*.zip" }
                 }
@@ -6515,9 +6515,11 @@ public partial class MainWindow : Window
             throw new UnsupportedInstanceImportException();
 
         var isArchive = Path.GetExtension(file).Equals(".zip", StringComparison.OrdinalIgnoreCase);
+        var review = target is null ? null : InstanceImportReview.Create(file, target,
+            InstanceStore.PendingConfigDirectories.Contains(Path.GetFullPath(target.ConfigDirectoryPath),
+                StringComparer.OrdinalIgnoreCase));
         var mode = target is null ? ImportMode.New : await new ImportModeWindow(
-            Localization.Overwrite(language), Localization.NewInstance(language),
-            !target.IsOfficial || Directory.Exists(target.ConfigDirectoryPath), language)
+            review!, !target.IsOfficial || Directory.Exists(target.ConfigDirectoryPath), language)
             .ShowDialog<ImportMode?>(this);
         if (mode is null || _windowClosed) return;
         if (mode == ImportMode.New)
@@ -6527,21 +6529,12 @@ public partial class MainWindow : Window
                 : InstanceStore.ImportFileNew(_packRoot, file, _gameVersion));
             if (imported is null) throw new UnsupportedInstanceImportException();
             ReloadInstances(imported.FolderName, column);
-            ClearUndoHistory();
+            // Importing a separate instance does not invalidate edits to existing instances.
             return;
         }
         if (target is null || !CanModifyInstanceFiles()) return;
 
-        var prompt = isArchive
-            ? Localization.OverwriteArchiveConfirmMessage(language, target.DisplayName)
-            : Localization.OverwriteConfirmMessage(language, target.DisplayName);
-        if (InstanceStore.PendingConfigDirectories.Contains(Path.GetFullPath(target.ConfigDirectoryPath),
-                StringComparer.OrdinalIgnoreCase))
-            prompt += "\n\n" + OperationText.Choose(language,
-                "Unsaved mod-list changes for this instance will also be replaced.",
-                "此实例尚未保存的模组列表修改也会被替换。",
-                "此執行個體尚未儲存的模組清單修改也會被取代。",
-                "このインスタンスの未保存の MOD リスト変更も置き換えられます。");
+        var prompt = review!.Confirmation(language);
         if (!await new ConfirmWindow(prompt, Localization.Overwrite(language),
                 Localization.CancelButton(language)).ShowDialog<bool>(this) ||
             _windowClosed || !CanModifyInstanceFiles()) return;

@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 922 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 1,076 regression
 checks. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -19,7 +19,7 @@ relying on a font being installed on the computer.
 | Main mod lists | Explicit per-pane enable target, matching-instance views, X/Escape filter recovery, visible shortcuts, pending header badges, Ctrl+S disk save, typing undo; populated 1100×700 layout with long names in four languages; copy unsaved lists while source disk remains unchanged; native hidden-ID reorder, filtered insertion, 10-step Undo/Redo and redo invalidation | Long real lists, Windows/macOS |
 | Confirmation | Long message fits, action buttons remain visible, safe initial focus and Escape | Extreme translated strings |
 | Rename | Empty input stays open with an error; Escape from button focus cancels | Filesystem rename failures on each OS |
-| Import mode | Full labels, unavailable-overwrite explanation, safe Cancel/Escape | Full native import matrix |
+| Import mode | Exact source/destination and format-specific overwrite scope, pending-edit warning, bounded scrolling and pinned controls; native invalid-XML rejection, safe cancellation, separate-new-instance Undo/Redo; four-language compact review | Full native picker/overwrite failure matrix, Windows/macOS |
 | Config folder | Invalid path error and focus, compact layout, named field | Native folder pickers on each OS |
 | Language | Named main action, current-language indicator, visible Cancel, four-language picker review, minimum Japanese and first-run layouts, selection/cancel results, pending edits and Undo across language switches; failed-save retention and repair/retry | Platform screen readers and OS-specific startup behavior |
 | Pending changes | Safe initial focus, wrapped message/actions inspected | Update-and-restart integration on each OS |
@@ -476,3 +476,41 @@ relying on a font being installed on the computer.
   Actual OS permission failures, first-run main-window startup on Windows/macOS,
   and screen-reader announcement timing remain unverified. No real user files,
   game launch or external service was used.
+
+
+## Import review and failure recovery
+
+- Import review now identifies the source file, selected instance name, and exact
+  destination. Lists target `Config/ModsConfig.xml`; managed archives target the
+  entire instance folder. Official archives explicitly apply Config only and do
+  not import archive Mods/Saves. Whole-instance replacement warns that files
+  absent from the archive are removed. Both review and final confirmation disclose
+  loss of the target's unsaved list changes.
+- The 640×480 review is resizable to 480×420. Paths are selectable and scroll with
+  the content; action controls remain visible. “Create new instance” and “Review
+  overwrite…” distinguish creation from the subsequent destructive confirmation.
+  Cancel receives initial focus. Picker format labels are localized.
+- Raw ModsConfig/ModList XML must contain activeMods/modIds. Explicitly present
+  empty lists remain supported. Missing containers, malformed input, namespaced
+  formats, official/managed overwrite rejection, and unchanged drafts/files are
+  covered by regression checks.
+- Managed list overwrite validates metadata before changing the destination,
+  stages config and metadata together, and uses rollback for a failed commit.
+  Valid unknown configuration/metadata fields and bindings survive. Tests inject
+  a metadata-path failure after staging and verify original bytes, pending edits,
+  cleanup of newly created Config folders, repair and successful retry.
+- Importing a separate new instance no longer clears existing Undo/Redo history.
+  Pure checks restore edits to two original instances after a third is imported.
+  Native checks staged a mod, rejected incomplete XML without changing files,
+  imported a new list, then exercised Undo/Redo on the old instance. The imported
+  list stayed byte-identical, and both original profiles stayed unchanged on disk.
+- Native Linux review used only an isolated synthetic installation. The original
+  archive dialog and revised production dialog used the same source and target
+  for the visual comparison. Reviewed managed-list and official-archive scopes,
+  long paths/names, all four languages at 480×480, Japanese at 480×420 with scroll,
+  Escape and focused-Cancel Enter. The final native comparison uses the production
+  dialog in a fixture host; it does not execute an import.
+- Final Release build: zero warnings/errors; 1,076 PASS lines across the full
+  console suite. Counts include both existing `PASS:` and `PASS ` output formats.
+  Live downloads/publishing and real game files were not used. Native confirmed
+  overwrite and OS-specific permission failure scenarios remain open.

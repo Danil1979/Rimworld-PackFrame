@@ -785,6 +785,13 @@ public static class InstanceStore
         ManagedInstance target,
         string file,
         string? gameVersion
+    ) => ImportFileOverwrite(target, file, gameVersion, null);
+
+    internal static bool ImportFileOverwrite(
+        ManagedInstance target,
+        string file,
+        string? gameVersion,
+        Action<string, string>? applyFiles
     )
     {
         var profile = ParseProfileFile(file);
@@ -798,7 +805,8 @@ public static class InstanceStore
             profile,
             Path.GetFileNameWithoutExtension(file),
             gameVersion,
-            target.Metadata?.Name ?? string.Empty
+            target.Metadata?.Name ?? string.Empty,
+            applyFiles
         );
         RemovePending(target);
         return true;
@@ -1044,26 +1052,74 @@ public static class InstanceStore
         ImportedProfile profile,
         string sourceName,
         string? gameVersion,
-        string displayName
+        string displayName,
+        Action<string, string>? applyFiles = null
     )
     {
-        var configDirectory = Path.Combine(target.DirectoryPath, "Config");
-        Directory.CreateDirectory(configDirectory);
-        Directory.CreateDirectory(Path.Combine(target.DirectoryPath, "Saves"));
+        // Validate current metadata before staging or changing any target files.
+        // Keep its raw JSON so bindings and fields from newer versions survive.
+        var currentMetadata = ReadMetadata(target.DirectoryPath) ?? new InstanceMetadata();
+        var metadataPath = Path.Combine(target.DirectoryPath, MetadataFileName);
+        var metadata = File.Exists(metadataPath)
+            ? System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(metadataPath))
+                as System.Text.Json.Nodes.JsonObject
+                ?? throw new IOException($"Invalid instance metadata: {metadataPath}")
+            : (System.Text.Json.Nodes.JsonObject)JsonSerializer.SerializeToNode(
+                currentMetadata, PackFrameJsonContext.Default.InstanceMetadata)!;
+        metadata["name"] = displayName;
+        metadata["source"] = sourceName;
 
-        var knownExpansions = profile.KnownExpansions.Count > 0
-            ? profile.KnownExpansions
-            : DeriveKnownExpansions(profile.ActivePackageIds);
+        var staging = Path.GetFullPath(target.DirectoryPath)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            + ".import-" + Guid.NewGuid().ToString("N");
+        try
+        {
+            var stagedConfig = Path.Combine(staging, "Config", "ModsConfig.xml");
+            Directory.CreateDirectory(Path.GetDirectoryName(stagedConfig)!);
+            var knownExpansions = profile.KnownExpansions.Count > 0
+                ? profile.KnownExpansions
+                : DeriveKnownExpansions(profile.ActivePackageIds);
+            WriteModsConfig(
+                stagedConfig,
+                profile.ActivePackageIds,
+                !string.IsNullOrWhiteSpace(gameVersion) ? gameVersion : profile.GameVersion,
+                knownExpansions
+            );
 
-        WriteModsConfig(
-            Path.Combine(configDirectory, "ModsConfig.xml"),
-            profile.ActivePackageIds,
-            !string.IsNullOrWhiteSpace(gameVersion)
-                ? gameVersion
-                : profile.GameVersion,
-            knownExpansions
-        );
-        WriteMetadata(target.DirectoryPath, displayName, sourceName);
+            // Import replaces the three list fields, not other tools' settings.
+            // An explicitly requested overwrite can still recover malformed XML;
+            // ordinary access errors must propagate instead of being repaired.
+            var currentConfig = Path.Combine(target.ConfigDirectoryPath, "ModsConfig.xml");
+            XDocument? document = null;
+            if (File.Exists(currentConfig))
+            {
+                try { document = XDocument.Load(currentConfig, LoadOptions.PreserveWhitespace); }
+                catch (XmlException) { }
+            }
+            if (document?.Root is { } root && root.Name.LocalName == "ModsConfigData")
+            {
+                foreach (var incoming in XDocument.Load(stagedConfig).Root!.Elements())
+                {
+                    var existing = root.Elements().FirstOrDefault(element =>
+                        element.Name.LocalName == incoming.Name.LocalName);
+                    if (existing is null)
+                    {
+                        existing = new XElement(root.Name.Namespace + incoming.Name.LocalName);
+                        root.Add(existing);
+                    }
+                    if (incoming.HasElements)
+                        existing.ReplaceNodes(incoming.Elements().Select(item =>
+                            new XElement(existing.Name.Namespace + item.Name.LocalName, item.Value)));
+                    else existing.Value = incoming.Value;
+                }
+                document.Save(stagedConfig, SaveOptions.DisableFormatting);
+            }
+            File.WriteAllText(Path.Combine(staging, MetadataFileName), metadata.ToJsonString());
+            if (applyFiles is null)
+                FileTransactions.ApplyFiles(staging, target.DirectoryPath, includeSubdirectories: true);
+            else applyFiles(staging, target.DirectoryPath);
+        }
+        finally { FileTransactions.TryDeleteDirectory(staging); }
     }
 
     private static bool IsSameOrSubPath(string path, string parent)
@@ -1345,6 +1401,11 @@ public static class InstanceStore
             {
                 var activeMods = root.Elements()
                     .FirstOrDefault(element => element.Name.LocalName == "activeMods");
+                if (activeMods is null)
+                {
+                    return null;
+                }
+
                 var knownExpansions = root.Elements()
                     .FirstOrDefault(element => element.Name.LocalName == "knownExpansions");
                 var version = root.Elements()
@@ -1361,6 +1422,11 @@ public static class InstanceStore
             {
                 var modIds = root.Elements()
                     .FirstOrDefault(element => element.Name.LocalName == "modIds");
+                if (modIds is null)
+                {
+                    return null;
+                }
+
                 return new ImportedProfile(ReadListItems(modIds), null, new List<string>());
             }
             case "savedModList":
