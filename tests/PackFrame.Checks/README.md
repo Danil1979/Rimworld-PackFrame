@@ -107,6 +107,14 @@ Manual platform checks:
   consistently without resetting their independent positions. Gutter width must
   remain stable during filtering, including three/four-digit orders. Status badges
   stay at the right edge; hover them to check the same details and actions.
+- All three pane footers show L: <local count>, including zero. Like
+  S/V/R, the count follows search/source filters but precedes footer filters.
+  Switch each instance, change search/source filters, hide errors, and clear the
+  catalogue: L must refresh without changing enabled mods or their order.
+  Click L in each pane: strikethrough excludes local mods, underline shows only
+  local mods, and the third click clears the filter. The three panes filter
+  independently; combining L with S/V/R uses all selected conditions. L keeps
+  its pre-filter count even when the visible list becomes empty.
 - Hover an error badge or bottom problem summary: it opens after 300ms, not on
   entry. Leaving before 300ms, switching badges, clicking, scrolling, or closing
   the pane/window must cancel the pending opening. Leaving an open popup closes
