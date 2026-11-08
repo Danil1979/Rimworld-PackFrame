@@ -4284,7 +4284,50 @@ public partial class MainWindow : Window
         _lastInstanceIndex2 = index2;
         RefreshManager(true);
     }
-    private void OnLaunchClick(object? sender, RoutedEventArgs e)
+    private bool _launchPromptOpen;
+
+    private async void OnLaunchClick(object? sender, RoutedEventArgs e)
+    {
+        if (_windowClosed || _launchPromptOpen || _pendingChangesPromptOpen ||
+            _instanceWriteInProgress || _instanceOperationBusy || !_launchButton.IsEnabled) return;
+        if (!InstanceStore.HasPendingMods) { LaunchSelectedInstance(); return; }
+        var target = GetSelectedInstance(_lastEnableColumn - 1);
+        if (target is null || target.IsDamaged) return;
+        if (GameLaunchService.IsRunning())
+        {
+            ShowToast(Localization.ModpackGameRunning(_config.Language));
+            return;
+        }
+        var targetPath = target.ConfigDirectoryPath;
+        var rows = PendingInstanceSummary.Rows(InstanceStore.PendingConfigDirectories, _instances,
+            InstanceStore.BlockedPendingConfigDirectories);
+        _launchPromptOpen = true;
+        _pendingChangesPromptOpen = true;
+        try
+        {
+            var allowed = await LaunchSavePrompt.ResolveAsync(
+                () => new ConfirmWindow(LaunchSavePrompt.Message(_config.Language, target.DisplayName, rows),
+                    LaunchSavePrompt.ConfirmLabel(_config.Language), LaunchSavePrompt.CancelLabel(_config.Language))
+                    .ShowDialog<bool>(this), SaveChanges, () => InstanceStore.HasPendingMods);
+            // Save refreshes the workspace. Never redirect a confirmed launch to
+            // another instance if the target changed during that refresh.
+            if (allowed && !_windowClosed &&
+                GetSelectedInstance(_lastEnableColumn - 1)?.ConfigDirectoryPath == targetPath)
+                LaunchSelectedInstance();
+        }
+        catch (Exception exception)
+        {
+            AppLog.Error("Save before launch", exception);
+            ShowToast(Localization.LaunchFailed(_config.Language));
+        }
+        finally
+        {
+            _launchPromptOpen = false;
+            _pendingChangesPromptOpen = false;
+        }
+    }
+
+    private void LaunchSelectedInstance()
     {
         var instance = GetSelectedInstance(_lastEnableColumn - 1);
         if (instance?.IsDamaged == true) { ShowToast(instance.LoadError!); return; }

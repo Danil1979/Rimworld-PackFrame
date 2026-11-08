@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 2,611 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 2,624 regression
 checks. Earlier checkpoint counts below describe their historical snapshots. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -948,3 +948,32 @@ the last position, retained selection/scroll visibility, and two Undos returning
 the original last position without saving. Windows/macOS remain unverified.
 Release checks pass 2,611 assertions, including two structural regressions ensuring
 the reorder controls cannot consume columns from the Enable/Disable row.
+
+## Explicit save-before-launch handoff
+
+Previously, Launch with pending edits stopped at a temporary unsaved-changes toast.
+It now opens a review naming the launch target and every edited instance with its
+configuration path. The user can explicitly choose Save all and launch, or Return
+to editing. The latter has initial focus, Escape cancels, and neither choice
+discards edits. This makes the global save scope visible, including hidden or
+similarly named instances, instead of silently saving unrelated drafts.
+
+The launch continuation requires successful Save and no remaining pending edits.
+A guard prevents concurrent launch/pending prompts; after Save refreshes the
+workspace, the selected target must still match the confirmed configuration path.
+Existing executable, damaged-instance, running-game, link-preparation and launch
+checks remain in the final continuation.
+
+Native Linux evidence at 1100×700: English and Japanese reviews fit with two
+long-path instances; Cancel preserved both pending edits and byte-identical files.
+A deliberately corrupted fixture configuration caused Save all and launch to stop
+with both drafts retained and persistent recovery guidance. The corrupt file and
+healthy instance file remained unchanged. Repair and Refresh recovered the drafts.
+Successful confirmation then saved the expected orders of both the 1,000- and
+900-entry instances and invoked a harmless local launch stub with only the selected
+instance's save-data path. No real game, Steam client, or user data was involved.
+Fixture configurations and executable were restored after the test.
+
+Release checks pass 2,624 assertions, including confirmation cancellation, save
+failure/exception, residual pending edits, success, and four-language target/path
+wording. Real-game launch and Windows/macOS dialog behavior remain unverified.
