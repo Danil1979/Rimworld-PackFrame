@@ -49,4 +49,12 @@ public partial class LanguageWindow : Window
     }
 
     private void OnCancelClick(object? sender, RoutedEventArgs e) => Close();
+
+    internal void ShowSaveFailure(string? attemptedLanguage)
+    {
+        var hint = this.FindControl<TextBlock>("HintText")!;
+        hint.Text = LanguageChoice.SaveFailure(attemptedLanguage);
+        hint.Foreground = ThemeService.PrimaryTextBrush;
+        hint.FontWeight = FontWeight.SemiBold;
+    }
 }

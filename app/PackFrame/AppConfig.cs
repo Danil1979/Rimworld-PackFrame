@@ -56,6 +56,17 @@ public sealed class AppConfig
 
     internal AppConfig Copy() => (AppConfig)MemberwiseClone();
 
+    // Keep live preferences unchanged until the complete candidate is persisted.
+    internal bool TrySetLanguage(string language, string? path = null)
+    {
+        if (!Localization.IsSupported(language)) return false;
+        var candidate = Copy();
+        candidate.Language = language;
+        if (!candidate.TrySave(path ?? ConfigPath)) return false;
+        Language = language;
+        return true;
+    }
+
     internal bool TrySave(string path)
     {
         try

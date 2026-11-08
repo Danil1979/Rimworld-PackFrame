@@ -666,15 +666,15 @@ public partial class MainWindow : Window
         UpdateSaveState();
     }
 
-    private void ApplyLanguage(string language)
+    private bool ApplyLanguage(string language)
     {
-        _config.Language = language;
-        _config.Save();
+        if (!_config.TrySetLanguage(language)) return false;
         ApplyLocalization();
         if (_instances.Count > 0)
         {
             ReloadInstances(null, -1);
         }
+        return true;
     }
 
     private void OnUndoClick(object? sender, RoutedEventArgs e)
@@ -2070,8 +2070,8 @@ public partial class MainWindow : Window
         var languageWindow = new LanguageWindow(_config.Language);
         languageWindow.LanguageSelected += (_, language) =>
         {
-            ApplyLanguage(language);
-            languageWindow.Close();
+            if (ApplyLanguage(language)) languageWindow.Close();
+            else languageWindow.ShowSaveFailure(language);
         };
         await languageWindow.ShowDialog(this);
     }

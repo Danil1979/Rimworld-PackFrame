@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 912 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 922 regression
 checks. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -21,7 +21,7 @@ relying on a font being installed on the computer.
 | Rename | Empty input stays open with an error; Escape from button focus cancels | Filesystem rename failures on each OS |
 | Import mode | Full labels, unavailable-overwrite explanation, safe Cancel/Escape | Full native import matrix |
 | Config folder | Invalid path error and focus, compact layout, named field | Native folder pickers on each OS |
-| Language | Named main action, current-language indicator, visible Cancel, four-language picker review, minimum Japanese and first-run layouts, selection/cancel results, pending edits and Undo across language switches | Platform screen readers and OS-specific startup behavior |
+| Language | Named main action, current-language indicator, visible Cancel, four-language picker review, minimum Japanese and first-run layouts, selection/cancel results, pending edits and Undo across language switches; failed-save retention and repair/retry | Platform screen readers and OS-specific startup behavior |
 | Pending changes | Safe initial focus, wrapped message/actions inspected | Update-and-restart integration on each OS |
 | Color palette | Native edit/cancel persistence, corrupt-file retention, repair/retry, selected-color + label commit, brush rollback, Undo/Redo and persistent error/Log | Four-language recovery layouts; Windows/macOS permissions and races |
 | Collection target | Explicit selection, duplicate-title IDs, mod addition/removal preview, name/ID search, hidden-selection recovery, 1,000-row keyboard navigation, compact four-language layouts, empty/cancel/result checks | Live Steam-owned collection retrieval and publishing |
@@ -455,3 +455,24 @@ relying on a font being installed on the computer.
 - Clean Linux Release build: zero warnings/errors; 912 regression checks passed.
   OS screen readers, Windows/macOS startup, and configuration-save failure
   recovery remain separate checks. No game or external service was launched.
+
+## Language-save recovery checkpoint
+
+- Native baseline testing reproduced the picker closing and the main UI changing
+  language even though its configuration could not be saved. Language preferences
+  now persist a candidate copy before applying it to the live configuration.
+- Save failure leaves the picker open with localized, persistent recovery guidance
+  and the previous language remains current. Cancel is available. First-run startup
+  uses the same persistence gate before opening the main window; failed first-run
+  state is covered by regression checks.
+- Native failure checks used only a generated fixture configuration replaced by
+  a marker-bearing directory. The marker and original configuration were preserved.
+  English, Japanese and both Chinese error messages fit at 380×320. Cancel retained
+  the existing language and staged mod edit. Repairing the fixture destination and
+  choosing again persisted the requested language without restarting the app.
+- Undo after recovery restored the original mod list. Both ModsConfig files and
+  the final app configuration were byte-identical to their pre-test baselines.
+- Clean Linux Release build: zero warnings/errors; 922 regression checks passed.
+  Actual OS permission failures, first-run main-window startup on Windows/macOS,
+  and screen-reader announcement timing remain unverified. No real user files,
+  game launch or external service was used.

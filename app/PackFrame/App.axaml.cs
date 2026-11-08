@@ -27,8 +27,11 @@ public partial class App : Application
                 var languageWindow = new LanguageWindow();
                 languageWindow.LanguageSelected += (_, language) =>
                 {
-                    config.Language = language;
-                    config.Save();
+                    if (!config.TrySetLanguage(language))
+                    {
+                        languageWindow.ShowSaveFailure(language);
+                        return;
+                    }
 
                     var mainWindow = new MainWindow(config);
                     desktop.MainWindow = mainWindow;
