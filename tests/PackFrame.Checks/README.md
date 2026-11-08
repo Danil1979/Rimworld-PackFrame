@@ -180,3 +180,16 @@ Manual platform checks:
   copy. The platform tar.gz must be extracted, including executable permissions.
   SteamCMD's native runtime prerequisites still apply; Apple Silicon may require
   Rosetta for Valve's Intel binaries.
+
+Readability/accessibility follow-up:
+
+- Footer labels now spell out Order, Version, Duplicate and Local. The existing
+  filter checks above apply to those buttons; per-mod S/V/R/L badges are unchanged.
+- At 1100×700 in split view, check every footer count and missing/download status
+  stays separate. Drag the details divider and use its arrow-key resize behavior.
+- Tab to each footer filter and cycle with Space or Enter. Counts stay pre-filter,
+  focus stays on the button, and the accessible name describes the current mode.
+- Check disabled Undo/Redo and keyboard focus are visibly distinct from enabled
+  buttons. Inspect mod row accessible names for the name/status, not a model dump.
+- No selected mod shows setup/edit/save instructions; missing previews reserve no
+  blank image area. Long mod names wrap and the instruction panel scrolls.

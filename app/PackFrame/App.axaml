@@ -11,6 +11,8 @@
         <SolidColorBrush x:Key="ItemHoverBrush" Color="#4D6378" />
         <SolidColorBrush x:Key="ItemSelectedBrush" Color="#5C6E82" />
         <ControlTheme x:Key="ModListItem" TargetType="ListBoxItem">
+            <Setter Property="AutomationProperties.Name" Value="{ReflectionBinding Name}" />
+            <Setter Property="AutomationProperties.HelpText" Value="{ReflectionBinding BadgeTooltip}" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
             <Setter Property="Padding" Value="6,3" />
@@ -38,8 +40,9 @@
             </Style>
         </ControlTheme>        <ControlTheme x:Key="FlatButton" TargetType="Button">
             <Setter Property="Background" Value="{StaticResource SecondaryBrush}" />
-            <Setter Property="Foreground" Value="#FFFFFF" />
-            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="Padding" Value="18,8" />
             <Setter Property="FontSize" Value="14" />
             <Setter Property="FontWeight" Value="Normal" />
@@ -47,7 +50,9 @@
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Border Background="{TemplateBinding Background}"
+                    <Border Name="ButtonSurface" Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
                             Padding="{TemplateBinding Padding}"
                             CornerRadius="0">
                         <ContentPresenter Content="{TemplateBinding Content}"
@@ -60,6 +65,18 @@
                     </Border>
                 </ControlTemplate>
             </Setter>
+            <Style Selector="^:pointerover">
+                <Setter Property="Background" Value="{DynamicResource ItemHoverBrush}" />
+            </Style>
+            <Style Selector="^:pressed">
+                <Setter Property="Background" Value="{DynamicResource ItemSelectedBrush}" />
+            </Style>
+            <Style Selector="^:focus-visible">
+                <Setter Property="BorderBrush" Value="{DynamicResource PrimaryTextBrush}" />
+            </Style>
+            <Style Selector="^:disabled">
+                <Setter Property="Opacity" Value="0.42" />
+            </Style>
         </ControlTheme>
     </Application.Resources>
     <Application.Styles>
@@ -229,6 +246,12 @@
             <Setter Property="MinHeight" Value="28" />
             <Setter Property="FontSize" Value="14" />
             <Setter Property="FontWeight" Value="Normal" />
+        </Style>
+        <Style Selector="Button.footerlink:focus-visible">
+            <Setter Property="Background" Value="{DynamicResource ItemSelectedBrush}" />
+        </Style>
+        <Style Selector="Button.footerlink:disabled">
+            <Setter Property="Opacity" Value="0.42" />
         </Style>
         <Style Selector="Button.footerlink">
             <Setter Property="Background" Value="Transparent" />

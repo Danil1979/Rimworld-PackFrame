@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace PackFrame;
 
-internal sealed record ModpackCatalogSnapshot(ModpackIndex Index, Uri IndexUri, string ContentHash);
+internal sealed record ModpackCatalogSnapshot(ModpackIndex Index, Uri IndexUri, string ContentHash, bool IsBundled = false);
 
 internal sealed class ModpackCatalogDocument
 {
@@ -72,7 +72,7 @@ internal sealed class ModpackCatalogCache
         }
 
         return IsKnownIndex(normalized)
-            ? new ModpackCatalogSnapshot(ParseIndex(_bundledJson), new Uri(normalized), Hash(_bundledJson))
+            ? new ModpackCatalogSnapshot(ParseIndex(_bundledJson), new Uri(normalized), Hash(_bundledJson), IsBundled: true)
             : null;
     }
 

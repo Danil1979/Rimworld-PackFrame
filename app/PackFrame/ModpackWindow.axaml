@@ -53,14 +53,22 @@
                     Margin="4,0,0,0"
                     Content="▾"
                     Click="OnRepoMenuClick" />
-            <TextBlock x:Name="CatalogStatusText"
-                       Grid.Row="1"
-                       Grid.ColumnSpan="3"
-                       Margin="0,4,0,0"
-                       MinHeight="16"
-                       FontSize="12"
-                       Foreground="{DynamicResource SecondaryTextBrush}"
-                       TextTrimming="CharacterEllipsis" />
+            <Border Grid.Row="1" Grid.ColumnSpan="3" Margin="0,8,0,0"
+                    Background="{DynamicResource SecondaryBrush}" Padding="10,8">
+                <StackPanel Spacing="4">
+                    <TextBlock x:Name="CatalogStatusText"
+                               Foreground="{DynamicResource PrimaryTextBrush}"
+                               TextWrapping="Wrap" />
+                    <Expander x:Name="CatalogErrorDetails" IsVisible="False"
+                              HorizontalAlignment="Stretch">
+                        <ScrollViewer MaxHeight="100" HorizontalScrollBarVisibility="Disabled">
+                            <SelectableTextBlock x:Name="CatalogErrorText"
+                                                 Foreground="{DynamicResource SecondaryTextBrush}"
+                                                 TextWrapping="Wrap" />
+                        </ScrollViewer>
+                    </Expander>
+                </StackPanel>
+            </Border>
         </Grid>
 
         <Grid Grid.Row="2"
@@ -114,6 +122,12 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Spacing="10">
+                        <Border x:Name="PackNotice" IsVisible="False" Padding="10"
+                                Background="{DynamicResource SecondaryBrush}">
+                            <TextBlock x:Name="PackNoticeText"
+                                       Foreground="{DynamicResource PrimaryTextBrush}"
+                                       TextWrapping="Wrap" />
+                        </Border>
                         <Border Height="240"
                                 Background="{DynamicResource AppBackgroundBrush}"
                                 HorizontalAlignment="Stretch">

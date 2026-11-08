@@ -243,6 +243,8 @@ public partial class ModpackWindow : Window
             ShowSelectedPack(saved.Pack, item, version);
             SetControls(true);
             if (!forceRefresh && _checkedPackDetails.Contains(key)) return;
+            SetPackNotice(T("Showing saved details while checking for updates...",
+                "正在显示已保存的详情，同时检查更新...", "正在顯示已儲存的詳情，同時檢查更新...", "保存済みの詳細を表示し、更新を確認しています..."));
         }
         else
         {
@@ -263,6 +265,7 @@ public partial class ModpackWindow : Window
             }
 
             _checkedPackDetails.Add(key);
+            SetPackNotice(null);
             if (saved is null || saved.ContentHash != snapshot.ContentHash)
                 ShowSelectedPack(snapshot.Pack, item, version);
         }
@@ -273,11 +276,21 @@ public partial class ModpackWindow : Window
         {
             if (!_closed && version == _detailVersion)
             {
+                AppLog.Error("Load pack details: " + item.Name, exception);
                 if (saved is null)
-                    ClearDetail(Localization.ModpackLoadFailed(_language, exception.Message));
+                {
+                    ClearDetail(T("Pack details unavailable. Check your connection and select Refresh to retry.",
+                        "无法读取合集详情。请检查网络连接并点击“刷新”重试。",
+                        "無法讀取合集詳情。請檢查網路連線並點擊「重新整理」重試。",
+                        "パックの詳細を読み込めません。接続を確認して「更新」で再試行してください。"));
+                    Find<SelectableTextBlock>("PackTitle").Text = item.Name;
+                    Find<SelectableTextBlock>("PackDescription").Text = item.Entry.Summary;
+                }
                 else
-                    Find<TextBlock>("StatusText").Text = T("Using saved pack details.",
-                        "正在使用本地合集详情。", "正在使用本機合集詳情。", "保存済みの詳細を表示しています。");
+                    SetPackNotice(T("Showing saved details. The update check failed; installation requires a connection. Select Refresh to retry.",
+                        "正在显示已保存的详情。更新检查失败；安装需要联网。点击“刷新”重试。",
+                        "正在顯示已儲存的詳情。更新檢查失敗；安裝需要連線。點擊「重新整理」重試。",
+                        "保存済みの詳細を表示しています。更新を確認できませんでした。インストールには接続が必要です。「更新」で再試行できます。"));
             }
         }
         finally
@@ -504,6 +517,7 @@ public partial class ModpackWindow : Window
 
     private void ClearDetail(string status)
     {
+        SetPackNotice(status);
         _coverCancellation?.Cancel();
         _canInstall = false;
         _canApplyConfig = false;

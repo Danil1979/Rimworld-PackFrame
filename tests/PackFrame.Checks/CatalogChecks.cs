@@ -21,7 +21,7 @@ internal static class CatalogChecks
         using var client = new HttpClient(handler);
         var cache = new ModpackCatalogCache(client, folder, Bundled);
         var initial = cache.LoadLocal(ModpackService.GiteeIndexUrl);
-        Require(initial?.Index.Packs.Single().Id == "bundled" && handler.Requests == 0,
+        Require(initial?.Index.Packs.Single().Id == "bundled" && initial.IsBundled && handler.Requests == 0,
             "bundled catalog opens without a network request");
         Require(cache.LoadLocal("https://example.com/custom/index.json") is null,
             "custom catalog never receives the default bundled catalog");
@@ -49,7 +49,8 @@ internal static class CatalogChecks
 
         var restarted = new ModpackCatalogCache(client, folder, Bundled);
         var requestCount = handler.Requests;
-        Require(restarted.LoadLocal(ModpackService.GitHubIndexUrl)?.ContentHash == first.ContentHash &&
+        Require(restarted.LoadLocal(ModpackService.GitHubIndexUrl) is { IsBundled: false } restored &&
+                restored.ContentHash == first.ContentHash &&
                 handler.Requests == requestCount,
             "validated catalog survives a restart and loads without HTTP");
         handler.Respond = (request, _) =>

@@ -47,6 +47,22 @@
         </DataTemplate>
     </Window.Resources>
     <Window.Styles>
+        <Style Selector="Button.summary-filter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="5,3" />
+            <Setter Property="Margin" Value="0,0,4,2" />
+            <Setter Property="MinHeight" Value="26" />
+            <Setter Property="MinWidth" Value="0" />
+        </Style>
+        <Style Selector="Button.summary-filter.filtered">
+            <Setter Property="Background" Value="{DynamicResource SecondaryBrush}" />
+        </Style>
+        <Style Selector="Button.primary-action">
+            <Setter Property="BorderBrush" Value="{DynamicResource SecondaryTextBrush}" />
+        </Style>
+        <Style Selector="GridSplitter:pointerover, GridSplitter:focus-visible">
+            <Setter Property="Background" Value="{DynamicResource ItemHoverBrush}" />
+        </Style>
         <Style Selector="Border.pane-header Border.header-tint">
             <Setter Property="Opacity" Value="0" />
         </Style>
@@ -133,15 +149,33 @@
                     Click="OnRefreshClick" />
         </StackPanel>
 
-        <Grid Grid.Row="2" Margin="0,8,0,0" ColumnDefinitions="420,12,*">
+        <Grid x:Name="WorkspaceGrid" Grid.Row="2" Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="220" MaxWidth="380" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="3*" MinWidth="630" />
+            </Grid.ColumnDefinitions>
             <Border Grid.Column="0"
                     Background="Transparent"
                     BorderBrush="{StaticResource SecondaryBrush}"
                     BorderThickness="1"
                     Padding="12">
-                <Grid RowDefinitions="240,Auto,Auto,Auto,Auto,Auto,*">
+                <Grid>
+                    <ScrollViewer x:Name="DetailsEmptyState" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Spacing="18" Margin="4,12">
+                        <TextBlock x:Name="DetailsEmptyTitle" FontSize="22" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
+                        <TextBlock x:Name="DetailsEmptyBody" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                        <Border Height="1" Background="{DynamicResource SecondaryBrush}" />
+                        <TextBlock x:Name="DetailsWorkflow" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" LineHeight="24" />
+                        <TextBlock x:Name="DetailsSelectionHint" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    </ScrollViewer>
+                    <Grid x:Name="DetailsContent" IsVisible="False" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*">
                     <Image x:Name="PreviewImage"
                            Grid.Row="0"
+                           MaxHeight="210"
+                           IsVisible="False"
                            Stretch="Uniform"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center" />
@@ -153,8 +187,9 @@
                                    Margin="0,0,10,0" />
                         <SelectableTextBlock x:Name="NameValue"
                                    Grid.Column="1"
+                                   FontWeight="SemiBold"
                                    Foreground="{DynamicResource PrimaryTextBrush}"
-                                   TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                                   TextWrapping="Wrap" />
                     </Grid>
 
                     <Grid Grid.Row="2" ColumnDefinitions="Auto,*" Margin="0,6,0,0">
@@ -200,8 +235,20 @@
                                              Foreground="{DynamicResource PrimaryTextBrush}"
                                              TextWrapping="Wrap" />
                     </ScrollViewer>
+                    </Grid>
                 </Grid>
             </Border>
+            <GridSplitter x:Name="DetailsSplitter" Grid.Column="1" ResizeDirection="Columns"
+                          ResizeBehavior="PreviousAndNext" HorizontalAlignment="Stretch"
+                          Background="Transparent" Focusable="True">
+                <GridSplitter.Template>
+                    <ControlTemplate>
+                        <Border Background="{TemplateBinding Background}">
+                            <Border Width="1" Background="{DynamicResource SecondaryBrush}" Margin="0,12" />
+                        </Border>
+                    </ControlTemplate>
+                </GridSplitter.Template>
+            </GridSplitter>
 
             <Grid x:Name="ManagerColumns" Grid.Column="2" ColumnDefinitions="*,8,*,8,*">
                 <Border Grid.Column="0"
@@ -210,7 +257,7 @@
                         BorderThickness="1"
                         Padding="8">
                     <Grid RowDefinitions="Auto,30,*,Auto">
-                        <Grid RowDefinitions="30" Margin="2,0,2,4">
+                        <Grid RowDefinitions="64" Margin="2,0,2,4">
                             <Grid>
                             <Button x:Name="InactiveSortButton"
                                 Grid.Row="0"
@@ -274,27 +321,20 @@
                                  Grid.Row="2"
                                  ItemContainerTheme="{StaticResource ModListItem}"
                                  SelectionChanged="OnListSelectionChanged">
-                        </ListBox>                        <Border Grid.Row="3"
-                                BorderBrush="{StaticResource SecondaryBrush}"
-                                BorderThickness="0,1,0,0"
-                                Padding="4,4,4,2">
-                            <StackPanel Orientation="Horizontal" Spacing="12">
-                                <TextBlock x:Name="InactiveProblemV"
-                                           Foreground="{DynamicResource PrimaryTextBrush}"
-                                           TextWrapping="NoWrap"
-                                           Cursor="Hand"
-                                           PointerPressed="OnInactiveProblemVClick" />
-                                <TextBlock x:Name="InactiveProblemR"
-                                           Foreground="{DynamicResource PrimaryTextBrush}"
-                                           TextWrapping="NoWrap"
-                                           Cursor="Hand"
-                                           PointerPressed="OnInactiveProblemRClick" />
-                                <TextBlock x:Name="InactiveLocalCount"
-                                           Text="L: 0"
-                                           Foreground="{DynamicResource PrimaryTextBrush}"
-                                           TextWrapping="NoWrap"
-                                           Cursor="Hand"
-                                           PointerPressed="OnInactiveLocalCountClick" />
+                        </ListBox>                        <Border Grid.Row="3" BorderBrush="{DynamicResource SecondaryBrush}"
+                                BorderThickness="0,1,0,0" Padding="0,6,0,0" MinHeight="64">
+                            <StackPanel>
+                            <WrapPanel>
+                                <Button Classes="summary-filter" Theme="{StaticResource FlatButton}" Click="OnSummaryFilterClick">
+                                    <TextBlock x:Name="InactiveProblemV" Foreground="{DynamicResource PrimaryTextBrush}" />
+                                </Button>
+                                <Button Classes="summary-filter" Theme="{StaticResource FlatButton}" Click="OnSummaryFilterClick">
+                                    <TextBlock x:Name="InactiveProblemR" Foreground="{DynamicResource PrimaryTextBrush}" />
+                                </Button>
+                                <Button Classes="summary-filter" Theme="{StaticResource FlatButton}" Click="OnSummaryFilterClick">
+                                    <TextBlock x:Name="InactiveLocalCount" Foreground="{DynamicResource PrimaryTextBrush}" />
+                                </Button>
+                            </WrapPanel>
                             </StackPanel>
                         </Border>                    </Grid>
                 </Border>
@@ -419,41 +459,27 @@
                                  Grid.Row="2"
                                  ItemContainerTheme="{StaticResource ModListItem}"
                                  SelectionChanged="OnListSelectionChanged">
-                        </ListBox>                        <Border Grid.Row="3"
-                                BorderBrush="{StaticResource SecondaryBrush}"
-                                BorderThickness="0,1,0,0"
-                                Padding="4,4,4,2">
-                            <Grid ColumnDefinitions="Auto,Auto,Auto,*">
-                                <TextBlock x:Name="ActiveProblemS1"
-                                           Margin="0,0,12,0"
-                                           Foreground="{DynamicResource PrimaryTextBrush}"
-                                           TextWrapping="NoWrap"
-                                           Cursor="Hand"
-                                           PointerPressed="OnActiveProblemS1Click" />
-                                <TextBlock x:Name="ActiveProblemV1"
-                                           Grid.Column="1" Margin="0,0,12,0"
-                                           Foreground="{DynamicResource PrimaryTextBrush}"
-                                           TextWrapping="NoWrap"
-                                           Cursor="Hand"
-                                           PointerPressed="OnActiveProblemV1Click" />
-                                <TextBlock x:Name="ActiveProblemR1"
-                                           Grid.Column="2" Margin="0,0,12,0"
-                                           Foreground="{DynamicResource PrimaryTextBrush}"
-                                           TextWrapping="NoWrap"
-                                           Cursor="Hand"
-                                           PointerPressed="OnActiveProblemR1Click" />
-                                <TextBlock x:Name="ActiveLocalCount1"
-                                           Text="L: 0"
-                                           Foreground="{DynamicResource PrimaryTextBrush}"
-                                           TextWrapping="NoWrap"
-                                           Cursor="Hand"
-                                           PointerPressed="OnActiveLocalCount1Click" />
-                                <Button x:Name="ActiveMissing1"
-                                        Grid.Column="3" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                        Classes="footerlink"
-                                        IsVisible="False"
-                                        Click="OnMissing1Click" />
-                            </Grid>
+                        </ListBox>                        <Border Grid.Row="3" BorderBrush="{DynamicResource SecondaryBrush}"
+                                BorderThickness="0,1,0,0" Padding="0,6,0,0" MinHeight="64">
+                            <StackPanel>
+                            <WrapPanel>
+                                <Button Classes="summary-filter" Theme="{StaticResource FlatButton}" Click="OnSummaryFilterClick">
+                                    <TextBlock x:Name="ActiveProblemS1" Foreground="{DynamicResource PrimaryTextBrush}" />
+                                </Button>
+                                <Button Classes="summary-filter" Theme="{StaticResource FlatButton}" Click="OnSummaryFilterClick">
+                                    <TextBlock x:Name="ActiveProblemV1" Foreground="{DynamicResource PrimaryTextBrush}" />
+                                </Button>
+                                <Button Classes="summary-filter" Theme="{StaticResource FlatButton}" Click="OnSummaryFilterClick">
+                                    <TextBlock x:Name="ActiveProblemR1" Foreground="{DynamicResource PrimaryTextBrush}" />
+                                </Button>
+                                <Button Classes="summary-filter" Theme="{StaticResource FlatButton}" Click="OnSummaryFilterClick">
+                                    <TextBlock x:Name="ActiveLocalCount1" Foreground="{DynamicResource PrimaryTextBrush}" />
+                                </Button>
+                            </WrapPanel>
+                            <Button x:Name="ActiveMissing1" Classes="footerlink" IsVisible="False"
+                                    HorizontalAlignment="Left" HorizontalContentAlignment="Left"
+                                    Margin="2,3,0,0" Click="OnMissing1Click" />
+                            </StackPanel>
                         </Border>                    </Grid>
                 </Border>
 
@@ -572,41 +598,27 @@
                                  Grid.Row="2"
                                  ItemContainerTheme="{StaticResource ModListItem}"
                                  SelectionChanged="OnListSelectionChanged">
-                        </ListBox>                        <Border Grid.Row="3"
-                                BorderBrush="{StaticResource SecondaryBrush}"
-                                BorderThickness="0,1,0,0"
-                                Padding="4,4,4,2">
-                            <Grid ColumnDefinitions="Auto,Auto,Auto,*">
-                                <TextBlock x:Name="ActiveProblemS2"
-                                           Margin="0,0,12,0"
-                                           Foreground="{DynamicResource PrimaryTextBrush}"
-                                           TextWrapping="NoWrap"
-                                           Cursor="Hand"
-                                           PointerPressed="OnActiveProblemS2Click" />
-                                <TextBlock x:Name="ActiveProblemV2"
-                                           Grid.Column="1" Margin="0,0,12,0"
-                                           Foreground="{DynamicResource PrimaryTextBrush}"
-                                           TextWrapping="NoWrap"
-                                           Cursor="Hand"
-                                           PointerPressed="OnActiveProblemV2Click" />
-                                <TextBlock x:Name="ActiveProblemR2"
-                                           Grid.Column="2" Margin="0,0,12,0"
-                                           Foreground="{DynamicResource PrimaryTextBrush}"
-                                           TextWrapping="NoWrap"
-                                           Cursor="Hand"
-                                           PointerPressed="OnActiveProblemR2Click" />
-                                <TextBlock x:Name="ActiveLocalCount2"
-                                           Text="L: 0"
-                                           Foreground="{DynamicResource PrimaryTextBrush}"
-                                           TextWrapping="NoWrap"
-                                           Cursor="Hand"
-                                           PointerPressed="OnActiveLocalCount2Click" />
-                                <Button x:Name="ActiveMissing2"
-                                        Grid.Column="3" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                        Classes="footerlink"
-                                        IsVisible="False"
-                                        Click="OnMissing2Click" />
-                            </Grid>
+                        </ListBox>                        <Border Grid.Row="3" BorderBrush="{DynamicResource SecondaryBrush}"
+                                BorderThickness="0,1,0,0" Padding="0,6,0,0" MinHeight="64">
+                            <StackPanel>
+                            <WrapPanel>
+                                <Button Classes="summary-filter" Theme="{StaticResource FlatButton}" Click="OnSummaryFilterClick">
+                                    <TextBlock x:Name="ActiveProblemS2" Foreground="{DynamicResource PrimaryTextBrush}" />
+                                </Button>
+                                <Button Classes="summary-filter" Theme="{StaticResource FlatButton}" Click="OnSummaryFilterClick">
+                                    <TextBlock x:Name="ActiveProblemV2" Foreground="{DynamicResource PrimaryTextBrush}" />
+                                </Button>
+                                <Button Classes="summary-filter" Theme="{StaticResource FlatButton}" Click="OnSummaryFilterClick">
+                                    <TextBlock x:Name="ActiveProblemR2" Foreground="{DynamicResource PrimaryTextBrush}" />
+                                </Button>
+                                <Button Classes="summary-filter" Theme="{StaticResource FlatButton}" Click="OnSummaryFilterClick">
+                                    <TextBlock x:Name="ActiveLocalCount2" Foreground="{DynamicResource PrimaryTextBrush}" />
+                                </Button>
+                            </WrapPanel>
+                            <Button x:Name="ActiveMissing2" Classes="footerlink" IsVisible="False"
+                                    HorizontalAlignment="Left" HorizontalContentAlignment="Left"
+                                    Margin="2,3,0,0" Click="OnMissing2Click" />
+                            </StackPanel>
                         </Border>                    </Grid>
                 </Border>
             </Grid>
@@ -648,6 +660,7 @@
                         Padding="24,8"
                         Click="OnSaveClick" />
                 <Button x:Name="LaunchButton"
+                        Classes="primary-action"
                         Theme="{StaticResource FlatButton}"
                         MinHeight="36"
                         MaxWidth="300"

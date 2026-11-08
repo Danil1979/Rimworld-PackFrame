@@ -15,6 +15,7 @@ public partial class ModpackWindow
     private string? _catalogUrl;
     private string? _catalogHash;
     private bool _applyingCatalog;
+    private bool _catalogIsBundled;
     private ModpackCatalogSnapshot? _pendingCatalog;
     private readonly HashSet<string> _checkedPackDetails = new(StringComparer.Ordinal);
 
@@ -78,14 +79,22 @@ public partial class ModpackWindow
             }
             if (_indexUri is not null)
             {
-                SetCatalogStatus(T("Using the saved catalog. Update check failed.",
-                    "正在使用本地合集列表，更新检查失败。", "正在使用本機合集清單，更新檢查失敗。",
-                    "保存済みカタログを使用中。更新を確認できませんでした。"), exception.Message);
+                var source = _catalogIsBundled
+                    ? T("Showing the bundled catalog.", "正在显示内置合集列表。", "正在顯示內建合集清單。", "同梱カタログを表示しています。")
+                    : T("Showing the saved catalog.", "正在显示已保存的合集列表。", "正在顯示已儲存的合集清單。", "保存済みカタログを表示しています。");
+                SetCatalogStatus(source + " " + T(
+                    "Could not check for updates. You can keep browsing; new details and installation require a connection. Select Refresh to retry.",
+                    "无法检查更新。您仍可浏览本地内容；新详情和安装需要联网。点击“刷新”重试。",
+                    "無法檢查更新。您仍可瀏覽本機內容；新詳情和安裝需要連線。點擊「重新整理」重試。",
+                    "更新を確認できませんでした。保存済みの内容は閲覧できますが、新しい詳細やインストールには接続が必要です。「更新」で再試行できます。"), exception.Message);
             }
             else
             {
-                var message = Localization.ModpackLoadFailed(_language, exception.Message);
-                SetCatalogStatus(message);
+                var message = T("Catalog unavailable. Check the repository address and your connection, then select Refresh.",
+                    "无法读取合集列表。请检查仓库地址和网络连接，然后点击“刷新”。",
+                    "無法讀取合集清單。請檢查儲存庫網址和網路連線，然後點擊「重新整理」。",
+                    "カタログを読み込めません。リポジトリのアドレスと接続を確認して「更新」を選択してください。");
+                SetCatalogStatus(message, exception.Message);
                 if (!_busy) ClearDetail(message);
             }
         }
@@ -107,6 +116,7 @@ public partial class ModpackWindow
             _pendingCatalog = snapshot;
             return;
         }
+        _catalogIsBundled = snapshot.IsBundled;
         if (_catalogHash == snapshot.ContentHash && !refreshDetails)
         {
             _indexUri = snapshot.IndexUri;
@@ -186,11 +196,23 @@ public partial class ModpackWindow
         var status = Find<TextBlock>("CatalogStatusText");
         status.Text = text;
         ToolTip.SetTip(status, detail ?? text);
+        var error = Find<Expander>("CatalogErrorDetails");
+        error.Header = T("Error details", "错误详情", "錯誤詳情", "エラーの詳細");
+        error.IsVisible = !string.IsNullOrWhiteSpace(detail);
+        error.IsExpanded = false;
+        Find<SelectableTextBlock>("CatalogErrorText").Text = detail;
+    }
+
+    private void SetPackNotice(string? text)
+    {
+        Find<Border>("PackNotice").IsVisible = !string.IsNullOrWhiteSpace(text);
+        Find<TextBlock>("PackNoticeText").Text = text;
     }
 
     private void ShowSelectedPack(ModpackDefinition pack, ModpackListItem item, int version)
     {
         _selectedPack = pack;
+        SetPackNotice(null);
         ShowPack(pack, item);
         SetCover(null);
         Find<TextBlock>("StatusText").Text = Localization.ModpackSelectHint(_language);

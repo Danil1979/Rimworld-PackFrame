@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.VisualTree;
@@ -656,6 +657,7 @@ public partial class MainWindow : Window
         UpdateViewModeButton(_activeViewModeButton1, _activeSearch1, language);
         UpdateViewModeButton(_activeViewModeButton2, _activeSearch2, language);
         UpdateSortButton(language);
+        UpdateWorkspaceGuidance();
 
         UpdateHeaders();
         UpdateLaunchButton();
@@ -1196,7 +1198,7 @@ public partial class MainWindow : Window
 
         if (sortText is not null)
         {
-            sortText.Text = $"S: {sortMods.Count}";
+            sortText.Text = $"{SummaryCaption(sortText)} {sortMods.Count}";
             var applyColumn = ReferenceEquals(sortText, _activeProblemS1) ? 1 : 2;
             SetSortProblemTooltip(
                 sortText,
@@ -1205,9 +1207,9 @@ public partial class MainWindow : Window
                 applyColumn
             );
         }
-        versionText.Text = $"V: {versionMods.Count}";
-        duplicateText.Text = $"R: {duplicateMods.Count}";
-        localText.Text = $"L: {mods.Count(mod => mod.IsLocal)}";
+        versionText.Text = $"{SummaryCaption(versionText)} {versionMods.Count}";
+        duplicateText.Text = $"{SummaryCaption(duplicateText)} {duplicateMods.Count}";
+        localText.Text = $"{SummaryCaption(localText)} {mods.Count(mod => mod.IsLocal)}";
         SetProblemTooltip(
             versionText,
             Localization.ProblemVersionTitle(language),
@@ -1218,6 +1220,7 @@ public partial class MainWindow : Window
             Localization.ProblemDuplicateTitle(language),
             duplicateMods
         );
+        UpdateProblemFilterVisuals();
     }
 
     private StackPanel CreateProblemTooltipFrame(string title)
@@ -1810,6 +1813,7 @@ public partial class MainWindow : Window
                 Text = Localization.ModAvailabilityLabel(_config.Language, missing, downloading, rows.Count - missing - downloading),
                 TextWrapping = TextWrapping.Wrap
             };
+            AutomationProperties.SetName(button, ((TextBlock)button.Content).Text);
             ToolTip.SetTip(button, Localization.ModAvailabilityTitle(_config.Language));
             return;
         }
@@ -1818,6 +1822,7 @@ public partial class MainWindow : Window
             _config.Language,
             historyCount
         );
+        AutomationProperties.SetName(button, button.Content?.ToString());
         ToolTip.SetTip(button, Localization.MissingHistoryTooltip(_config.Language));
     }
 
@@ -1885,6 +1890,17 @@ public partial class MainWindow : Window
         _activeProblemV2.TextDecorations = ProblemDecoration(_activeFilter2.Version);
         _activeProblemR2.TextDecorations = ProblemDecoration(_activeFilter2.Duplicate);
         _activeLocalCount2.TextDecorations = ProblemDecoration(_activeFilter2.Local);
+        UpdateSummaryAccessibility(_inactiveProblemV, _inactiveFilter.Version);
+        UpdateSummaryAccessibility(_inactiveProblemR, _inactiveFilter.Duplicate);
+        UpdateSummaryAccessibility(_inactiveLocalCount, _inactiveFilter.Local);
+        UpdateSummaryAccessibility(_activeProblemS1, _activeFilter1.Sort);
+        UpdateSummaryAccessibility(_activeProblemV1, _activeFilter1.Version);
+        UpdateSummaryAccessibility(_activeProblemR1, _activeFilter1.Duplicate);
+        UpdateSummaryAccessibility(_activeLocalCount1, _activeFilter1.Local);
+        UpdateSummaryAccessibility(_activeProblemS2, _activeFilter2.Sort);
+        UpdateSummaryAccessibility(_activeProblemV2, _activeFilter2.Version);
+        UpdateSummaryAccessibility(_activeProblemR2, _activeFilter2.Duplicate);
+        UpdateSummaryAccessibility(_activeLocalCount2, _activeFilter2.Local);
     }
 
     private static TextDecorationCollection? ProblemDecoration(ProblemFilterMode mode)
@@ -2002,83 +2018,6 @@ public partial class MainWindow : Window
         };
     }
 
-
-    private void OnInactiveProblemVClick(object? sender, PointerPressedEventArgs e)
-    {
-        _inactiveFilter.Version = CycleProblemFilter(_inactiveFilter.Version);
-        RefreshManager(false);
-        e.Handled = true;
-    }
-
-    private void OnInactiveProblemRClick(object? sender, PointerPressedEventArgs e)
-    {
-        _inactiveFilter.Duplicate = CycleProblemFilter(_inactiveFilter.Duplicate);
-        RefreshManager(false);
-        e.Handled = true;
-    }
-
-    private void OnInactiveLocalCountClick(object? sender, PointerPressedEventArgs e)
-    {
-        _inactiveFilter.Local = CycleProblemFilter(_inactiveFilter.Local);
-        RefreshManager(false);
-        e.Handled = true;
-    }
-
-    private void OnActiveProblemS1Click(object? sender, PointerPressedEventArgs e)
-    {
-        _activeFilter1.Sort = CycleProblemFilter(_activeFilter1.Sort);
-        RefreshManager(false);
-        e.Handled = true;
-    }
-
-    private void OnActiveProblemV1Click(object? sender, PointerPressedEventArgs e)
-    {
-        _activeFilter1.Version = CycleProblemFilter(_activeFilter1.Version);
-        RefreshManager(false);
-        e.Handled = true;
-    }
-
-    private void OnActiveProblemR1Click(object? sender, PointerPressedEventArgs e)
-    {
-        _activeFilter1.Duplicate = CycleProblemFilter(_activeFilter1.Duplicate);
-        RefreshManager(false);
-        e.Handled = true;
-    }
-
-    private void OnActiveLocalCount1Click(object? sender, PointerPressedEventArgs e)
-    {
-        _activeFilter1.Local = CycleProblemFilter(_activeFilter1.Local);
-        RefreshManager(false);
-        e.Handled = true;
-    }
-
-    private void OnActiveProblemS2Click(object? sender, PointerPressedEventArgs e)
-    {
-        _activeFilter2.Sort = CycleProblemFilter(_activeFilter2.Sort);
-        RefreshManager(false);
-        e.Handled = true;
-    }
-
-    private void OnActiveProblemV2Click(object? sender, PointerPressedEventArgs e)
-    {
-        _activeFilter2.Version = CycleProblemFilter(_activeFilter2.Version);
-        RefreshManager(false);
-        e.Handled = true;
-    }
-
-    private void OnActiveProblemR2Click(object? sender, PointerPressedEventArgs e)
-    {
-        _activeFilter2.Duplicate = CycleProblemFilter(_activeFilter2.Duplicate);
-        RefreshManager(false);
-        e.Handled = true;
-    }
-
-    private void OnActiveLocalCount2Click(object? sender, PointerPressedEventArgs e)
-    {
-        _activeFilter2.Local = CycleProblemFilter(_activeFilter2.Local);
-        RefreshManager(false);
-        e.Handled = true;
-    }
 
     private void OnPathKeyDown(object? sender, KeyEventArgs e)
     {
@@ -2797,6 +2736,9 @@ public partial class MainWindow : Window
     )
     {
         button.Content = CreateEyeContent(state.HideUnmatched);
+        AutomationProperties.SetName(button, state.HideUnmatched
+            ? Localization.SearchVisibilityHidden(language)
+            : Localization.SearchVisibilityDimmed(language));
         ToolTip.SetTip(
             button,
             state.HideUnmatched
@@ -6711,6 +6653,8 @@ public partial class MainWindow : Window
 
     private async void ShowDetails(ModInfo? mod)
     {
+        Find<ScrollViewer>("DetailsEmptyState").IsVisible = mod is null;
+        Find<Grid>("DetailsContent").IsVisible = mod is not null;
         if (mod is null)
         {
             _nameValue.Text = string.Empty;
@@ -6721,6 +6665,7 @@ public partial class MainWindow : Window
             _previewVersion++;
             _previewPath = null;
             _previewImage.Source = null;
+            _previewImage.IsVisible = false;
             _previewBitmap?.Dispose();
             _previewBitmap = null;
             return;
@@ -6736,6 +6681,7 @@ public partial class MainWindow : Window
         _previewPath = mod.PreviewPath;
         var version = ++_previewVersion;
         _previewImage.Source = null;
+        _previewImage.IsVisible = false;
         _previewBitmap?.Dispose();
         _previewBitmap = null;
         if (string.IsNullOrWhiteSpace(mod.PreviewPath))
@@ -6759,6 +6705,7 @@ public partial class MainWindow : Window
             }
             _previewBitmap = bitmap;
             _previewImage.Source = _previewBitmap;
+            _previewImage.IsVisible = true;
         }
         catch (Exception exception)
         {
@@ -6779,6 +6726,7 @@ public partial class MainWindow : Window
         }
 
         _pathBox.Foreground = valid ? TextBrush : Brushes.White;
+        UpdateWorkspaceGuidance();
     }
 
     private async void OnClosing(object? sender, WindowClosingEventArgs e)
@@ -6801,6 +6749,7 @@ public partial class MainWindow : Window
         _windowClosed = true;
         _previewVersion++;
         _previewImage.Source = null;
+        _previewImage.IsVisible = false;
         _previewBitmap?.Dispose();
         _previewBitmap = null;
         CloseProblemTooltip();
