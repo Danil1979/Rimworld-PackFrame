@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 757 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 764 regression
 checks. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -213,3 +213,22 @@ relying on a font being installed on the computer.
   Successful remote-operation rows, real service failure/cancellation and
   Windows/macOS remain unverified.
 - Clean Linux Release build: zero warnings/errors; 757 regression checks passed.
+
+
+## Single-step Undo/Redo checkpoint
+
+- Toolbar Undo and Redo no longer subscribe twice to the same click. Their XAML
+  handlers remain the single wiring point. A source-wiring regression check embeds
+  the exact MainWindow XAML and constructor source used by the test build and
+  detects the duplicate pattern while preserving valid code-only buttons.
+- Native before/after reproduction used the same isolated two-instance fixture and
+  two separate Enable actions. Before the fix, one Undo changed the active count
+  from six to four and one Redo restored both edits. After the fix, individual
+  Undo clicks produced six → five → four and Redo clicks four → five → six.
+- Ctrl+Z and Ctrl+Shift+Z matched toolbar behavior. A new edit cleared redo, and
+  undo/redo of a second-instance edit left the first instance unchanged. Ctrl+S
+  persisted the expected distinct package IDs in both synthetic instance files,
+  including the pre-existing unresolved ID.
+- Clean Linux Release build: zero warnings/errors; 764 regression checks passed.
+  This pass exercised Enable history, not drag reorder, color undo or ten-entry
+  boundary behavior in the native app. Those remain separate follow-up checks.

@@ -449,8 +449,7 @@ public partial class MainWindow : Window
         _pathBox.TextChanged += OnPathTextChanged;
         _languageButton.Click += OnLanguageClick;
         _browseButton.Click += OnBrowseClick;
-        _undoButton.Click += OnUndoClick;
-        _redoButton.Click += OnRedoClick;
+        // Undo/Redo are wired once in XAML; adding handlers here doubles each click.
         _inactiveSearchBox.TextChanged += (_, _) =>
             OnSearchTextChanged(_inactiveSearch, _inactiveSearchBox.Text, _inactiveList);
         _activeSearchBox1.TextChanged += (_, _) =>

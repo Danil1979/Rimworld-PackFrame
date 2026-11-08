@@ -397,6 +397,7 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
     PaneLayoutChecks.Run();
     ProblemFilterChecks.Run();
     DialogStateChecks.Run(root);
+    UiActionWiringChecks.Run();
     MissingHistoryChecks.Run(root);
     DiagnosticLogChecks.Run();
     await IndexSubmissionChecks.Run();

@@ -268,3 +268,9 @@ and Workshop-link drafts, and strict local-save failure/retry for missing, null,
 malformed and unreadable manifests. Native Linux checks additionally exercised the
 production dialogs at 640×560, with isolated local-only save/validation/recovery.
 These tests do not perform authenticated publication or grant token permissions.
+
+
+UI action-wiring checks embed the current MainWindow markup and constructor source
+to ensure Undo/Redo are not subscribed in both places. They also verify code-only
+Language/Browse wiring and test the duplicate-detection rule against synthetic
+examples. Native Linux two-edit tests verify the actual single-step history flow.

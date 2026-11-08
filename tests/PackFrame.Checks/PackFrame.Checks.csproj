@@ -8,4 +8,8 @@
   <ItemGroup>
     <ProjectReference Include="../../app/PackFrame/PackFrame.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="../../app/PackFrame/MainWindow.axaml" LogicalName="UiWiring.MainWindow.axaml" />
+    <EmbeddedResource Include="../../app/PackFrame/MainWindow.axaml.cs" LogicalName="UiWiring.MainWindow.axaml.cs" />
+  </ItemGroup>
 </Project>
