@@ -12,10 +12,83 @@ internal static class ArchiveImportChecks
         Directory.CreateDirectory(area);
         try
         {
+            CheckArchiveErrorRecovery(area);
             CheckInvalidArchives(area);
             CheckOfficialTransaction(area);
         }
         finally { InstanceStore.DiscardPendingMods(); }
+    }
+
+    private static void CheckArchiveErrorRecovery(string area)
+    {
+        var zip = Path.Combine(area, "malformed.ZIP");
+        File.WriteAllText(zip, "not a ZIP archive");
+        ExpectArchiveFailure(() => MainWindow.IsSupportedInstanceImportFile(zip),
+            "initial malformed ZIP receives archive-specific recovery");
+
+        File.Delete(zip);
+        using (var archive = ZipFile.Open(zip, ZipArchiveMode.Create))
+        using (var writer = new StreamWriter(archive.CreateEntry("Config/ModsConfig.xml").Open()))
+            writer.Write(Config);
+        Require(MainWindow.IsSupportedInstanceImportFile(zip), "valid ZIP passes import preflight");
+        // Simulate the source changing while the overwrite review is open.
+        File.WriteAllText(zip, "incomplete replacement");
+        var target = InstanceStore.CreateNew(Path.Combine(area, "late-archive"), null, "1.6", new[] { "old.mod" });
+        var official = Official(Path.Combine(area, "late-official"));
+        ExpectArchiveFailure(() => MainWindow.ReadInstanceImport(zip,
+            () => InstanceStore.ImportOfficialOverwrite(official, zip, "1.6")),
+            "late malformed ZIP receives archive recovery for official overwrite");
+        ExpectArchiveFailure(() => MainWindow.ReadInstanceImport(zip,
+            () => InstanceStore.ImportArchiveOverwrite(target, zip)),
+            "late malformed ZIP receives archive recovery for managed overwrite");
+        ExpectArchiveFailure(() => MainWindow.ReadInstanceImport(zip,
+            () => InstanceStore.ImportArchiveNew(Path.Combine(area, "late-new"), zip)),
+            "late malformed ZIP receives archive recovery for new instance import");
+
+        var xml = Path.Combine(area, "malformed.xml");
+        File.WriteAllText(xml, "<broken>");
+        Require(!MainWindow.IsSupportedInstanceImportFile(xml), "malformed XML retains unsupported-file recovery");
+        var emptyZip = MakeArchive(area, new() { ["readme.txt"] = "Not an instance" });
+        Require(!MainWindow.IsSupportedInstanceImportFile(emptyZip), "valid ZIP without an instance retains unsupported-file recovery");
+        var invalidData = new InvalidDataException("Non-archive data failure");
+        try
+        {
+            MainWindow.ReadInstanceImport<bool>(xml, () => throw invalidData);
+            throw new Exception("Expected invalid data failure");
+        }
+        catch (InvalidDataException exception)
+        {
+            Require(ReferenceEquals(exception, invalidData), "non-ZIP invalid data is not reclassified as archive corruption");
+        }
+        var configFailure = new IOException("Could not read imported configuration", new System.Xml.XmlException("Malformed XML"));
+        try
+        {
+            MainWindow.ReadInstanceImport<bool>(zip, () => throw configFailure);
+            throw new Exception("Expected configuration failure");
+        }
+        catch (IOException exception)
+        {
+            Require(ReferenceEquals(exception, configFailure), "ZIP configuration errors retain original recovery classification");
+        }
+        var languages = new[] { "en", "zh-Hans", "zh-Hant", "ja" };
+        var messages = languages.Select(OperationText.InvalidInstanceArchive).ToArray();
+        Require(messages.Distinct().Count() == 4 && messages.All(message => message.Contains("ZIP") &&
+            message.Contains("Config/ModsConfig.xml")), "archive recovery is localized in all four languages");
+        Require(messages[0].Contains("invalid or incomplete") && messages[0].Contains("download") &&
+            !messages[0].Contains("not been replaced") && !messages[0].Contains("unchanged"),
+            "archive recovery offers a next action without promising destination state");
+        Require(OperationText.InvalidInstanceArchive("unknown") == messages[0], "archive recovery has English fallback");
+    }
+
+    private static void ExpectArchiveFailure<T>(Func<T> action, string label)
+    {
+        try { action(); }
+        catch (MainWindow.InvalidInstanceArchiveException exception)
+        {
+            Require(exception.InnerException is InvalidDataException, label + " and preserves diagnostic cause");
+            return;
+        }
+        throw new Exception("FAIL: " + label);
     }
 
     private static void CheckInvalidArchives(string area)

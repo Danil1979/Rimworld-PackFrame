@@ -407,6 +407,7 @@ Check(launch.ArgumentList.SequenceEqual(new[] { "-logfile", Path.Combine(saveFol
     RenameWorkflowChecks.Run();
     InstanceCreationHistoryChecks.Run(root);
     ModListEditHistoryChecks.Run(root);
+    ModpackInstanceSafetyChecks.Run(Path.Combine(root, "installer-safety"));
     InstanceCreationChecks.Run(root);
     InstanceImportCreationChecks.Run(root);
     OfficialConfigWorkflowChecks.Run(root);

@@ -311,7 +311,7 @@ public static class InstanceStore
         }
     }
 
-    private static int GetNextCreationIndex(string instancesRoot)
+    internal static int GetNextCreationIndex(string instancesRoot)
     {
         var maximum = 0;
         void ReserveName(string name)

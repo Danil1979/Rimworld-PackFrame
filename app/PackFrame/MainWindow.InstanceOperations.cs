@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -14,6 +15,33 @@ public partial class MainWindow
     private bool _instanceWriteInProgress;
     private int _instanceFileVersion;
     private sealed class UnsupportedInstanceImportException : Exception { }
+
+    internal sealed class InvalidInstanceArchiveException(InvalidDataException cause)
+        : Exception("The selected instance ZIP could not be read.", cause) { }
+
+    internal static T ReadInstanceImport<T>(string file, Func<T> read)
+    {
+        try { return read(); }
+        // Catch only direct archive decoder failures for a known ZIP source. Wrapped
+        // configuration, metadata and transaction errors retain their recovery details.
+        catch (InvalidDataException exception) when (
+            Path.GetExtension(file).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidInstanceArchiveException(exception);
+        }
+    }
+
+    internal static bool IsSupportedInstanceImportFile(string file) => ReadInstanceImport(file, () =>
+    {
+        // Store probing returns false for unreadable inputs. Validate the ZIP directory
+        // first so format errors can offer a specific recovery action in the import dialog.
+        if (Path.GetExtension(file).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+        {
+            using var archive = ZipFile.OpenRead(file);
+            _ = archive.Entries.Count;
+        }
+        return InstanceStore.IsSupportedImportFile(file);
+    });
 
     private Task CreateInstanceAsync(int column) => RunInstanceOperationAsync(
         Localization.NewInstance(_config.Language), () => CreateInstanceCoreAsync(column));
@@ -148,6 +176,8 @@ public partial class MainWindow
                 "操作を完了できませんでした。元ファイル、ディスクの空き容量、フォルダーの権限を確認して再試行してください。詳細と復元先はログで確認できます。");
             if (exception is UnsupportedInstanceImportException)
                 message = operation + "\n\n" + InvalidImportMessage();
+            if (exception is InvalidInstanceArchiveException)
+                message = operation + "\n\n" + OperationText.InvalidInstanceArchive(_config.Language);
             if (exception is LocalModDeletionException deletion)
                 message = operation + "\n\n" + LocalModDeletionFailureMessage(deletion.Result);
             var dialog = new ConfirmWindow(message, Localization.LogButton(_config.Language),

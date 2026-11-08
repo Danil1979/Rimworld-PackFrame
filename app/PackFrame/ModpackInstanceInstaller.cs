@@ -6,6 +6,10 @@ namespace PackFrame;
 internal static class ModpackInstanceInstaller
 {
     public static ManagedInstance Create(string packRoot, string? gameVersion, ModpackInstallResult result)
+        => Create(packRoot, gameVersion, result, new ModpackInstanceOperations());
+
+    internal static ManagedInstance Create(string packRoot, string? gameVersion, ModpackInstallResult result,
+        ModpackInstanceOperations operations)
     {
         var staging = ValidateStaging(packRoot, result.ModsSourcePath, result.ConfigSourcePath);
         var instances = Path.Combine(packRoot, InstanceStore.InstancesFolderName);
@@ -13,6 +17,7 @@ internal static class ModpackInstanceInstaller
         var temporary = Path.Combine(instances, ".install-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temporary);
         var movedMods = false;
+        var retainTemporary = false;
         string? movedModsTarget = null;
         try
         {
@@ -26,37 +31,45 @@ internal static class ModpackInstanceInstaller
             MoveTree(result.ModsSourcePath, movedModsTarget);
             movedMods = true;
             var validated = InstanceStore.LoadInstance(created.DirectoryPath);
-            var destination = Path.Combine(instances, $"profile{InstanceStore.GetNextIndex(packRoot)}");
-            Directory.Move(created.DirectoryPath, destination);
+            var destination = Path.GetFullPath(Path.Combine(instances,
+                $"profile{InstanceStore.GetNextCreationIndex(Path.GetFullPath(instances))}"));
             var installed = new ManagedInstance
             {
                 FolderName = Path.GetFileName(destination), DirectoryPath = Path.GetFullPath(destination),
                 ActivePackageIds = validated.ActivePackageIds, GameVersion = validated.GameVersion,
                 KnownExpansions = validated.KnownExpansions, Metadata = validated.Metadata
             };
+            operations.PublishDirectory(created.DirectoryPath, destination);
             if (staging is not null) FileTransactions.TryDeleteDirectory(staging);
             return installed;
         }
-        catch
+        catch (Exception failure)
         {
-            if (movedMods &&
-                movedModsTarget is not null &&
-                Directory.Exists(movedModsTarget) &&
-                result.ModsSourcePath is not null &&
-                !Directory.Exists(result.ModsSourcePath))
+            if (movedMods && movedModsTarget is not null && Directory.Exists(movedModsTarget))
             {
                 try
                 {
-                    MoveTree(movedModsTarget, result.ModsSourcePath);
+                    // A recreated source belongs to another operation. Never merge
+                    // or delete it while restoring the only remaining mod copy.
+                    if (result.ModsSourcePath is null || Directory.Exists(result.ModsSourcePath) ||
+                        File.Exists(result.ModsSourcePath))
+                        throw new IOException("Install staging source is no longer available for recovery.");
+                    operations.RestoreMods(movedModsTarget, result.ModsSourcePath);
                 }
-                catch
+                catch (Exception recoveryFailure)
                 {
+                    retainTemporary = true;
+                    throw new IOException("Installation failed. Downloaded mods were retained for recovery at: " +
+                        movedModsTarget, new AggregateException(failure, recoveryFailure));
                 }
             }
 
             throw;
         }
-        finally { FileTransactions.TryDeleteDirectory(temporary); }
+        finally
+        {
+            if (!retainTemporary) FileTransactions.TryDeleteDirectory(temporary);
+        }
     }
 
     internal static string? ValidateStaging(string packRoot, string? mods, string? config)

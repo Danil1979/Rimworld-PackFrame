@@ -5778,6 +5778,11 @@ public partial class MainWindow : Window
         if (_windowClosed) return;
         if (window.ConfigApplied && currentInstance is not null)
         {
+            // Configuration may replace the saved list even when no draft exists.
+            // Invalidate before catalog reload, which can fail after that commit.
+            ModListEditHistory.InvalidateInstance(_undoHistory, currentInstance.FolderName, entry => entry.Instances);
+            ModListEditHistory.InvalidateInstance(_redoHistory, currentInstance.FolderName, entry => entry.Instances);
+            UpdateUndoButton();
             if (_gameInstallation is not null)
             {
                 await LoadModsAsync(_gameInstallation);
@@ -5807,7 +5812,8 @@ public partial class MainWindow : Window
         SaveProfileSelection();
         _lastEnableColumn = column + 1;
         UpdateEnableTargetBorders();
-        ClearUndoHistory();
+        // Installing a distinct instance does not invalidate existing list edits.
+        UpdateUndoButton();
         var pending = result.UnresolvedWorkshopCount;
         var completion = new CompletionWindow(
             Localization.CompletionTitle(_config.Language),
@@ -6513,7 +6519,7 @@ public partial class MainWindow : Window
         var language = _config.Language;
         var operation = Localization.ImportInstance(language);
         if (string.IsNullOrWhiteSpace(file) ||
-            !await RunInstanceWorkAsync(operation, () => InstanceStore.IsSupportedImportFile(file)))
+            !await RunInstanceWorkAsync(operation, () => IsSupportedInstanceImportFile(file)))
             throw new UnsupportedInstanceImportException();
 
         var isArchive = Path.GetExtension(file).Equals(".zip", StringComparison.OrdinalIgnoreCase);
@@ -6526,9 +6532,9 @@ public partial class MainWindow : Window
         if (mode is null || _windowClosed) return;
         if (mode == ImportMode.New)
         {
-            var imported = await RunInstanceWorkAsync(operation, () => isArchive
+            var imported = await RunInstanceWorkAsync(operation, () => ReadInstanceImport(file, () => isArchive
                 ? InstanceStore.ImportArchiveNew(_packRoot, file)
-                : InstanceStore.ImportFileNew(_packRoot, file, _gameVersion));
+                : InstanceStore.ImportFileNew(_packRoot, file, _gameVersion)));
             if (imported is null) throw new UnsupportedInstanceImportException();
             ReloadInstances(imported.FolderName, column);
             // Importing a separate instance does not invalidate edits to existing instances.
@@ -6541,11 +6547,11 @@ public partial class MainWindow : Window
                 Localization.CancelButton(language)).ShowDialog<bool>(this) ||
             _windowClosed || !CanModifyInstanceFiles()) return;
 
-        var overwritten = await RunInstanceWorkAsync(operation, () => target.IsOfficial
+        var overwritten = await RunInstanceWorkAsync(operation, () => ReadInstanceImport(file, () => target.IsOfficial
             ? InstanceStore.ImportOfficialOverwrite(target, file, _gameVersion)
             : isArchive
                 ? InstanceStore.ImportArchiveOverwrite(target, file)
-                : InstanceStore.ImportFileOverwrite(target, file, _gameVersion));
+                : InstanceStore.ImportFileOverwrite(target, file, _gameVersion)));
         if (!overwritten) throw new UnsupportedInstanceImportException();
         // Replacement is not undoable. Preserve independent edits, but discard
         // snapshots that could restore the replaced list or cross a removed move.

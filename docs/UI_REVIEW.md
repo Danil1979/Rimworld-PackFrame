@@ -6,8 +6,8 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 1,113 regression
-checks. Native UI checks used Linux, synthetic instances, and a dialog host that
+The latest November 2026 checkpoint builds cleanly in Release and passes 1,991 regression
+checks. Earlier checkpoint counts below describe their historical snapshots. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
 relying on a font being installed on the computer.
@@ -19,7 +19,7 @@ relying on a font being installed on the computer.
 | Main mod lists | Explicit per-pane enable target, matching-instance views, X/Escape filter recovery, visible shortcuts, pending header badges, Ctrl+S disk save, typing undo; populated 1100×700 layout with long names in four languages; copy unsaved lists while source disk remains unchanged; native hidden-ID reorder, filtered insertion, 10-step Undo/Redo and redo invalidation | Long real lists, Windows/macOS |
 | Confirmation | Long message fits, action buttons remain visible, safe initial focus and Escape | Extreme translated strings |
 | Rename | Empty input stays open with an error; Escape from button focus cancels | Filesystem rename failures on each OS |
-| Import mode | Exact source/destination and format-specific overwrite scope, pending-edit warning, bounded scrolling and pinned controls; native invalid-XML rejection, safe cancellation, separate-new-instance Undo/Redo; four-language compact review | Full native picker/overwrite failure matrix, Windows/macOS |
+| Import mode | Exact source/destination and format-specific overwrite scope, pending-edit warning, bounded scrolling and pinned controls; native invalid-XML rejection, safe cancellation, separate-new-instance Undo/Redo; four-language compact review | Remaining picker/failure matrix, Windows/macOS |
 | Config folder | Named current/proposed paths, bounded layout, native folder-picker Cancel, failed-save retention and repair/retry, pending-destination protection, no-op history preservation, four-language error layouts at 480×380 | Auto-detection integration and folder pickers on Windows/macOS |
 | Language | Named main action, current-language indicator, visible Cancel, four-language picker review, minimum Japanese and first-run layouts, selection/cancel results, pending edits and Undo across language switches; failed-save retention and repair/retry | Platform screen readers and OS-specific startup behavior |
 | Pending changes | Safe initial focus, wrapped message/actions inspected | Update-and-restart integration on each OS |
@@ -738,3 +738,36 @@ user control and freedom, and keeps the operation's effect within its stated sco
 - Official/Default ZIP failure and repair/retry still needs native acceptance.
   The installer allocation/history concerns and Windows/macOS/screen-reader
   acceptance remain open. Only isolated synthetic fixtures were modified.
+
+
+## Installer isolation and explicit archive recovery
+
+**Problem and principle.** Instance creation must not take over an identity that
+belongs to a pending list, remove unrelated recovery history, or lose the only
+remaining copy after a rollback fails. Error messages should explain the actual
+problem and the next recovery step rather than list unrelated possibilities.
+
+- Installer allocation now uses the existing pending-aware identity reservation
+  and exclusive publication. Empty competing directories and case-variant files
+  remain untouched. A failed rollback keeps the hidden staged Mods copy and
+  reports its recovery path instead of deleting the only remaining copy.
+- Creating a distinct installed instance retains existing list Undo/Redo. Applying
+  replacement configuration invalidates only its affected history, before a later
+  catalog reload can fail. Synthetic tests cover cross-list Undo/Redo and Save
+  without changing the new/replaced profile, collisions, failure and retry, and
+  secondary recovery failure. No live download/install workflow was executed.
+- Native official/Default ZIP acceptance changed the synthetic archive after
+  overwrite review. Failure kept the pending list, Undo and every saved file.
+  Repair/retry changed only matching official Config files; unrelated configuration,
+  managed profiles and saves stayed intact, and archive Saves were not imported.
+- Invalid/incomplete ZIP failures now identify the archive problem, request a
+  valid instance ZIP or a fresh download, and keep Log access. The same localized
+  guidance covers preflight and late source changes during new/managed/official
+  import. Other invalid-data and wrapped configuration failures retain their own
+  classification. No destination-unchanged guarantee is asserted by this message.
+- Native malformed-ZIP selection also verified the final specific error text and
+  safe Close behavior. The matching 520×184 before/after dialogs are screenshots
+  `173-import-corrupt-zip-before.jpg` and `174-import-corrupt-zip-after.jpg`.
+- Final Release build has zero warnings/errors; full suite: 1,991 PASS lines.
+  Desktop coverage is Linux with synthetic fixtures. Windows/macOS, screen-reader
+  acceptance, and live Steam/network installation or publishing remain unverified.

@@ -10,6 +10,11 @@ internal static class OperationText
         Localization.Japanese => ja,
         _ => en
     };
+    public static string InvalidInstanceArchive(string? language) => Choose(language,
+        "This ZIP archive is invalid or incomplete and could not be read. Choose a valid instance ZIP containing Config/ModsConfig.xml, or download the archive again and retry. Open the log for details.",
+        "此 ZIP 压缩包无效或不完整，无法读取。请选择包含 Config/ModsConfig.xml 的有效实例 ZIP，或重新下载压缩包后重试。打开日志可查看详情。",
+        "此 ZIP 壓縮包無效或不完整，無法讀取。請選擇包含 Config/ModsConfig.xml 的有效執行個體 ZIP，或重新下載壓縮包後重試。開啟記錄可查看詳情。",
+        "この ZIP アーカイブは無効または不完全なため、読み込めません。Config/ModsConfig.xml を含む有効なインスタンス ZIP を選ぶか、アーカイブを再ダウンロードして再試行してください。詳細はログで確認できます。");
     public static string Download(string? language) => Choose(language, "Downloading local mods archive...", "正在下载本地模组压缩包...", "正在下載本機模組壓縮包...", "ローカル MOD アーカイブをダウンロード中...");
     public static string Extract(string? language) => Choose(language, "Extracting local mods...", "正在解压本地模组...", "正在解壓本機模組...", "ローカル MOD を展開中...");
     public static string Install(string? language) => Choose(language, "Installing mods...", "正在安装模组...", "正在安裝模組...", "MOD をインストール中...");
