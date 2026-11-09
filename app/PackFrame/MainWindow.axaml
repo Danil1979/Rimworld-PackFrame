@@ -220,7 +220,11 @@
                     <Grid Grid.Row="1" x:Name="DetailsContent" IsVisible="False">
                       <ScrollViewer x:Name="DetailsScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
-                        <Image x:Name="PreviewImage" MaxHeight="170" IsVisible="False" Stretch="Uniform" HorizontalAlignment="Center" />
+                        <Grid x:Name="PreviewFrame" Height="170" IsVisible="False">
+                            <Image x:Name="PreviewImage" MaxHeight="170" IsVisible="False" Stretch="Uniform" HorizontalAlignment="Center" />
+                            <TextBlock x:Name="PreviewStatus" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Margin="12" TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource SecondaryTextBrush}" />
+                        </Grid>
                         <StackPanel Grid.Row="1" Margin="0,14,0,0">
                             <SelectableTextBlock x:Name="NameLabel" IsVisible="False" />
                             <SelectableTextBlock x:Name="NameValue" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />

@@ -6646,6 +6646,18 @@ public partial class MainWindow : Window
     private int _previewVersion;
     private bool _windowClosed;
 
+    private ModPreviewState _previewState;
+
+    private void UpdatePreviewPresentation()
+    {
+        Find<Grid>("PreviewFrame").IsVisible = _previewState != ModPreviewState.None;
+        _previewImage.IsVisible = _previewState == ModPreviewState.Loaded;
+        var status = Find<TextBlock>("PreviewStatus");
+        status.Text = ModPreviewPresentation.Status(_config.Language, _previewState);
+        status.IsVisible = _previewState is ModPreviewState.Loading or ModPreviewState.Unavailable;
+        AutomationProperties.SetName(_previewImage, ModPreviewPresentation.ImageName(_config.Language, _nameValue.Text));
+    }
+
     private string? _detailsPackageId;
     private string? _detailsSourcePath;
 
@@ -6668,6 +6680,8 @@ public partial class MainWindow : Window
             _descriptionValue.Text = string.Empty;
             _previewVersion++;
             _previewPath = null;
+            _previewState = ModPreviewState.None;
+            UpdatePreviewPresentation();
             _previewImage.Source = null;
             _previewImage.IsVisible = false;
             _previewBitmap?.Dispose();
@@ -6681,9 +6695,11 @@ public partial class MainWindow : Window
         _packageValue.Text = mod.PackageId;
         _descriptionValue.Text = mod.Description;
 
-        if (_previewPath == mod.PreviewPath) return;
+        if (ModPreviewPresentation.CanReuse(_previewPath, mod.PreviewPath, _previewState)) { UpdatePreviewPresentation(); return; }
         _previewPath = mod.PreviewPath;
         var version = ++_previewVersion;
+        _previewState = string.IsNullOrWhiteSpace(mod.PreviewPath) ? ModPreviewState.None : ModPreviewState.Loading;
+        UpdatePreviewPresentation();
         _previewImage.Source = null;
         _previewImage.IsVisible = false;
         _previewBitmap?.Dispose();
@@ -6709,12 +6725,18 @@ public partial class MainWindow : Window
             }
             _previewBitmap = bitmap;
             _previewImage.Source = _previewBitmap;
-            _previewImage.IsVisible = true;
+            _previewState = ModPreviewState.Loaded;
+            UpdatePreviewPresentation();
         }
         catch (Exception exception)
         {
             AppLog.Error("Load preview: " + mod.PreviewPath, exception);
-            if (version == _previewVersion) _previewPath = null;
+            if (!_windowClosed && version == _previewVersion)
+            {
+                _previewPath = null;
+                _previewState = ModPreviewState.Unavailable;
+                UpdatePreviewPresentation();
+            }
         }
     }
 

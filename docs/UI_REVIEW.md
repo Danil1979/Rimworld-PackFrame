@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 2,652 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 2,670 regression
 checks. Earlier checkpoint counts below describe their historical snapshots. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -1022,3 +1022,25 @@ restored afterward. No mod-list edits were saved and no game was launched.
 Release checks pass 2,652 assertions, including source identity, path-case behavior,
 full catalog reset/selection restoration, and vanished-selection handling. Native
 Windows/macOS behavior and asynchronous preview-image layout remain unverified.
+
+## Asynchronous preview stability
+
+A test-only build delayed image decoding by 20 seconds to reproduce slow preview
+arrival. In the baseline, a visible description jumped from paragraph 11 to
+paragraph 9 when the image was inserted above it. The production fix reserves a
+170-pixel preview slot whenever a preview path exists; loading, loaded and failed
+states share that slot. Mods without previews do not reserve space. Loading and
+unavailable messages are localized, and image accessibility names identify the mod.
+This favors stable reading position over reclaiming a few pixels for short images.
+
+The delayed native Linux comparison verified the same visible paragraph before
+and after decoding with the fix. A rapid switch to another mod did not display
+the late image. The normal production build also verified malformed-image feedback,
+transition to a mod without a preview (no stale status or gap), and repaired-image
+retry. Existing request-version and disposed-window guards remain intact.
+
+The artificial delay exists only in a separate QA source copy, not production
+source. Fixture metadata, preview files and project reference were restored after
+review. Release regression checks pass 2,670 assertions; the production harness
+build reports zero warnings/errors. Windows/macOS, real-world remote-filesystem
+latency and resource-pressure stress remain unverified. No game was launched.
