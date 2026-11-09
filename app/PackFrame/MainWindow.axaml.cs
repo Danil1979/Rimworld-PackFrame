@@ -6371,9 +6371,11 @@ public partial class MainWindow : Window
         RefreshManager(true);
     }
 
+    private bool _exportProfileInProgress;
+
     private async Task ExportProfileAsync(int column, bool rml)
     {
-        if (_packRoot is null)
+        if (_packRoot is null || _exportProfileInProgress)
         {
             return;
         }
@@ -6384,6 +6386,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        _exportProfileInProgress = true;
         try
         {
             var activeIds = instance.ActivePackageIds
@@ -6402,16 +6405,14 @@ public partial class MainWindow : Window
             var displayName = string.IsNullOrWhiteSpace(instance.DisplayName)
                 ? instance.FolderName
                 : instance.DisplayName;
-            var invalid = Path.GetInvalidFileNameChars();
-            var safeName = new string(displayName
-                .Select(character => invalid.Contains(character) ? '_' : character)
-                .ToArray()).Trim();
-            if (safeName.Length == 0)
-            {
-                safeName = instance.FolderName;
-            }
-
-            var path = Path.Combine(outputDirectory, safeName + (rml ? ".rml" : ".xml"));
+            var storage = StorageProvider;
+            if (!storage.CanSave) throw new IOException(ProfileExport.PickerUnavailable(_config.Language));
+            var options = ProfileExport.Options(displayName, instance.FolderName, rml, _config.Language);
+            options.SuggestedStartLocation = await storage.TryGetFolderFromPathAsync(outputDirectory);
+            using var selectedFile = await storage.SaveFilePickerAsync(options);
+            if (selectedFile is null || _windowClosed) return;
+            var path = selectedFile.TryGetLocalPath();
+            if (string.IsNullOrWhiteSpace(path)) throw new IOException(ProfileExport.LocalFileRequired(_config.Language));
             var version = !string.IsNullOrWhiteSpace(instance.GameVersion)
                 ? instance.GameVersion
                 : _gameVersion ?? string.Empty;
@@ -6421,17 +6422,17 @@ public partial class MainWindow : Window
                     .Where(id => id.StartsWith("ludeon.rimworld", StringComparison.OrdinalIgnoreCase))
                     .ToList();
 
-            await Task.Run(() =>
+            await Task.Run(() => FileTransactions.WriteAtomic(path, temporary =>
             {
                 if (rml)
                 {
-                    WriteRmlProfile(path, version, entries);
+                    WriteRmlProfile(temporary, version, entries);
                 }
                 else
                 {
-                    WriteXmlProfile(path, version, activeIds, knownExpansions);
+                    WriteXmlProfile(temporary, version, activeIds, knownExpansions);
                 }
-            });
+            }));
             ShowToast(Localization.ExportProfileDone(_config.Language, path));
         }
         catch (Exception exception)
@@ -6439,6 +6440,7 @@ public partial class MainWindow : Window
             AppLog.Error("Export profile: " + instance.FolderName, exception);
             ShowToast(exception.Message);
         }
+        finally { _exportProfileInProgress = false; }
     }
 
     private static ulong ExportSteamId(ModInfo? mod, string packageId)

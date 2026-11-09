@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 2,670 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 2,700 regression
 checks. Earlier checkpoint counts below describe their historical snapshots. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -1044,3 +1044,31 @@ source. Fixture metadata, preview files and project reference were restored afte
 review. Release regression checks pass 2,670 assertions; the production harness
 build reports zero warnings/errors. Windows/macOS, real-world remote-filesystem
 latency and resource-pressure stress remain unverified. No game was launched.
+
+
+## Explicit, failure-safe profile export
+
+Native review reproduced silent replacement of an existing same-name XML export.
+The export workflow now opens the platform Save As dialog, starting in Output
+profile with the instance name and the chosen XML/RML format. Users can retain
+separate snapshots, choose another destination, or explicitly approve replacing
+an existing file. Cancellation writes nothing. Suggested names sanitize portable
+filename characters; unavailable/non-local destinations receive actionable errors.
+
+Export retains its existing meaning: a snapshot of the current staged load order,
+including missing IDs, without applying those edits to the game's configuration.
+The request captures IDs before the dialog, prevents overlapping export requests,
+and writes to a temporary sibling before atomically publishing the complete file.
+A serialization failure leaves an existing export intact. This follows user control,
+error prevention and familiar platform conventions rather than adding a custom
+confirmation modal to every export.
+
+Native Linux checks verified XML replacement refusal, Save As under a new name
+with automatic extension, explicit replacement, RML cancellation and retry, and
+RML export of a staged added mod. The exported RML included the staged mod while
+the game configuration remained unchanged; Undo returned the workspace to its
+original state. No game was launched. Release checks pass 2,700 assertions and
+the final production harness builds with zero warnings/errors. Added checks cover
+both formats in four languages, portable names, cancellation/guard wiring, and
+atomic write failure/success. Native Windows/macOS dialogs and remote filesystem
+behavior remain unverified. The native dialog uses the operating system's language.
