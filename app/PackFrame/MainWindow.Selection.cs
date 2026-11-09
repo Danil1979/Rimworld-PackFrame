@@ -89,6 +89,59 @@ public partial class MainWindow
     private readonly Dictionary<ListBox, int> _paneRestoreVersions = new();
     private ListBox? _activeSelectionList;
 
+    private sealed record RefreshReadingContext(
+        Dictionary<ListBox, PaneSelectionSnapshot> Selections,
+        Dictionary<ListBox, string?> RangeEnds, ListBox? Context, int EnableColumn,
+        string? DetailsPackage, string? DetailsPath, Vector DetailsOffset);
+
+    private RefreshReadingContext CaptureRefreshReadingContext() => new(
+        GetModLists().ToDictionary(list => list, list => PaneSelectionSnapshot.Capture(list,
+            _paneScopes.GetValueOrDefault(list), _paneAnchors.GetValueOrDefault(list))),
+        new(_paneRangeEnds), GetCommandList(), _lastEnableColumn,
+        _detailsPackageId, _detailsSourcePath, Find<ScrollViewer>("DetailsScrollViewer").Offset);
+
+    private void RestoreRefreshReadingContext(RefreshReadingContext saved)
+    {
+        _refreshing = true;
+        try
+        {
+            foreach (var (list, selection) in saved.Selections)
+            {
+                var rows = list.Items.OfType<ModInfo>().ToList();
+                var scope = _paneScopes.GetValueOrDefault(list);
+                var anchor = selection.Restore(list, rows, scope, selectFirst: false);
+                _paneAnchors[list] = anchor >= 0 ? rows[anchor].PackageId : null;
+                var end = saved.RangeEnds.GetValueOrDefault(list);
+                _paneRangeEnds[list] = string.Equals(selection.Scope, scope, StringComparison.OrdinalIgnoreCase) &&
+                    rows.Any(row => string.Equals(row.PackageId, end, StringComparison.OrdinalIgnoreCase))
+                    ? end : _paneAnchors[list];
+                InvalidatePaneScrollRestore(list);
+            }
+        }
+        finally { _refreshing = false; }
+        if (saved.Context is { IsEffectivelyVisible: true } context)
+        {
+            SetPaneInteractionContext(context);
+            var mod = PaneSelectionSnapshot.ResolveDetails(context, saved.DetailsPackage);
+            ShowDetails(mod);
+            if (mod is not null && !ModDetailsNavigation.ShouldReset(saved.DetailsPackage, saved.DetailsPath,
+                    mod.PackageId, mod.Path, OperatingSystem.IsWindows()))
+            {
+                var version = _loadVersion;
+                void RestoreReadingOffset()
+                {
+                    if (_loadVersion == version && !ModDetailsNavigation.ShouldReset(saved.DetailsPackage,
+                            saved.DetailsPath, _detailsPackageId, _detailsSourcePath, OperatingSystem.IsWindows()))
+                        Find<ScrollViewer>("DetailsScrollViewer").Offset = saved.DetailsOffset;
+                }
+                RestoreReadingOffset();
+                Dispatcher.UIThread.Post(RestoreReadingOffset, DispatcherPriority.Loaded);
+            }
+        }
+        else ShowDetails(null);
+        UpdateSelectionAction();
+    }
+
     private void InitializePaneSelection()
     {
         foreach (var list in GetModLists())

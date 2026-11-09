@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 2,640 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 2,652 regression
 checks. Earlier checkpoint counts below describe their historical snapshots. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -998,3 +998,27 @@ long-name layouts were inspected; full names remained available to accessibility
 No edits were saved. Release checks pass 2,640 assertions, including four-language
 target changes, empty selections, reserved caption lines and accessible identities.
 Windows/macOS screen-reader announcements remain unverified.
+
+## Inspector and Refresh reading continuity
+
+Two native reading defects were reproduced with long synthetic descriptions: a
+newly selected mod inherited the previous mod's mid-description scroll offset,
+and Refresh discarded selections and opened the first available mod instead.
+The left inspector now starts at the beginning when package/source identity
+changes. Redisplaying the same source does not request a reset.
+
+Refresh captures per-pane selection, range anchor/endpoint, active context, enable
+target, inspected package/source and description offset before the catalog reset.
+It restores only surviving selections within the same instance scope, resolves
+the inspected item against newly loaded rows, and restores its offset only if
+the source still matches. A superseded load cannot apply an old reading snapshot.
+Refresh retains its existing staged-edit and history behavior.
+
+Native Linux verification: selecting another long description returns to its title;
+Refresh retains a two-row selection and the same visible paragraph; removing the
+inspected fixture mod retains the other selected row and starts its description
+at the top; primary and comparison selections survive independently. Fixtures were
+restored afterward. No mod-list edits were saved and no game was launched.
+Release checks pass 2,652 assertions, including source identity, path-case behavior,
+full catalog reset/selection restoration, and vanished-selection handling. Native
+Windows/macOS behavior and asynchronous preview-image layout remain unverified.

@@ -4208,6 +4208,7 @@ public partial class MainWindow : Window
         // discard just to recover an unreadable file or update the catalog.
         ModColorStore.Invalidate();
         UpdateSaveState();
+        var readingContext = CaptureRefreshReadingContext();
         var inactiveOffset = GetListScrollOffset(_inactiveList);
         var activeOffset1 = GetListScrollOffset(_activeList1);
         var activeOffset2 = GetListScrollOffset(_activeList2);
@@ -4225,14 +4226,19 @@ public partial class MainWindow : Window
 
             var folder1 = GetSelectedInstanceFolder(0);
             var folder2 = GetSelectedInstanceFolder(1);
-            await LoadModsAsync(result);
+            var reload = LoadModsAsync(result);
+            var refreshLoadVersion = _loadVersion;
+            await reload;
+            if (_loadVersion != refreshLoadVersion) return;
             if (_instances.Count == 0)
             {
                 ShowToast(Localization.RefreshFailed(_config.Language));
                 return;
             }
 
+            _lastEnableColumn = readingContext.EnableColumn;
             RestoreInstanceSelection(folder1, folder2);
+            RestoreRefreshReadingContext(readingContext);
             RestoreListScrollOffsets(inactiveOffset, activeOffset1, activeOffset2);
             ShowToast(Localization.Refreshed(_config.Language));
         }
@@ -6640,8 +6646,16 @@ public partial class MainWindow : Window
     private int _previewVersion;
     private bool _windowClosed;
 
+    private string? _detailsPackageId;
+    private string? _detailsSourcePath;
+
     private async void ShowDetails(ModInfo? mod)
     {
+        if (ModDetailsNavigation.ShouldReset(_detailsPackageId, _detailsSourcePath,
+                mod?.PackageId, mod?.Path, OperatingSystem.IsWindows()))
+            Find<ScrollViewer>("DetailsScrollViewer").Offset = default;
+        _detailsPackageId = mod?.PackageId;
+        _detailsSourcePath = mod?.Path;
         UpdateSelectionAction();
         Find<ScrollViewer>("DetailsEmptyState").IsVisible = mod is null;
         Find<Grid>("DetailsContent").IsVisible = mod is not null;

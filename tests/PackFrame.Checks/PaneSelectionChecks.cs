@@ -51,6 +51,19 @@ internal static class PaneSelectionChecks
                 source.SelectedItems!.Cast<ModInfo>().All(rebuilt.Contains),
             "rebuilding a pane restores its visible multi-selection and Shift anchor onto the new row models");
 
+        var reloadState = PaneSelectionSnapshot.Capture(source, "instance-A", "BETA");
+        source.ItemsSource = null; // Full catalog reload clears controls before rows return.
+        var reloaded = new[] { alpha with { }, beta with { }, gamma with { } };
+        var reloadAnchor = reloadState.Restore(source, reloaded, "instance-A", selectFirst: false);
+        Require(Selected(source).SequenceEqual(new[] { "alpha", "beta" }) && reloadAnchor == 1,
+            "snapshot survives catalog reset and restores multi-selection and anchor");
+        Require(ReferenceEquals(PaneSelectionSnapshot.ResolveDetails(source, "BETA"), reloaded[1]),
+            "refresh resolves last inspected selected mod onto its newly loaded source");
+        reloadState.Restore(source, new[] { gamma with { } }, "instance-A", selectFirst: false);
+        Require(source.SelectedItems!.Count == 0 && PaneSelectionSnapshot.ResolveDetails(source, "beta") is null,
+            "refresh clears vanished selections rather than choosing an unrelated mod");
+        sourceState.Restore(source, rebuilt, "instance-A", selectFirst: false);
+
         var filteredState = PaneSelectionSnapshot.Capture(source, "instance-A", "BETA");
         anchor = filteredState.Restore(source, new[] { alpha with { }, gamma with { } }, "instance-A", selectFirst: true);
         Require(Selected(source).SequenceEqual(new[] { "alpha" }) && anchor == 0,
