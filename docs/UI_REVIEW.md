@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 2,706 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 2,734 regression
 checks. Earlier checkpoint counts below describe their historical snapshots. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -1094,3 +1094,43 @@ pass 2,706 assertions, including failed deletion, both retained stacks, unresolv
 IDs, disk preservation, and the existing transitive multi-list history tests.
 The production harness builds with zero warnings/errors. Windows/macOS native
 verification and real-game data remain outside this checkpoint.
+
+
+## Persistent compatibility diagnosis in the left inspector
+
+A matched native fixture showed the previous diagnosis gap: selecting a mod with
+a load-order error, missing prerequisite and incompatibility left its inspector
+showing only ordinary metadata and description. The small S badge exposed details
+on hover; clicking the Order summary filtered the list instead of reviewing it.
+
+The inspector now contains a persistent Compatibility issues card between the
+author and technical details, retaining the familiar left-side layout. It names
+the instance and separates load order, missing prerequisites, incompatibilities,
+version support and duplicate packages. Healthy selections do not show a card.
+Review compatibility in the mod context menu opens and focuses this card, even
+when the inspector was hidden. Reviewing is separate from list filtering.
+
+Apply order suggestion is positioned beside the order explanation. It resolves
+current full-order diagnostics and verifies the instance identity before using
+the existing staged move/Undo path. The action explicitly changes only this mod;
+it neither installs requirements nor claims to resolve incompatibilities. After
+repair, remaining issues stay visible. Compact copy and shared adaptive button
+styling preserve readable light/dark contrast and keyboard focus.
+
+Native Linux verification covered: mouse repair and Undo; the order warning
+clearing while missing prerequisites/conflicts remain; comparison scope; repairing
+with the predecessor hidden by a search while preserving search and the other
+instance; Shift+F10 → Review compatibility → keyboard activation; a hidden
+inspector reopening; healthy selection clearing the card; Japanese comparison
+layout; and light/dark styling. A light-theme action contrast defect found during
+review was corrected and rechecked. Matched before/after screenshots use the same
+1180×812 fixture, mod selection and issue metadata. Fixture metadata was restored,
+no game configuration was saved and no game was launched.
+
+Release checks pass 2,734 assertions, including four-language issue categories,
+remaining issues after order repair, full-order/identity guards, staged action
+wiring and adaptive styling. Production harness build: zero warnings/errors.
+Windows/macOS screen readers, real mod compatibility accuracy beyond the existing
+metadata rules, and real-game execution remain unverified. The principles are
+recognition over recall, visible system state, accessible recovery and explicit
+action scope, rather than relying on hover or automatic repair of unrelated issues.

@@ -4616,6 +4616,11 @@ public partial class MainWindow : Window
         var language = _config.Language;
         var flyout = new MenuFlyout();
         var reorderColumn = GetListColumn(list);
+        if (CompatibilityGuidance.Issues(mod, language).Count > 0)
+        {
+            flyout.Items.Add(CreateMenuItem(CompatibilityGuidance.Review(language), true, () => Dispatcher.UIThread.Post(() => ReviewCompatibility(mod))));
+            flyout.Items.Add(new Separator());
+        }
         if (reorderColumn > 0)
         {
             foreach (var direction in new[] { -1, 1 })
@@ -6669,6 +6674,7 @@ public partial class MainWindow : Window
 
     private async void ShowDetails(ModInfo? mod)
     {
+        UpdateCompatibilityDetails(mod);
         if (ModDetailsNavigation.ShouldReset(_detailsPackageId, _detailsSourcePath,
                 mod?.PackageId, mod?.Path, OperatingSystem.IsWindows()))
             Find<ScrollViewer>("DetailsScrollViewer").Offset = default;

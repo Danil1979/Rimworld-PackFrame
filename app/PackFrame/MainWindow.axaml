@@ -219,7 +219,7 @@
                     </ScrollViewer>
                     <Grid Grid.Row="1" x:Name="DetailsContent" IsVisible="False">
                       <ScrollViewer x:Name="DetailsScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                       <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                       <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                         <Grid x:Name="PreviewFrame" Height="170" IsVisible="False">
                             <Image x:Name="PreviewImage" MaxHeight="170" IsVisible="False" Stretch="Uniform" HorizontalAlignment="Center" />
                             <TextBlock x:Name="PreviewStatus" HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -233,7 +233,12 @@
                             <SelectableTextBlock x:Name="AuthorLabel" IsVisible="False" />
                             <SelectableTextBlock x:Name="AuthorValue" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
                         </StackPanel>
-                        <Expander x:Name="TechnicalDetails" Foreground="{DynamicResource PrimaryTextBrush}" Grid.Row="3" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,12">
+                        <Border x:Name="CompatibilityCard" Grid.Row="3" IsVisible="False" Focusable="True"
+                                BorderBrush="{DynamicResource SecondaryTextBrush}" BorderThickness="2,1,1,1"
+                                CornerRadius="4" Padding="10" Margin="0,0,0,14">
+                            <StackPanel x:Name="CompatibilityContent" Spacing="6" />
+                        </Border>
+                        <Expander x:Name="TechnicalDetails" Foreground="{DynamicResource PrimaryTextBrush}" Grid.Row="4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,12">
                             <StackPanel Spacing="6">
                                 <SelectableTextBlock x:Name="PackageLabel" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" />
                                 <SelectableTextBlock x:Name="PackageValue" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
@@ -241,8 +246,8 @@
                                 <SelectableTextBlock x:Name="PathValue" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Expander>
-                        <SelectableTextBlock x:Name="DescriptionLabel" Grid.Row="4" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" Margin="0,0,0,8" />
-                        <SelectableTextBlock Grid.Row="5" x:Name="DescriptionValue" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" LineHeight="22" />
+                        <SelectableTextBlock x:Name="DescriptionLabel" Grid.Row="5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" Margin="0,0,0,8" />
+                        <SelectableTextBlock Grid.Row="6" x:Name="DescriptionValue" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" LineHeight="22" />
                        </Grid>
                       </ScrollViewer>
                     </Grid>
