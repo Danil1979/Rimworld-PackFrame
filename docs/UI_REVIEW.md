@@ -6,7 +6,7 @@ This is an iterative review of PackFrame's desktop workflows. Passing checks bel
 are evidence for specific behavior, not a claim that all platforms, languages, or
 live publishing/install scenarios have been validated.
 
-The latest November 2026 checkpoint builds cleanly in Release and passes 2,700 regression
+The latest November 2026 checkpoint builds cleanly in Release and passes 2,706 regression
 checks. Earlier checkpoint counts below describe their historical snapshots. Native UI checks used Linux, synthetic instances, and a dialog host that
 constructs the production windows. The actual application launcher was also
 verified with mod rows and badges. It now bundles and registers Inter rather than
@@ -1072,3 +1072,25 @@ the final production harness builds with zero warnings/errors. Added checks cove
 both formats in four languages, portable names, cancellation/guard wiring, and
 atomic write failure/success. Native Windows/macOS dialogs and remote filesystem
 behavior remain unverified. The native dialog uses the operating system's language.
+
+
+## Independent history after instance deletion
+
+Native comparison review found that deleting Experimental colony cleared Undo
+for an unsaved edit in the unrelated Frontier colony. The surviving list remained
+edited, but its recovery action disappeared. Deletion now uses the same
+dependency-aware invalidation as import replacement: remove whole commands
+involving the deleted instance and their stale replay dependencies, retain
+independent commands and global color edits, and update both Undo and Redo.
+Invalidation happens only after successful deletion. Deletion itself remains
+explicitly confirmed and is not made undoable.
+
+This follows least surprise and recovery continuity across independent tasks.
+The native Linux fixture now retains Undo after deleting the comparison instance;
+Undo restores the original surviving list, Redo reapplies the staged edit, and a
+second Undo returns to the clean state. No game configuration was saved, and the
+backed-up synthetic comparison instance was restored after testing. Release checks
+pass 2,706 assertions, including failed deletion, both retained stacks, unresolved
+IDs, disk preservation, and the existing transitive multi-list history tests.
+The production harness builds with zero warnings/errors. Windows/macOS native
+verification and real-game data remain outside this checkpoint.

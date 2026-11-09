@@ -9,9 +9,16 @@ internal static class ModListEditHistoryChecks
     {
         CheckDependencies();
         CheckImport(Path.Combine(root, "selective-import-history"));
+        CheckDeletion(Path.Combine(root, "selective-delete-history"));
         using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("UiWiring.MainWindow.axaml.cs")!;
         using var reader = new StreamReader(stream);
         var source = reader.ReadToEnd();
+        var deletion = source[source.IndexOf("private async Task DeleteInstanceCoreAsync")..source.IndexOf("private string? GetNextOrPreviousFolder")];
+        Check(!deletion.Contains("ClearUndoHistory()") &&
+            deletion.IndexOf("await RunInstanceWorkAsync", StringComparison.Ordinal) < deletion.IndexOf("ModListEditHistory.InvalidateInstance", StringComparison.Ordinal) &&
+            deletion.Contains("InvalidateInstance(_undoHistory, instance.FolderName, entry => entry.Instances)") &&
+            deletion.Contains("InvalidateInstance(_redoHistory, instance.FolderName, entry => entry.Instances)"),
+            "successful instance deletion invalidates dependent commands only, on both stacks");
         var start = source.IndexOf("var overwritten = await RunInstanceWorkAsync", StringComparison.Ordinal);
         var end = source.IndexOf("private void OpenInstance", start, StringComparison.Ordinal);
         var overwrite = source[start..end];
@@ -93,6 +100,36 @@ internal static class ModListEditHistoryChecks
             untouched.SequenceEqual(File.ReadAllBytes(Path.Combine(other.ConfigDirectoryPath, "ModsConfig.xml"))) &&
             loaded.Single(x => x.FolderName == target.FolderName).ActivePackageIds.SequenceEqual(new[] { "replacement.mod" }),
             "retained history never reverts replacement or writes unrelated list files");
+        InstanceStore.DiscardPendingMods();
+    }
+
+    private static void CheckDeletion(string root)
+    {
+        var target = InstanceStore.CreateNew(root, null, "1.6", new[] { "delete.saved" });
+        var other = InstanceStore.CreateNew(root, null, "1.6", new[] { "keep.saved" });
+        var saved = File.ReadAllBytes(Path.Combine(other.ConfigDirectoryPath, "ModsConfig.xml"));
+        var undo = new List<Entry> { new("other", new() { new(other.FolderName, other.ActivePackageIds.ToList()) }),
+            new("target", new() { new(target.FolderName, target.ActivePackageIds.ToList()) }) };
+        InstanceStore.StageActiveMods(other, new[] { "keep.draft", "missing.id" });
+        InstanceStore.StageActiveMods(target, new[] { "delete.draft" });
+        var redo = new List<Entry> { new("other-next", new() { new(other.FolderName, new() { "keep.next" }) }) };
+        try { InstanceStore.DeleteInstance(target, _ => throw new IOException("simulated failure")); }
+        catch (IOException) { }
+        Check(Directory.Exists(target.DirectoryPath) && undo.Count == 2 && redo.Count == 1 &&
+            target.ActivePackageIds.SequenceEqual(new[] { "delete.draft" }), "failed deletion retains target draft and both history stacks");
+        InstanceStore.DeleteInstance(target);
+        ModListEditHistory.InvalidateInstance(undo, target.FolderName, entry => entry.Instances);
+        ModListEditHistory.InvalidateInstance(redo, target.FolderName, entry => entry.Instances);
+        Check(undo.Count == 1 && redo.Count == 1 && !Directory.Exists(target.DirectoryPath), "successful deletion retains independent Undo and Redo");
+        var remaining = InstanceStore.Discover(root);
+        var inverse = ModListOperations.Restore(undo.Single().Instances, remaining);
+        Check(remaining.Single().ActivePackageIds.SequenceEqual(new[] { "keep.saved" }), "retained Undo restores surviving instance after deletion");
+        ModListOperations.Restore(inverse, remaining);
+        Check(remaining.Single().ActivePackageIds.SequenceEqual(new[] { "keep.draft", "missing.id" }), "inverse replay retains unresolved IDs without restoring deleted instance");
+        ModListOperations.Restore(redo.Single().Instances, remaining);
+        Check(remaining.Single().ActivePackageIds.SequenceEqual(new[] { "keep.next" }) &&
+            saved.SequenceEqual(File.ReadAllBytes(Path.Combine(other.ConfigDirectoryPath, "ModsConfig.xml"))) &&
+            !Directory.Exists(target.DirectoryPath), "retained Redo remains staged and cannot recreate deleted instance");
         InstanceStore.DiscardPendingMods();
     }
 

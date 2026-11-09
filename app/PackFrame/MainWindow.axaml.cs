@@ -6281,8 +6281,12 @@ public partial class MainWindow : Window
 
         if (!CanModifyInstanceFiles()) return;
         await RunInstanceWorkAsync(Localization.DeleteInstance(language), () => InstanceStore.DeleteInstance(instance));
+        // Deletion is not undoable, but unrelated lists and color edits remain
+        // valid. Remove whole dependent commands before replaying either stack.
+        ModListEditHistory.InvalidateInstance(_undoHistory, instance.FolderName, entry => entry.Instances);
+        ModListEditHistory.InvalidateInstance(_redoHistory, instance.FolderName, entry => entry.Instances);
+        UpdateUndoButton();
         ReloadInstancesAfterDelete(instance.FolderName, replacement, column);
-        ClearUndoHistory();
     }
 
     private string? GetNextOrPreviousFolder(string folderName)
